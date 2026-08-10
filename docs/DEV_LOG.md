@@ -14,3 +14,4 @@ Automated and verified development entries.
 - `2026-08-10 12:32:00 +0530`: chore(telemetry): refine trace metrics aggregation
 - `2026-08-10 14:49:00 +0530`: feat(cli): enhance argument parser error recovery
 - `2026-08-10 16:26:00 +0530`: fix(scanner): correct edge-case handling in regex stream buffer
+- `2026-08-10 18:43:00 +0530`: refactor(core): decouple dispatcher from worker thread pool
