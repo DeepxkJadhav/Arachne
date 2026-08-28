@@ -25,3 +25,4 @@ Automated and verified development entries.
 - `2026-08-28 10:15:00 +0530`: feat(cli): enhance argument parser error recovery
 - `2026-08-28 12:32:00 +0530`: fix(scanner): correct edge-case handling in regex stream buffer
 - `2026-08-28 14:49:00 +0530`: refactor(core): decouple dispatcher from worker thread pool
+- `2026-08-28 16:26:00 +0530`: docs(api): document sub-command execution lifecycle
