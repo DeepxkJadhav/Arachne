@@ -22,3 +22,4 @@ Automated and verified development entries.
 - `2026-08-17 12:32:00 +0530`: fix(parser): handle trailing delimiters in input streams
 - `2026-08-17 14:49:00 +0530`: refactor(plugin): isolate dynamic module loader boundaries
 - `2026-08-17 16:26:00 +0530`: chore(telemetry): refine trace metrics aggregation
+- `2026-08-28 10:15:00 +0530`: feat(cli): enhance argument parser error recovery
