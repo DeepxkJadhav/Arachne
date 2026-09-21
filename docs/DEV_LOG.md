@@ -26,3 +26,4 @@ Automated and verified development entries.
 - `2026-08-28 12:32:00 +0530`: fix(scanner): correct edge-case handling in regex stream buffer
 - `2026-08-28 14:49:00 +0530`: refactor(core): decouple dispatcher from worker thread pool
 - `2026-08-28 16:26:00 +0530`: docs(api): document sub-command execution lifecycle
+- `2026-09-21 10:15:00 +0530`: test(e2e): add regression assertions for nested flags
