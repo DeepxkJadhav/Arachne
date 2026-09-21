@@ -29,3 +29,4 @@ Automated and verified development entries.
 - `2026-09-21 10:15:00 +0530`: test(e2e): add regression assertions for nested flags
 - `2026-09-21 12:32:00 +0530`: perf(io): buffer asynchronous file descriptor reads
 - `2026-09-21 14:49:00 +0530`: feat(output): format tabular reporting for terminal width
+- `2026-09-21 16:26:00 +0530`: fix(parser): handle trailing delimiters in input streams
