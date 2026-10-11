@@ -1,7 +1,7 @@
 {
-  "name": "firecrawl-scraper-js",
+  "name": "arachne-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "Arachne - Fast web scraping, crawling and AI extraction engine",
   "main": "src/index.ts",
   "scripts": {
     "start": "tsc && node dist/src/harness.js --start-built",
@@ -43,7 +43,11 @@
     "prepare": "cd ../.. && husky ./apps/api/.husky",
     "knip": "knip"
   },
-  "author": "",
+  "author": "Deepak Jadhav (DeepxkJadhav)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DeepxkJadhav/Arachne.git"
+  },
   "license": "ISC",
   "devDependencies": {
     "@types/amqplib": "^0.10.7",

@@ -121,8 +121,10 @@ if (config.BULL_AUTH_KEY) {
 
 app.get("/", (_, res) => {
   res.json({
-    message: "Firecrawl API",
-    documentation_url: "https://docs.firecrawl.dev",
+    message: "Arachne API",
+    version: "1.0.0",
+    repository: "https://github.com/DeepxkJadhav/Arachne",
+    documentation_url: "https://github.com/DeepxkJadhav/Arachne#readme",
   });
 });
 

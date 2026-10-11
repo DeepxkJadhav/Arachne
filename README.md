@@ -1,64 +1,33 @@
-<h3 align="center">
-  <a name="readme-top"></a>
-  <img
-    src="https://raw.githubusercontent.com/firecrawl/firecrawl/main/img/firecrawl_logo.png"
-    height="200"
-  >
-</h3>
-
 <div align="center">
-  <a href="https://github.com/firecrawl/firecrawl/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/firecrawl/firecrawl" alt="License">
-  </a>
-  <a href="https://pepy.tech/project/firecrawl-py">
-    <img src="https://static.pepy.tech/badge/firecrawl-py" alt="Downloads">
-  </a>
-  <a href="https://GitHub.com/firecrawl/firecrawl/graphs/contributors">
-    <img src="https://img.shields.io/github/contributors/firecrawl/firecrawl.svg" alt="GitHub Contributors">
-  </a>
-  <a href="https://firecrawl.dev">
-    <img src="https://img.shields.io/badge/Visit-firecrawl.dev-orange" alt="Visit firecrawl.dev">
-  </a>
-</div>
+  <a name="readme-top"></a>
+  <h1>🕷️ Arachne</h1>
+  <p><b>Supercharge your AI agents with clean web data. High-performance, self-hosted web scraping, crawling, and AI extraction engine.</b></p>
 
-<div>
-  <p align="center">
-    <a href="https://twitter.com/firecrawl">
-      <img src="https://img.shields.io/badge/Follow%20on%20X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Follow on X" />
-    </a>
-    <a href="https://www.linkedin.com/company/104100957">
-      <img src="https://img.shields.io/badge/Follow%20on%20LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="Follow on LinkedIn" />
-    </a>
-    <a href="https://discord.gg/firecrawl">
-      <img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord" />
-    </a>
-  </p>
+  <a href="https://github.com/DeepxkJadhav/Arachne/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/DeepxkJadhav/Arachne" alt="License">
+  </a>
+  <a href="https://github.com/DeepxkJadhav/Arachne">
+    <img src="https://img.shields.io/github/stars/DeepxkJadhav/Arachne?style=social" alt="GitHub stars">
+  </a>
+  <a href="https://github.com/DeepxkJadhav/Arachne/issues">
+    <img src="https://img.shields.io/github/issues/DeepxkJadhav/Arachne" alt="Issues">
+  </a>
 </div>
 
 ---
 
-# **🔥 Firecrawl**
-
-**Supercharge your AI agents with data from the web and beyond. Building the library for superintelligence. 🔥** Open source and available as a [hosted service](https://firecrawl.dev/?ref=github).
-
-_Pst. Hey, you, join our stargazers :)_
-
-<a href="https://github.com/firecrawl/firecrawl">
-  <img src="https://img.shields.io/github/stars/firecrawl/firecrawl.svg?style=social&label=Star&maxAge=2592000" alt="GitHub stars">
-</a>
+> [!NOTE]
+> **Arachne** is an open-source, production-ready web crawler, scraper, and LLM-ready data pipeline maintained by [Deepak Jadhav (@DeepxkJadhav)](https://github.com/DeepxkJadhav). Built upon the open-source Firecrawl architecture (AGPL-3.0), optimized for robust self-hosting and seamless AI agent integration.
 
 ---
 
-## Why Firecrawl?
+## Why Arachne?
 
-- **Industry-leading reliability**: Covers 96% of the web, including JS-heavy pages — no proxy headaches, just clean data ([see benchmarks](https://www.firecrawl.dev/blog/the-worlds-best-web-data-api-v25))
-- **Blazingly fast**: P95 latency of 3.4s across millions of pages, built for real-time agents and dynamic apps
-- **LLM-ready output**: Clean markdown, structured JSON, screenshots, and more — spend fewer tokens, build better AI apps
-- **We handle the hard stuff**: Rotating proxies, orchestration, rate limits, JS-blocked content, and more — zero configuration
-- **Agent ready**: Connect Firecrawl to any AI agent or MCP client with a single command
-- **Media parsing**: Parse and extract content from web-hosted PDFs, DOCX, and more
-- **Actions**: Click, scroll, write, wait, and press before extracting content
-- **Open source**: Developed transparently and collaboratively — [join our community](https://discord.gg/firecrawl)
+- **High-Performance Scraping**: Handles 96%+ of the web, including heavy dynamic JavaScript pages via bundled Playwright with smart fallback.
+- **LLM-Ready Output**: Clean markdown, structured JSON schema extraction, and screenshots tailored for AI agents and LLMs.
+- **Complete Self-Hosting Control**: Run entirely within your private infrastructure with Docker Compose or Kubernetes, keeping your data sovereign.
+- **Full-Spectrum Features**: Scrape, deep Crawl, Sitemap/URL Map, Search, Batch Scrape, and AI-directed page interactions.
+- **Zero Lock-In**: 100% open source under AGPL-3.0.
 
 ---
 
@@ -83,9 +52,51 @@ _Pst. Hey, you, join our stargazers :)_
 
 ---
 
-## Quick Start
+## 🚀 Quick Start (Self-Hosted)
 
-Sign up at [firecrawl.dev](https://firecrawl.dev) to get your API key. Try the [playground](https://firecrawl.dev/playground) to test it out.
+### 1. Launch with Docker Compose
+
+Deploy the complete Arachne stack locally or on a cloud server:
+
+```bash
+# Clone the repository
+git clone https://github.com/DeepxkJadhav/Arachne.git
+cd Arachne
+
+# Copy sample configuration
+cp .env.example .env
+
+# Start all services
+docker compose up -d
+```
+
+Arachne API will start on `http://localhost:3002`.
+
+### 2. Open Arachne Web Studio (UI)
+
+Open your browser and visit:
+👉 **`http://localhost:3002/`**
+
+Arachne includes a built-in dark-mode Web Studio where you can visually scrape any URL to markdown, discover all links on any site, copy content, and inspect execution performance in real time.
+
+### 3. Verify via API
+
+```bash
+curl http://localhost:3002/
+```
+Expected response:
+```json
+{
+  "message": "Arachne API",
+  "version": "1.0.0",
+  "repository": "https://github.com/DeepxkJadhav/Arachne",
+  "documentation_url": "https://github.com/DeepxkJadhav/Arachne#readme"
+}
+```
+
+---
+
+## API Usage Examples
 
 ### Search
 
@@ -883,35 +894,28 @@ The build skills (integrating Firecrawl into product code) are authored in this 
 
 ---
 
-## Open Source vs Cloud
+## Open Source & Self-Hosting
 
-Firecrawl is open source under the AGPL-3.0 license. The cloud version at [firecrawl.dev](https://firecrawl.dev) includes additional features:
-
-![Open Source vs Cloud](https://raw.githubusercontent.com/firecrawl/firecrawl/main/img/open-source-cloud.png)
-
-To run locally, see the [Contributing Guide](https://github.com/firecrawl/firecrawl/blob/main/CONTRIBUTING.md). To self-host, see [Self-Hosting Guide](https://docs.firecrawl.dev/contributing/self-host).
+Arachne is 100% open source under the AGPL-3.0 license.
+To run locally, see the [Contributing Guide](https://github.com/DeepxkJadhav/Arachne/blob/main/CONTRIBUTING.md). To self-host, see the [Self-Hosting Guide](./SELF_HOST.md).
 
 ---
 
 ## Contributing
 
-We love contributions! Please read our [Contributing Guide](https://github.com/firecrawl/firecrawl/blob/main/CONTRIBUTING.md) before submitting a pull request.
-
-### Contributors
-
-<a href="https://github.com/firecrawl/firecrawl/graphs/contributors">
-  <img alt="contributors" src="https://contrib.rocks/image?repo=firecrawl/firecrawl"/>
-</a>
+We welcome contributions from the community! Please read our [Contributing Guide](https://github.com/DeepxkJadhav/Arachne/blob/main/CONTRIBUTING.md) before submitting a pull request.
 
 ---
 
-## License
+## Acknowledgments & License
 
-This project is primarily licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). The SDKs and some UI components are licensed under the MIT License. See the LICENSE files in specific directories for details.
+- Built upon the robust open-source core developed by [Firecrawl](https://github.com/firecrawl/firecrawl) under the GNU Affero General Public License v3.0 (AGPL-3.0).
+- Maintained & customized by [Deepak Jadhav (DeepxkJadhav)](https://github.com/DeepxkJadhav/Arachne).
+- SDKs and utilities are licensed under the MIT License. See individual LICENSE files for details.
 
 ---
 
-**It is the sole responsibility of end users to respect websites' policies when scraping.** Users are advised to adhere to applicable privacy policies and terms of use. By default, Firecrawl respects robots.txt directives. By using Firecrawl, you agree to comply with these conditions.
+**It is the sole responsibility of end users to respect websites' policies and robots.txt when scraping.** Users are advised to adhere to applicable privacy policies and terms of use.
 
 <p align="right" style="font-size: 14px; color: #555; margin-top: 20px;">
   <a href="#readme-top" style="text-decoration: none; color: #007bff; font-weight: bold;">

@@ -1,8 +1,6 @@
-# Self-hosting Firecrawl
+# Self-hosting Arachne
 
-Want to get Firecrawl running? Start with the
-[Firecrawl self-hosting guide](https://docs.firecrawl.dev/contributing/self-host).
-It takes you from checkout to a successful scrape with Docker Compose.
+Want to get Arachne running? This guide takes you from repository checkout to a successful scrape with Docker Compose.
 
 Use this file when you are changing the baseline. It stays with the source, so
 the services and configuration match the revision you checked out.
@@ -70,6 +68,5 @@ security, availability, capacity, upgrades, data retention, and compliance.
 Treat the Kubernetes and Helm examples as versioned starting points, not as
 evidence that these production decisions have been made for you.
 
-Stuck? Open a
-[self-host issue template](https://github.com/firecrawl/firecrawl/issues/new?template=self_host_issue.md)
-or join the [Firecrawl Discord community](https://discord.gg/firecrawl).
+Stuck or found a bug? Open an issue at
+[Arachne Issues](https://github.com/DeepxkJadhav/Arachne/issues).

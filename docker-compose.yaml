@@ -1,9 +1,9 @@
-name: firecrawl
+name: arachne
 
 x-common-service: &common-service
   # NOTE: If you don't want to build the service locally,
   # comment out the build: statement and uncomment the image: statement
-  # image: ghcr.io/firecrawl/firecrawl
+  # image: ghcr.io/deepxkjadhav/arachne
   build: apps/api
 
   ulimits:
@@ -63,7 +63,7 @@ services:
   playwright-service:
     # NOTE: If you don't want to build the service locally,
     # comment out the build: statement and uncomment the image: statement
-    # image: ghcr.io/firecrawl/playwright-service:latest
+    # image: ghcr.io/deepxkjadhav/arachne-playwright:latest
     build: apps/playwright-service-ts
     environment:
       PORT: 3000
@@ -165,7 +165,7 @@ services:
   nuq-postgres:
     # NOTE: If you don't want to build the image locally,
     # comment out the build: statement and uncomment the image: statement
-    # image: ghcr.io/firecrawl/nuq-postgres:latest
+    # image: ghcr.io/deepxkjadhav/arachne-nuq-postgres:latest
     build: apps/nuq-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

@@ -75,7 +75,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bump", choices=["patch", "minor"], default="patch")
     parser.add_argument("--sha", default=os.environ.get("GITHUB_SHA", "HEAD"))
-    parser.add_argument("--image-name", default="firecrawl")
+    parser.add_argument("--image-name", default="arachne")
     parser.add_argument(
         "--include-current-commit-tags",
         action="store_true",
@@ -109,7 +109,7 @@ def main() -> int:
         )
         return 1
 
-    repo_owner = os.environ.get("GITHUB_REPOSITORY_OWNER", "firecrawl").lower()
+    repo_owner = os.environ.get("GITHUB_REPOSITORY_OWNER", "DeepxkJadhav").lower()
     image = f"ghcr.io/{repo_owner}/{args.image_name}"
     version_text = ".".join(str(part) for part in version)
 
