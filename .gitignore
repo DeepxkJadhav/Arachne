@@ -4,6 +4,7 @@
 .env
 *.csv
 .arachne-vault/
+apps/desktop/node_modules/
 dump.rdb
 /mongo-data
 apps/js-sdk/node_modules/
