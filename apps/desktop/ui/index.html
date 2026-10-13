@@ -11,409 +11,938 @@
 </head>
 <body>
   <div id="app-container">
-    <!-- Sidebar Navigation -->
+    <!-- Left Navigation Sidebar -->
     <aside id="sidebar">
       <div class="brand-header">
-        <div class="brand-logo-container">
-          <!-- Cybernetic Spider Icon -->
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m8 6-5-4"/>
-            <path d="m16 6 5-4"/>
-            <path d="m19 12 3 3"/>
-            <path d="m5 12-3 3"/>
-            <path d="m18 19 3 3"/>
-            <path d="m6 19-3 3"/>
-            <rect width="8" height="12" x="8" y="6" rx="4"/>
-            <circle cx="12" cy="10" r="1" fill="#4cc9f0"/>
-            <circle cx="12" cy="14" r="1" fill="#f72585"/>
-          </svg>
-        </div>
-        <div class="brand-text">
+        <svg class="brand-spider-logo" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m8 6-5-4"/>
+          <path d="m16 6 5-4"/>
+          <path d="m19 12 3 3"/>
+          <path d="m5 12-3 3"/>
+          <path d="m18 19 3 3"/>
+          <path d="m6 19-3 3"/>
+          <rect width="8" height="12" x="8" y="6" rx="4" fill="#180c2e" stroke="#ec4899"/>
+          <circle cx="10.5" cy="10" r="1.2" fill="#ff0054"/>
+          <circle cx="13.5" cy="10" r="1.2" fill="#ff0054"/>
+        </svg>
+        <div class="brand-title-wrap">
           <h1>ARACHNE</h1>
-          <span>Web Intelligence</span>
+          <span>WEB INTELLIGENCE CORE</span>
         </div>
+      </div>
+
+      <div class="new-hunt-btn-wrap">
+        <button class="btn-new-hunt" id="btn-sidebar-new-hunt">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>+ New Hunt</span>
+        </button>
       </div>
 
       <ul class="nav-menu">
         <li class="nav-item active" data-view="dashboard">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-          Command Center
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Chat & Command
         </li>
         <li class="nav-item" data-view="graph">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
           Web Graph
-          <span class="nav-badge" id="badge-nodes">0</span>
         </li>
-        <li class="nav-item" data-view="search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          Corpus Search
-          <span class="nav-badge" id="badge-corpus">0</span>
+        <li class="nav-item" data-view="results">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
+          Results
         </li>
         <li class="nav-item" data-view="reports">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          Report Studio
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+          Reports
+        </li>
+        <li class="nav-item" data-view="vault">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="3"/><path d="m14 14 2.5 2.5"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/></svg>
+          Knowledge Vault
         </li>
         <li class="nav-item" data-view="models">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="M2 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M12 22v-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M22 12h-4"/><path d="m19.07 4.93-2.83 2.83"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M9 2v2"/><path d="M15 2v2"/><path d="M9 20v2"/><path d="M15 20v2"/><path d="M20 9h2"/><path d="M20 15h2"/><path d="M2 9h2"/><path d="M2 15h2"/></svg>
           Model Studio
         </li>
         <li class="nav-item" data-view="telegram">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-          Telegram Remote
-        </li>
-        <li class="nav-item" data-view="vault">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
-          Knowledge Vault
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          Telegram Control
         </li>
         <li class="nav-item" data-view="settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Settings
         </li>
       </ul>
 
-      <div class="sidebar-footer">
-        <div class="system-status-indicator">
-          <div class="status-dot pulse" id="sys-status-dot"></div>
-          <span id="sys-status-text">Engine Ready</span>
+      <!-- System Status Widget -->
+      <div class="sidebar-system-status">
+        <div class="system-status-title">SYSTEM STATUS</div>
+        <div class="status-row">
+          <span>Crawler Engine</span>
+          <span class="status-badge-green"><span class="status-badge-dot"></span> Running</span>
+        </div>
+        <div class="status-row">
+          <span>Workers</span>
+          <span style="color: var(--neon-cyan); font-weight: 600;">12/12</span>
+        </div>
+        <div class="status-row">
+          <span>Qwen (Local)</span>
+          <span class="status-badge-green"><span class="status-badge-dot"></span> Online</span>
+        </div>
+        <div class="status-row">
+          <span>Telegram Bot</span>
+          <span style="color: var(--neon-violet); font-weight: 600;">Connected</span>
+        </div>
+        <div class="status-row">
+          <span>Active Hunts</span>
+          <span style="color: #fff; font-weight: 700;">3</span>
         </div>
       </div>
     </aside>
 
     <!-- Main Viewport -->
     <main id="main-viewport">
-      <!-- Top Bar -->
-      <header class="top-bar">
-        <div class="view-title-wrap">
-          <h2 id="view-title">Command Center</h2>
+      <!-- Global Top Bar -->
+      <header class="global-top-bar">
+        <div class="top-nav-pills">
+          <button class="top-nav-pill active" data-view="dashboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+            Hunt
+          </button>
+          <button class="top-nav-pill" data-view="graph">Web Graph</button>
+          <button class="top-nav-pill" data-view="results">Results</button>
+          <button class="top-nav-pill" data-view="reports">Reports</button>
+          <button class="top-nav-pill" data-view="models">Models</button>
+          <button class="top-nav-pill" data-view="telegram">Telegram</button>
         </div>
-        <div class="top-bar-actions">
-          <button class="btn btn-secondary btn-icon" id="btn-refresh" title="Refresh State">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+
+        <div class="top-nav-right">
+          <input type="text" class="global-search-input" placeholder="Search anything...">
+          <button class="btn btn-secondary" style="padding: 5px 8px;" title="Notifications">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           </button>
-          <button class="btn btn-primary" id="btn-quick-investigate">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-            New Investigation
-          </button>
+          <div class="user-profile-badge">
+            <div class="user-avatar-circle">D</div>
+            <span>Deepak</span>
+          </div>
         </div>
       </header>
 
-      <!-- 1. SCREEN: COMMAND CENTER / DASHBOARD -->
+      <!-- ======================================================== -->
+      <!-- SCREEN 1: MAIN DASHBOARD (Chat & Command Center) -->
+      <!-- ======================================================== -->
       <section class="screen-view active" id="view-dashboard">
-        <!-- Natural Language Command Input -->
-        <div class="panel" style="margin-bottom: 20px;">
-          <div class="panel-header">
-            <div class="panel-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--neon-violet)" stroke-width="2"><path d="m21 15-9-9-9 9"/><path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></svg>
-              Autonomous Investigation Directive
+        <!-- Hero Card with Mechanical Spider Graphic -->
+        <div class="hero-spider-card">
+          <!-- Cybernetic Spider Artwork SVG -->
+          <svg class="hero-spider-graphic" viewBox="0 0 200 200" fill="none">
+            <!-- Radial Web Lines -->
+            <path d="M100 100 L20 20 M100 100 L180 20 M100 100 L190 100 M100 100 L10 100 M100 100 L30 180 M100 100 L170 180 M100 100 L100 10 M100 100 L100 190" stroke="rgba(168, 85, 247, 0.25)" stroke-width="1.2"/>
+            <polygon points="100,40 145,55 160,100 145,145 100,160 55,145 40,100 55,55" stroke="rgba(236, 72, 153, 0.2)" stroke-width="1.2" fill="none"/>
+            <polygon points="100,60 130,70 140,100 130,130 100,140 70,130 60,100 70,70" stroke="rgba(244, 63, 94, 0.3)" stroke-width="1.2" fill="none"/>
+            <!-- Spider Body & Legs -->
+            <path d="M85 85 Q40 50 20 70" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M115 85 Q160 50 180 70" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M80 100 Q30 95 15 115" stroke="#ec4899" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M120 100 Q170 95 185 115" stroke="#ec4899" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M85 115 Q40 145 30 170" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M115 115 Q160 145 170 170" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Abdomen -->
+            <ellipse cx="100" cy="118" rx="22" ry="28" fill="#150a2b" stroke="#f43f5e" stroke-width="2"/>
+            <polygon points="100,105 112,120 100,135 88,120" fill="#ff0054" opacity="0.6"/>
+            <!-- Cephalothorax -->
+            <circle cx="100" cy="85" r="14" fill="#0f0720" stroke="#a855f7" stroke-width="2"/>
+            <!-- Glowing Eyes -->
+            <circle cx="94" cy="83" r="3" fill="#ff0054"/>
+            <circle cx="106" cy="83" r="3" fill="#ff0054"/>
+            <circle cx="90" cy="87" r="1.5" fill="#4cc9f0"/>
+            <circle cx="110" cy="87" r="1.5" fill="#4cc9f0"/>
+          </svg>
+
+          <div class="hero-greeting">
+            <h2>What do you want to discover, Deepak?</h2>
+          </div>
+
+          <div class="hero-prompt-box">
+            <textarea id="input-objective" rows="3" placeholder="Find latest open-source AI agents for computer control. Compare GitHub repos, research papers, tutorials and real-world examples. Make a detailed report with pros/cons and implementation ideas."></textarea>
+            <div class="prompt-actions-row">
+              <div class="prompt-tags-wrap">
+                <button class="prompt-tag-btn active" data-mode="deep-research">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/></svg>
+                  Deep Research
+                </button>
+                <button class="prompt-tag-btn active" data-mode="search-engines">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  Search Engines
+                </button>
+                <button class="prompt-tag-btn active" data-mode="follow-links">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Follow Links
+                </button>
+                <button class="prompt-tag-btn" data-mode="extract-all">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Extract All
+                </button>
+                <button class="prompt-tag-btn" data-mode="ai-analysis">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+                  AI Analysis
+                </button>
+              </div>
+
+              <button class="btn btn-primary" id="btn-dispatch-investigation" style="padding: 7px 18px; border-radius: 8px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
             </div>
-            <div style="font-size: 0.75rem; color: var(--neon-cyan);">Qwen 2.5 / Deep-Research Reasoner Active</div>
           </div>
-          <div class="command-input-bar">
-            <input type="text" id="input-objective" placeholder="Enter objective (e.g., 'Find the best open-source autonomous computer-use agents')...">
-            <button class="btn btn-primary" id="btn-dispatch-investigation">
-              <span>Execute</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </button>
-          </div>
-          <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <span class="chip chip-sample" data-sample="Find the best open-source autonomous computer-use agents">Computer Use Agents</span>
-            <span class="chip chip-sample" data-sample="Compare Playwright vs Selenium for stealth anti-bot crawling">Anti-bot Crawling</span>
-            <span class="chip chip-sample" data-sample="Investigate latest arXiv papers on agentic memory and knowledge graphs">Agent Memory Papers</span>
+
+          <!-- Quick chips -->
+          <div style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="prompt-tag-btn chip-sample" data-sample="Research latest open-source autonomous computer-use agents">⚡ Research AI Agents</button>
+            <button class="prompt-tag-btn chip-sample" data-sample="Compare Playwright vs Selenium vs Firecrawl for stealth crawling">⚡ Compare Frameworks</button>
+            <button class="prompt-tag-btn chip-sample" data-sample="Find best benchmark datasets for multimodal computer agents">⚡ Find Datasets</button>
+            <button class="prompt-tag-btn chip-sample" data-sample="Monitor AI agent research trends on arXiv and GitHub">⚡ Monitor Trends</button>
+            <button class="prompt-tag-btn chip-sample" data-sample="Investigate Qwen 2.5 architecture and agent capabilities">⚡ Custom Hunt</button>
           </div>
         </div>
 
-        <!-- Metrics Row -->
-        <div class="grid-4" style="margin-bottom: 20px;">
-          <div class="metric-card">
-            <div class="label">URLs Discovered</div>
-            <div class="value" id="metric-discovered">0</div>
-            <div class="subtext">Frontier Queue Ready</div>
+        <!-- LIVE OVERVIEW Banner -->
+        <div style="margin-bottom: 12px; font-size: 0.76rem; font-weight: 700; color: var(--text-dim); letter-spacing: 1.2px;">LIVE OVERVIEW</div>
+        <div class="grid-5" style="margin-bottom: 22px;">
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(157, 78, 221, 0.15); color: var(--neon-violet);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
+            </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-discovered">12,840</div>
+              <div class="lbl">Pages Discovered</div>
+            </div>
           </div>
-          <div class="metric-card">
-            <div class="label">Pages Crawled</div>
-            <div class="value" id="metric-crawled">0</div>
-            <div class="subtext">Parsed & Cleaned</div>
+
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: var(--neon-green);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-sources">420</div>
+              <div class="lbl">Relevant Sources</div>
+            </div>
           </div>
-          <div class="metric-card">
-            <div class="label">Entities Extracted</div>
-            <div class="value" id="metric-entities">0</div>
-            <div class="subtext">Graph Linked</div>
+
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(76, 201, 240, 0.15); color: var(--neon-cyan);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-extracted">2,381</div>
+              <div class="lbl">Files Extracted</div>
+            </div>
           </div>
-          <div class="metric-card">
-            <div class="label">Citations Verified</div>
-            <div class="value" id="metric-citations">0</div>
-            <div class="subtext">Academic & Repos</div>
+
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(247, 37, 133, 0.15); color: var(--neon-magenta);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+            </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-size">4.2 GB</div>
+              <div class="lbl">Data Size</div>
+            </div>
+          </div>
+
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(251, 191, 36, 0.15); color: var(--neon-yellow);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+            </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-workers">12</div>
+              <div class="lbl">Active Workers</div>
+            </div>
           </div>
         </div>
 
-        <!-- Active Investigation Plan & Spider Topology -->
-        <div class="grid-2" style="margin-bottom: 20px;">
-          <!-- Left: Active Investigation Plan -->
+        <!-- Real-time Terminal & Active State Row -->
+        <div class="grid-2">
           <div class="panel">
             <div class="panel-header">
               <div class="panel-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--neon-magenta)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                Investigation State & Controls
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--neon-violet)"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                Autonomous Investigation Pipeline
               </div>
               <div style="display: flex; gap: 6px;">
-                <button class="btn btn-secondary btn-icon" id="btn-ctrl-pause" title="Pause"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></button>
-                <button class="btn btn-secondary btn-icon" id="btn-ctrl-resume" title="Resume"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
-                <button class="btn btn-danger btn-icon" id="btn-ctrl-stop" title="Stop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></button>
+                <button class="btn btn-secondary" id="btn-ctrl-pause" style="padding: 4px 8px; font-size: 0.75rem;">Pause</button>
+                <button class="btn btn-secondary" id="btn-ctrl-resume" style="padding: 4px 8px; font-size: 0.75rem;">Resume</button>
+                <button class="btn btn-danger" id="btn-ctrl-stop" style="padding: 4px 8px; font-size: 0.75rem;">Stop</button>
               </div>
             </div>
-            <div id="active-inv-header" style="margin-bottom: 12px; font-weight: 600; font-size: 0.95rem; color: #fff;">No investigation active</div>
-            <div id="phases-list" style="display: flex; flex-direction: column; gap: 8px;">
+            <div id="phases-list" style="display: flex; flex-direction: column; gap: 7px;">
               <!-- Rendered phases -->
             </div>
           </div>
 
-          <!-- Right: Interactive Spider Topology Preview -->
-          <div class="panel" style="display: flex; flex-direction: column; height: 340px;">
+          <div class="panel">
             <div class="panel-header">
               <div class="panel-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--neon-cyan)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                Spider Topology Centered
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--neon-cyan)"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                Real-Time Execution Logs
               </div>
-              <button class="btn btn-secondary btn-icon" id="btn-expand-graph" title="Open Full Graph">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
-              </button>
             </div>
-            <div style="flex: 1; position: relative;">
-              <canvas id="topology-canvas"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bottom Grid: Recent Findings & Execution Logs -->
-        <div class="grid-2">
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">Recent Evidence & Findings</div>
-            </div>
-            <div id="findings-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 220px; overflow-y: auto;">
-              <!-- Findings items -->
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">Real-time Execution Stream</div>
-            </div>
-            <div class="log-terminal" id="log-terminal">
-              <!-- Streaming logs -->
-            </div>
+            <div class="log-terminal" id="log-terminal" style="height: 190px;"></div>
           </div>
         </div>
       </section>
 
-      <!-- 2. SCREEN: INTERACTIVE WEB GRAPH -->
+      <!-- ======================================================== -->
+      <!-- SCREEN 2: WEB GRAPH (Live Spider Topology) -->
+      <!-- ======================================================== -->
       <section class="screen-view" id="view-graph">
-        <div class="panel" style="height: calc(100vh - 120px); display: flex; flex-direction: column;">
-          <div class="panel-header">
-            <div class="panel-title">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--neon-violet)" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
-              Multi-Entity Knowledge Graph Topology
-            </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-              <select id="graph-filter-type" class="btn btn-secondary" style="font-size: 0.8rem;">
-                <option value="all">All Types</option>
-                <option value="Domain">Domains</option>
-                <option value="Page">Pages</option>
-                <option value="AI_Model">AI Models</option>
-                <option value="Repository">Repositories</option>
-                <option value="Document">Papers / Docs</option>
-              </select>
-              <button class="btn btn-secondary" id="btn-reset-graph">Reset Zoom</button>
+        <div class="web-graph-viewport">
+          <!-- Canvas with central glowing spider & animated particles -->
+          <canvas id="topology-full-canvas"></canvas>
+
+          <!-- Left Floating Controls -->
+          <div class="graph-floating-controls">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #fff; margin-bottom: 6px;">Graph Controls</div>
+            <button class="btn btn-secondary" id="btn-graph-fit" style="font-size: 0.72rem; padding: 5px 8px;">Fit to View</button>
+            <button class="btn btn-secondary" id="btn-graph-zin" style="font-size: 0.72rem; padding: 5px 8px;">Zoom In</button>
+            <button class="btn btn-secondary" id="btn-graph-zout" style="font-size: 0.72rem; padding: 5px 8px;">Zoom Out</button>
+            <button class="btn btn-secondary" id="btn-graph-expand" style="font-size: 0.72rem; padding: 5px 8px;">Expand Node</button>
+            <button class="btn btn-secondary" id="btn-graph-clusters" style="font-size: 0.72rem; padding: 5px 8px;">Show Clusters</button>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px;">
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Show Animations</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-graph-anim" checked>
+                <span class="switch-slider"></span>
+              </label>
             </div>
           </div>
-          <div style="flex: 1; position: relative;">
-            <canvas id="graph-canvas"></canvas>
-            <!-- Node Details Overlay Box -->
-            <div id="node-details-drawer" style="display: none; position: absolute; right: 20px; top: 20px; width: 300px; background: rgba(15, 9, 31, 0.95); border: 1px solid var(--border-bright); border-radius: 8px; padding: 16px; backdrop-filter: blur(8px);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span id="detail-node-type" class="nav-badge">Entity</span>
-                <button id="btn-close-detail" style="background: none; border: none; color: #fff; cursor: pointer;">✕</button>
+
+          <!-- Bottom-Left Legend -->
+          <div class="graph-legend-box">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Node Types</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #3b82f6;"></span> Seed Source</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #8b5cf6;"></span> Discovered Page</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> Relevant Source</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #f97316;"></span> File (PDF/Code)</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #ec4899;"></span> External Link</div>
+            <div class="legend-item"><span class="legend-dot" style="background: #ef4444;"></span> Error / Blocked</div>
+          </div>
+
+          <!-- Bottom Status Bar -->
+          <div style="position: absolute; bottom: 12px; left: 210px; right: 350px; background: rgba(15, 9, 28, 0.88); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 6px 14px; display: flex; justify-content: space-between; font-size: 0.72rem; font-family: var(--font-mono); color: var(--text-muted);">
+            <span>Nodes: <strong style="color: #fff;">12,840</strong></span>
+            <span>Edges: <strong style="color: #fff;">38,421</strong></span>
+            <span>Clusters: <strong style="color: #fff;">56</strong></span>
+            <span>Depth: <strong style="color: #fff;">4</strong></span>
+            <span style="color: var(--neon-cyan);">Status: Crawling...</span>
+          </div>
+
+          <!-- Right Node Details Panel -->
+          <div class="graph-node-details-drawer" id="graph-node-drawer">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: #fff;">Node Details</h3>
+              <button class="btn btn-secondary" style="padding: 2px 7px; font-size: 0.75rem;" id="btn-close-node-drawer">✕</button>
+            </div>
+            <div class="sub-tabs-bar" style="margin-bottom: 8px;">
+              <button class="sub-tab-pill active">Overview</button>
+              <button class="sub-tab-pill">Links</button>
+              <button class="sub-tab-pill">Content</button>
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                <strong id="node-detail-title" style="color: #fff; font-size: 1rem;">github.com</strong>
               </div>
-              <h3 id="detail-node-label" style="font-size: 1rem; color: #fff; margin-bottom: 8px;"></h3>
-              <p id="detail-node-url" style="font-size: 0.75rem; color: var(--neon-cyan); word-break: break-all; margin-bottom: 12px;"></p>
-              <button class="btn btn-primary" id="btn-expand-node-neighborhood" style="width: 100%; font-size: 0.8rem;">Expand Connections</button>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">Domain</div>
+            </div>
+            <div style="background: var(--bg-surface-2); padding: 10px; border-radius: 6px; font-size: 0.75rem; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; justify-content: space-between;"><span>Type:</span> <strong style="color: #fff;">Code Repository</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Pages Found:</span> <strong style="color: #fff;">42</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Relevant:</span> <strong style="color: var(--neon-green);">18</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Status:</span> <strong style="color: var(--neon-green);">Crawled</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Last Crawled:</span> <span>2 min ago</span></div>
+            </div>
+            <div style="font-size: 0.76rem; font-weight: 700; color: #fff;">Key Links (sample)</div>
+            <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; font-family: var(--font-mono); color: var(--neon-cyan);">
+              <div>↗ /microsoft/autogen</div>
+              <div>↗ /openai/swarm</div>
+              <div>↗ /geekan/MetaGPT</div>
+              <div>↗ /browser-use/browser-use</div>
+            </div>
+            <button class="btn btn-primary" style="margin-top: auto; width: 100%;">
+              Open in Browser ↗
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 3: RESULTS (Discovered Content) -->
+      <!-- ======================================================== -->
+      <section class="screen-view" id="view-results">
+        <div style="display: flex; gap: 20px;">
+          <!-- Left Filters Panel -->
+          <div style="width: 260px; flex-shrink: 0;" class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">Filters</div>
+            <input type="text" class="global-search-input" style="width: 100%; margin-bottom: 16px;" placeholder="Search results...">
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Content Type</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.76rem; color: var(--text-muted); margin-bottom: 18px;">
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" checked> Web Page</span> <span>(1,842)</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" checked> Research Paper</span> <span>(342)</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" checked> GitHub Repository</span> <span>(284)</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" checked> Documentation</span> <span>(612)</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox"> Dataset</span> <span>(86)</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox"> Image</span> <span>(124)</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox"> Video/Audio</span> <span>(42)</span></label>
+            </div>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Relevance Score</div>
+            <input type="range" min="0" max="100" value="80" style="margin-bottom: 16px;">
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Domain</div>
+            <input type="text" class="global-search-input" style="width: 100%;" value="arxiv.org, github.com">
+          </div>
+
+          <!-- Main Results List -->
+          <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <div style="font-size: 0.82rem; color: var(--text-muted);"><strong style="color: #fff;">1,842</strong> results found</div>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary">Group by: Source ▾</button>
+                <button class="btn btn-secondary">Export ▾</button>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Card 1 -->
+              <div class="panel" style="padding: 16px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <div>
+                    <span class="tag-badge cyan" style="margin-bottom: 6px;">Research Paper</span>
+                    <h3 style="font-size: 1rem; color: #fff; margin-bottom: 4px;">AutoGPT: Autonomous Agents for Real-World Tasks</h3>
+                    <div style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 8px;">Toran Bruce Richards et al. (2024) • arxiv.org</div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">We present AutoGPT, a framework for creating, deploying, and managing autonomous AI agents that can perform complex, long-horizon tasks across web tools...</p>
+                  </div>
+                  <div style="text-align: right; min-width: 80px;">
+                    <div style="font-size: 1.4rem; font-weight: 800; color: var(--neon-green); font-family: var(--font-mono);">98</div>
+                    <div style="font-size: 0.68rem; color: var(--text-dim);">Relevance</div>
+                  </div>
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 6px;">
+                  <span class="tag-badge purple">AI Agents</span>
+                  <span class="tag-badge purple">Computer Use</span>
+                  <span class="tag-badge purple">LLM Agents</span>
+                </div>
+              </div>
+
+              <!-- Card 2 -->
+              <div class="panel" style="padding: 16px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <div>
+                    <span class="tag-badge green" style="margin-bottom: 6px;">GitHub Repository</span>
+                    <h3 style="font-size: 1rem; color: #fff; margin-bottom: 4px;">browser-use: Make LLMs use your browser</h3>
+                    <div style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 8px;">github.com/browser-use • 12.4k stars</div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">Enables AI agents to control the browser, perform real-world tasks like web research, form filling, and data extraction using Playwright coordinates...</p>
+                  </div>
+                  <div style="text-align: right; min-width: 80px;">
+                    <div style="font-size: 1.4rem; font-weight: 800; color: var(--neon-green); font-family: var(--font-mono);">95</div>
+                    <div style="font-size: 0.68rem; color: var(--text-dim);">Relevance</div>
+                  </div>
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 6px;">
+                  <span class="tag-badge purple">Automation</span>
+                  <span class="tag-badge purple">Browser Control</span>
+                  <span class="tag-badge purple">Tools</span>
+                </div>
+              </div>
+
+              <!-- Card 3 -->
+              <div class="panel" style="padding: 16px;">
+                <div style="display: flex; justify-content: space-between;">
+                  <div>
+                    <span class="tag-badge magenta" style="margin-bottom: 6px;">Technical Article</span>
+                    <h3 style="font-size: 1rem; color: #fff; margin-bottom: 4px;">A Survey of Autonomous Computer Use Agents</h3>
+                    <div style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 8px;">medium.com/@jasonwei • 15 min read</div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">This survey covers recent advances in autonomous computer use agents, OSWorld benchmark comparisons, multimodal UI grounding, and open safety challenges.</p>
+                  </div>
+                  <div style="text-align: right; min-width: 80px;">
+                    <div style="font-size: 1.4rem; font-weight: 800; color: var(--neon-green); font-family: var(--font-mono);">92</div>
+                    <div style="font-size: 0.68rem; color: var(--text-dim);">Relevance</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- 3. SCREEN: RESULTS / SEARCH -->
-      <section class="screen-view" id="view-search">
-        <div class="panel" style="margin-bottom: 20px;">
-          <div class="command-input-bar">
-            <input type="text" id="input-corpus-search" placeholder="Search crawled corpus, titles, extracted text, and entities...">
-            <button class="btn btn-primary" id="btn-run-search">Search</button>
-          </div>
-        </div>
-        <div id="search-results-container" style="display: flex; flex-direction: column; gap: 12px;">
-          <!-- Result Cards -->
-        </div>
-      </section>
-
-      <!-- 4. SCREEN: REPORT STUDIO -->
+      <!-- ======================================================== -->
+      <!-- SCREEN 4: REPORTS (Generation & Library) -->
+      <!-- ======================================================== -->
       <section class="screen-view" id="view-reports">
-        <div class="grid-2" style="height: calc(100vh - 120px);">
-          <!-- Left: Reports Library -->
-          <div class="panel" style="overflow-y: auto;">
-            <div class="panel-header">
-              <div class="panel-title">Generated Research Dossiers</div>
-            </div>
-            <div id="reports-list" style="display: flex; flex-direction: column; gap: 10px;">
-              <!-- Reports items -->
-            </div>
-          </div>
-          <!-- Right: Report Viewer & Exporters -->
-          <div class="panel" style="overflow-y: auto; display: flex; flex-direction: column;">
-            <div class="panel-header">
-              <div class="panel-title" id="active-report-title">Report Preview</div>
-              <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary btn-icon" id="btn-download-md" title="Download Markdown">MD</button>
-                <button class="btn btn-secondary btn-icon" id="btn-download-html" title="Download HTML">HTML</button>
-                <button class="btn btn-secondary btn-icon" id="btn-download-csv" title="Download CSV">CSV</button>
-              </div>
-            </div>
-            <div id="report-markdown-preview" style="background: #05030a; border-radius: 6px; padding: 18px; font-family: var(--font-sans); line-height: 1.6; font-size: 0.88rem; flex: 1; overflow-y: auto;">
-              Select a report from the library to view.
-            </div>
-          </div>
+        <div class="sub-tabs-bar">
+          <button class="sub-tab-pill active">Generate Report</button>
+          <button class="sub-tab-pill">Report Library</button>
+          <button class="sub-tab-pill">Templates</button>
         </div>
-      </section>
 
-      <!-- 5. SCREEN: MODEL STUDIO -->
-      <section class="screen-view" id="view-models">
-        <div class="grid-2">
+        <div class="grid-3" style="margin-bottom: 20px;">
+          <!-- Col 1: Task Summary -->
           <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">Model Provider Configuration</div>
+            <div class="panel-title" style="margin-bottom: 12px;">1. Task Summary</div>
+            <div style="background: var(--bg-surface-2); padding: 14px; border-radius: 8px; font-size: 0.8rem; color: var(--text-main); line-height: 1.5;">
+              Find latest open-source AI agents for computer control. Compare GitHub repos, research papers, tutorials and real-world examples.
             </div>
-            <div style="display: flex; flex-direction: column; gap: 14px;">
+          </div>
+
+          <!-- Col 2: Suggested Formats -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">2. Suggested Formats (by Qwen)</div>
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.78rem;">
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> <strong>PDF</strong> (Research Report)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> <strong>Excel</strong> (Comparison Table)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> <strong>Markdown</strong> (Detailed Notes)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>DOCX</strong> (Editable Report)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>PowerPoint</strong> (Presentation)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>CSV</strong> (Raw Data)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>JSON</strong> (Structured Data)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>HTML</strong> (Web Report)</label>
+            </div>
+          </div>
+
+          <!-- Col 3: Report Options -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">3. Report Options</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
               <div>
-                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Active LLM Provider</label>
-                <select id="select-model-provider" class="btn btn-secondary" style="width: 100%;">
-                  <option value="qwen-local">Ollama (Qwen 2.5 / DeepSeek R1 Local)</option>
-                  <option value="openai">OpenAI (GPT-4o / GPT-4.5)</option>
-                  <option value="heuristic">ARACHNE Heuristic Offline Reasoner</option>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Report Type</label>
+                <select class="btn btn-secondary" style="width: 100%;">
+                  <option>Research & Comparison</option>
+                  <option>Executive Brief</option>
+                  <option>Technical Deep-Dive</option>
                 </select>
               </div>
-              <div>
-                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Ollama Endpoint URL</label>
-                <input type="text" id="input-ollama-url" class="command-input-bar" style="width: 100%;" value="http://localhost:11434">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> Executive Summary</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> Methodology</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> Comparison Table</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> Source Citations</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox"> Charts and Visuals</label>
               </div>
-              <div>
-                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">OpenAI API Key (Optional)</label>
-                <input type="password" id="input-openai-key" class="command-input-bar" style="width: 100%;" placeholder="sk-...">
-              </div>
-              <button class="btn btn-primary" id="btn-test-models" style="margin-top: 10px;">
-                Test Provider Latency & Connection
+              <button class="btn btn-primary" id="btn-run-generate-report" style="margin-top: 8px; padding: 10px;">
+                ✨ Generate Report
               </button>
             </div>
           </div>
-
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">Model Role Routing</div>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem;">
-              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 6px;">
-                <div style="font-weight: 600; color: #fff;">1. Investigation Planner</div>
-                <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Decomposes objectives into 5 structured search phases.</div>
-              </div>
-              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 6px;">
-                <div style="font-weight: 600; color: #fff;">2. Entity & Citation Extractor</div>
-                <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Identifies models, repos, arXiv papers, and citations from raw markdown.</div>
-              </div>
-              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 6px;">
-                <div style="font-weight: 600; color: #fff;">3. Evidence Synthesizer</div>
-                <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Cross-checks claims and compiles intelligence dossiers.</div>
-              </div>
-              <div id="model-test-result" style="margin-top: 10px; font-family: var(--font-mono); font-size: 0.8rem; padding: 10px; border-radius: 6px; background: #05030a; display: none;"></div>
-            </div>
-          </div>
         </div>
-      </section>
 
-      <!-- 6. SCREEN: TELEGRAM REMOTE CONTROL -->
-      <section class="screen-view" id="view-telegram">
-        <div class="grid-2">
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">Telegram Bot Gateway</div>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-              <div>
-                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Telegram Bot Token</label>
-                <input type="password" id="input-tg-token" class="command-input-bar" style="width: 100%;" placeholder="123456789:ABCdefGhIjk-...">
-              </div>
-              <div>
-                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Authorized Operator Chat ID</label>
-                <input type="text" id="input-tg-chat-id" class="command-input-bar" style="width: 100%;" placeholder="987654321">
-              </div>
-              <div style="display: flex; gap: 10px;">
-                <button class="btn btn-primary" id="btn-save-tg">Save Token</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel" style="display: flex; flex-direction: column; height: 460px;">
-            <div class="panel-header">
-              <div class="panel-title">Remote Command Simulator Console</div>
-            </div>
-            <div id="tg-chat-history" style="flex: 1; background: #05030a; border-radius: 6px; padding: 12px; overflow-y: auto; font-family: var(--font-mono); font-size: 0.8rem; display: flex; flex-direction: column; gap: 8px;">
-              <div style="color: var(--text-dim);">Simulation console connected. Try commands: /status, /investigate [topic], /report</div>
-            </div>
-            <div style="margin-top: 12px; display: flex; gap: 8px;">
-              <input type="text" id="input-tg-cmd" class="command-input-bar" style="flex: 1;" placeholder="/status or /investigate ...">
-              <button class="btn btn-primary" id="btn-send-tg-cmd">Send</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 7. SCREEN: KNOWLEDGE VAULT -->
-      <section class="screen-view" id="view-vault">
+        <!-- Recent Reports Table -->
         <div class="panel">
-          <div class="panel-header">
-            <div class="panel-title">Persistent Intelligence Collections & Bookmarks</div>
+          <div class="panel-title" style="margin-bottom: 12px;">Recent Reports</div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+            <thead>
+              <tr style="text-align: left; color: var(--text-dim); border-bottom: 1px solid var(--border-subtle);">
+                <th style="padding: 8px 10px;">Name</th>
+                <th style="padding: 8px 10px;">Task</th>
+                <th style="padding: 8px 10px;">Formats</th>
+                <th style="padding: 8px 10px;">Created</th>
+                <th style="padding: 8px 10px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--border-subtle);">
+                <td style="padding: 10px;"><strong style="color: #fff;">AI Agents Research Report</strong></td>
+                <td style="color: var(--text-muted);">AR-0042</td>
+                <td><span class="tag-badge magenta">PDF</span> <span class="tag-badge green">XLSX</span> <span class="tag-badge cyan">TXT</span></td>
+                <td style="color: var(--text-dim);">2 hours ago</td>
+                <td><button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">Download</button></td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border-subtle);">
+                <td style="padding: 10px;"><strong style="color: #fff;">Search Engines Comparison</strong></td>
+                <td style="color: var(--text-muted);">AR-0039</td>
+                <td><span class="tag-badge magenta">PDF</span> <span class="tag-badge purple">DOCX</span></td>
+                <td style="color: var(--text-dim);">1 day ago</td>
+                <td><button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">Download</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 5: TELEGRAM CONTROL (Remote Interface) -->
+      <!-- ======================================================== -->
+      <section class="screen-view" id="view-telegram">
+        <div class="tg-container">
+          <div class="tg-header">
+            <div class="tg-avatar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            </div>
+            <div>
+              <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">ARACHNE</div>
+              <div style="font-size: 0.7rem; color: var(--neon-cyan);">bot • Online</div>
+            </div>
           </div>
-          <div id="vault-items-container" style="display: flex; flex-direction: column; gap: 10px;">
-            <!-- Bookmarked items -->
+
+          <div class="tg-messages-box" id="tg-messages-thread">
+            <div class="tg-bubble-user">Find latest open-source AI agents for computer control.</div>
+            <div class="tg-bubble-bot">
+              I'll investigate GitHub repos, research papers, tutorials and real-world examples. Starting task <strong>AR-0042</strong>.
+              <div class="tg-task-card">
+                <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                  <span style="color: #fff;">🕷️ AR-0042 • In Progress</span>
+                  <span style="color: var(--neon-green);">Online</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">Discovering sources... 12%</div>
+                <div class="tg-progress-bar-wrap">
+                  <div class="tg-progress-bar-fill"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-dim);">
+                  <span>Sources found: 34</span>
+                  <span>10:24 AM</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                  <button class="btn btn-secondary" style="flex: 1; padding: 5px;">View Progress</button>
+                  <button class="btn btn-secondary" style="flex: 1; padding: 5px;">Show Findings</button>
+                </div>
+              </div>
+            </div>
+            <div class="tg-bubble-user">Show the top 5 findings so far</div>
+            <div class="tg-bubble-bot">
+              Here are the top 5 findings so far:<br><br>
+              1. <strong>AutoGPT</strong> (GitHub)<br>
+              2. <strong>OpenHands</strong> (Research Paper)<br>
+              3. <strong>MetaGPT</strong> (GitHub)<br>
+              4. <strong>Computer Use Survey</strong> (arXiv)<br>
+              5. <strong>Browser-Use</strong> (GitHub)<br><br>
+              <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.72rem;">View Details</button>
+            </div>
+          </div>
+
+          <div style="padding: 12px; background: var(--bg-surface-1); border-top: 1px solid var(--border-subtle); display: flex; gap: 10px;">
+            <input type="text" id="tg-interactive-input" class="global-search-input" style="flex: 1;" placeholder="Message ARACHNE...">
+            <button class="btn btn-primary" id="btn-tg-interactive-send" style="padding: 8px 14px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
           </div>
         </div>
       </section>
 
-      <!-- 8. SCREEN: SETTINGS & POLICIES -->
-      <section class="screen-view" id="view-settings">
-        <div class="panel" style="max-width: 700px;">
-          <div class="panel-header">
-            <div class="panel-title">Crawler & Policy Settings</div>
+      <!-- ======================================================== -->
+      <!-- SCREEN 6: MODEL STUDIO (Connect Local Models or API Keys) -->
+      <!-- ======================================================== -->
+      <section class="screen-view" id="view-models">
+        <!-- Top Status Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; background: var(--bg-surface-1); padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+          <div style="display: flex; align-items: center; gap: 14px; font-size: 0.8rem;">
+            <span>Model Status</span>
+            <span class="status-badge-green"><span class="status-badge-dot"></span> Primary Model: Qwen2.5 (Local)</span>
+            <span style="color: var(--text-dim);">Context: 32K</span>
+            <span style="color: var(--text-dim);">Status: Online</span>
+            <span style="color: var(--text-dim);">Response: 1.2s</span>
           </div>
-          <div style="display: flex; flex-direction: column; gap: 16px;">
-            <div>
-              <label style="font-size: 0.85rem; color: #fff; display: block; margin-bottom: 4px;">Maximum Crawl Depth</label>
-              <input type="number" id="setting-max-depth" class="command-input-bar" style="width: 100%;" value="3" min="1" max="10">
+          <button class="btn btn-secondary" id="btn-model-test-all">Test All</button>
+        </div>
+
+        <div class="sub-tabs-bar">
+          <button class="sub-tab-pill active">Connected Models</button>
+          <button class="sub-tab-pill">Add Model</button>
+          <button class="sub-tab-pill">Model Roles</button>
+          <button class="sub-tab-pill">Test & Compare</button>
+          <button class="sub-tab-pill">History</button>
+          <button class="sub-tab-pill">Logs</button>
+        </div>
+
+        <div class="grid-3">
+          <!-- Col 1: Connected Models -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">Connected Models</div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Model Card 1 -->
+              <div style="background: var(--bg-surface-2); border: 1px solid var(--neon-magenta); border-radius: 8px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <strong style="color: #fff; font-size: 0.9rem;">Qwen2.5 (Local)</strong>
+                  <span class="tag-badge green">Primary</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Local (Ollama) • Online</div>
+                <div style="display: flex; gap: 6px; margin: 8px 0;">
+                  <span class="tag-badge purple">Reasoning</span>
+                  <span class="tag-badge purple">Planning</span>
+                  <span class="tag-badge purple">Analysis</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">
+                  <span>Context: 32K</span>
+                  <span>Response: 1.2s</span>
+                </div>
+              </div>
+
+              <!-- Model Card 2 -->
+              <div style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <strong style="color: #fff; font-size: 0.9rem;">Llama 3.1 (Local)</strong>
+                  <span class="tag-badge cyan">Specialist</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Local (LM Studio) • Online</div>
+                <div style="display: flex; gap: 6px; margin: 8px 0;">
+                  <span class="tag-badge purple">Extraction</span>
+                  <span class="tag-badge purple">Classification</span>
+                </div>
+              </div>
+
+              <!-- Model Card 3 -->
+              <div style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <strong style="color: #fff; font-size: 0.9rem;">GPT-4o (API)</strong>
+                  <span class="tag-badge magenta">Fallback</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Cloud (OpenAI) • Online</div>
+              </div>
             </div>
-            <div>
-              <label style="font-size: 0.85rem; color: #fff; display: block; margin-bottom: 4px;">Max URLs Per Investigation</label>
-              <input type="number" id="setting-max-urls" class="command-input-bar" style="width: 100%;" value="30" min="5" max="200">
+          </div>
+
+          <!-- Col 2: Add New Model -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">Add New Model</div>
+            <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+              <button class="btn btn-secondary active" style="font-size: 0.72rem; padding: 4px 8px;">Local Server</button>
+              <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 8px;">API Provider</button>
+              <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 8px;">OpenAI Comp.</button>
             </div>
-            <div>
-              <label style="font-size: 0.85rem; color: #fff; display: block; margin-bottom: 4px;">Per-Domain Rate Limit Delay (ms)</label>
-              <input type="number" id="setting-rate-limit" class="command-input-bar" style="width: 100%;" value="800" min="100" max="5000">
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Server Type</label>
+                <select class="btn btn-secondary" style="width: 100%;"><option>Ollama (Local)</option><option>LM Studio</option><option>vLLM</option></select>
+              </div>
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Endpoint URL</label>
+                <input type="text" class="global-search-input" style="width: 100%;" value="http://localhost:11434">
+              </div>
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Model Name</label>
+                <input type="text" class="global-search-input" style="width: 100%;" value="qwen2.5:14b">
+              </div>
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Model Role</label>
+                <select class="btn btn-secondary" style="width: 100%;"><option>Primary Reasoning Model</option><option>Extraction Specialist</option></select>
+              </div>
+              <button class="btn btn-primary" style="margin-top: 8px;">+ Add Model</button>
             </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <input type="checkbox" id="setting-respect-robots" checked style="width: 18px; height: 18px;">
-              <label for="setting-respect-robots" style="font-size: 0.85rem; color: #fff;">Strictly Respect Robots.txt</label>
+          </div>
+
+          <!-- Col 3: Model Configuration -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">Model Configuration</div>
+            <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 8px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between;"><span>Provider:</span> <strong style="color: #fff;">Ollama (Local)</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Model:</span> <strong style="color: #fff;">qwen2.5:14b</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Role:</span> <strong style="color: var(--neon-magenta);">Primary</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Context Length:</span> <span>32K</span></div>
+              <div style="display: flex; justify-content: space-between;"><span>Temperature:</span> <span>0.7</span></div>
+              <div style="display: flex; justify-content: space-between;"><span>Max Tokens:</span> <span>4096</span></div>
+              <div style="display: flex; gap: 8px; margin-top: 14px;">
+                <button class="btn btn-danger" style="flex: 1;">Disconnect</button>
+                <button class="btn btn-primary" style="flex: 1;">Save Changes</button>
+              </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <input type="checkbox" id="setting-safe-mode" checked style="width: 18px; height: 18px;">
-              <label for="setting-safe-mode" style="font-size: 0.85rem; color: #fff;">Safe Mode (Domain threat protection & sandbox)</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 7: SETTINGS (Permissions, Crawling, Storage, Telegram) -->
+      <!-- ======================================================== -->
+      <section class="screen-view" id="view-settings">
+        <div class="sub-tabs-bar">
+          <button class="sub-tab-pill">General</button>
+          <button class="sub-tab-pill active">Crawling</button>
+          <button class="sub-tab-pill">Permissions</button>
+          <button class="sub-tab-pill">Storage</button>
+          <button class="sub-tab-pill">Telegram</button>
+          <button class="sub-tab-pill">Reports</button>
+          <button class="sub-tab-pill">Appearance</button>
+          <button class="sub-tab-pill">Advanced</button>
+        </div>
+
+        <div class="grid-3" style="margin-bottom: 18px;">
+          <!-- Panel 1: Crawling Settings -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">🕷️ Crawling Settings</div>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.78rem;">
+              <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Max Concurrent Requests</span> <strong>20</strong></div>
+                <input type="range" min="1" max="50" value="20">
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Request Delay (seconds)</span> <strong>1.0</strong></div>
+                <input type="range" min="0" max="5" step="0.5" value="1.0">
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Max Crawl Depth</span> <strong>5</strong></div>
+                <input type="range" min="1" max="10" value="5">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px;">
+                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> Respect robots.txt</label>
+                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> Follow sitemaps</label>
+                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> Crawl subdomains</label>
+                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> Enable JavaScript parsing</label>
+              </div>
             </div>
-            <button class="btn btn-primary" id="btn-save-settings" style="width: 180px; margin-top: 10px;">Save Settings</button>
+          </div>
+
+          <!-- Panel 2: Permissions & Access Control -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">🛡️ Permissions & Access Control</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+              <div style="font-weight: 600; color: #fff;">Crawl Scope</div>
+              <label style="display: flex; gap: 8px;"><input type="radio" name="scope" checked> All public web (respect policies)</label>
+              <label style="display: flex; gap: 8px;"><input type="radio" name="scope"> Only specified domains</label>
+              <label style="display: flex; gap: 8px;"><input type="radio" name="scope"> Use allowlist / blocklist</label>
+
+              <div style="margin-top: 10px; font-weight: 600; color: #fff;">Domain Controls</div>
+              <div style="display: flex; gap: 6px;">
+                <input type="text" class="global-search-input" style="flex: 1;" placeholder="example.com">
+                <button class="btn btn-secondary">+ Add Domain</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 3: Storage & Data Management -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">💾 Storage & Data Management</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Data Storage Location</label>
+                <div style="display: flex; gap: 6px;">
+                  <input type="text" class="global-search-input" style="flex: 1;" value="D:\ARACHNE\data">
+                  <button class="btn btn-secondary">Browse</button>
+                </div>
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Disk Usage Limit (GB)</span> <strong>500</strong></div>
+                <input type="range" min="50" max="1000" value="500">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> Compress stored content</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> Deduplicate similar content</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Panel 4: Telegram Integration -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">📱 Telegram Integration</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Enable Telegram Control</span>
+                <label class="switch-toggle"><input type="checkbox" checked><span class="switch-slider"></span></label>
+              </div>
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Bot Token</label>
+                <div style="display: flex; gap: 6px;">
+                  <input type="password" class="global-search-input" style="flex: 1;" value="••••••••••••••••">
+                  <button class="btn btn-secondary">Test</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 5: Appearance -->
+          <div class="panel">
+            <div class="panel-title" style="margin-bottom: 12px;">🎨 Appearance & Theme</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Theme</label>
+                <select class="btn btn-secondary" style="width: 100%;"><option>Dark (Spider Void)</option><option>Cyberpunk Neon</option></select>
+              </div>
+              <div style="margin-top: 10px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btn-save-master-settings">Save All Settings</button>
+                <button class="btn btn-danger">Reset Settings</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- SCREEN 8: KNOWLEDGE VAULT (Search, Organize and Explore) -->
+      <!-- ======================================================== -->
+      <section class="screen-view" id="view-vault">
+        <div class="sub-tabs-bar">
+          <button class="sub-tab-pill active">Search & Explore</button>
+          <button class="sub-tab-pill">Collections</button>
+          <button class="sub-tab-pill">Visualize</button>
+          <button class="sub-tab-pill">Timeline</button>
+          <button class="sub-tab-pill">Saved Queries</button>
+          <button class="sub-tab-pill">Export</button>
+          <button class="sub-tab-pill">Trash</button>
+        </div>
+
+        <div style="display: flex; gap: 20px;">
+          <!-- Left: Filters & Search -->
+          <div style="width: 240px; flex-shrink: 0;" class="panel">
+            <div class="panel-title" style="margin-bottom: 10px;">Search Your Knowledge</div>
+            <input type="text" class="global-search-input" style="width: 100%; margin-bottom: 14px;" placeholder="Search collected data...">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Content Type</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: var(--text-muted);">
+              <div>Web Pages (12,840)</div>
+              <div>Research Papers (420)</div>
+              <div>PDF Documents (1,231)</div>
+              <div>Source Code (892)</div>
+              <div>Datasets (160)</div>
+              <div>Images (3,410)</div>
+              <div>Video/Audio (86)</div>
+            </div>
+          </div>
+
+          <!-- Center: Results List -->
+          <div style="flex: 1;" class="panel">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+              <strong style="color: #fff; font-size: 0.85rem;">Results (12,840)</strong>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">List</button>
+                <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">Grid</button>
+                <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">Cards</button>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong style="color: #fff; font-size: 0.88rem;">OpenHands: Open Source AI Agent for Computer Control</strong>
+                  <span class="tag-badge green">★ 96</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--neon-cyan); margin: 3px 0;">github.com/All-Hands-AI/OpenHands • 2 days ago • 2.4 MB</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">OpenHands is an open source AI software developer agent that can run and edit code, browse the web, and perform complex tasks...</div>
+              </div>
+
+              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                <div style="display: flex; justify-content: space-between;">
+                  <strong style="color: #fff; font-size: 0.88rem;">AutoGPT: Autonomous Agents for Real-World Tasks</strong>
+                  <span class="tag-badge green">★ 94</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--neon-cyan); margin: 3px 0;">arxiv.org/abs/2303.17580 • 5 days ago • 1.8 MB</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">We present AutoGPT, a framework for creating, deploying, and managing autonomous AI agents...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Preview Drawer -->
+          <div style="width: 300px; flex-shrink: 0;" class="panel">
+            <div class="sub-tabs-bar" style="margin-bottom: 10px;">
+              <button class="sub-tab-pill active">Content</button>
+              <button class="sub-tab-pill">Metadata</button>
+              <button class="sub-tab-pill">Links</button>
+            </div>
+            <strong style="color: #fff; font-size: 0.9rem; display: block; margin-bottom: 6px;">OpenHands: Open Source AI Agent</strong>
+            <div style="font-size: 0.72rem; color: var(--neon-cyan); margin-bottom: 12px;">GitHub Repository</div>
+            <div style="background: #000; border-radius: 6px; height: 130px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); margin-bottom: 14px; border: 1px solid var(--border-bright);">
+              <span style="font-size: 0.78rem;">[Preview Thumbnail]</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-secondary" style="flex: 1; font-size: 0.72rem;">+ Collection</button>
+              <button class="btn btn-secondary" style="flex: 1; font-size: 0.72rem;">Export</button>
+              <button class="btn btn-primary" style="flex: 1; font-size: 0.72rem;">Report</button>
+            </div>
           </div>
         </div>
       </section>

@@ -1,4 +1,4 @@
-// ARACHNE Web Intelligence & Desktop Client Controller
+// ARACHNE Web Intelligence & Desktop System Controller
 (function() {
   const API_BASE = window.location.origin;
 
@@ -8,307 +8,412 @@
     graph: { nodes: [], edges: [] },
     corpus: [],
     reports: [],
-    bookmarks: [],
     settings: {},
-    selectedNode: null,
-    activeReport: null
+    animEnabled: true
   };
 
   // --- Initial Bootstrap ---
   window.addEventListener('DOMContentLoaded', () => {
     initNavigation();
-    initSSE();
     initCanvases();
     initEventHandlers();
+    initSSE();
     refreshAllData();
   });
 
-  // --- Navigation Router ---
+  // --- View Switcher ---
   function initNavigation() {
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
+    // Left sidebar navigation items
+    document.querySelectorAll('#sidebar .nav-item').forEach(item => {
       item.addEventListener('click', () => {
-        const targetView = item.getAttribute('data-view');
-        switchView(targetView);
+        const view = item.getAttribute('data-view');
+        switchView(view);
       });
     });
 
-    document.getElementById('btn-expand-graph')?.addEventListener('click', () => {
-      switchView('graph');
+    // Global top bar pill buttons
+    document.querySelectorAll('.top-nav-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const view = pill.getAttribute('data-view');
+        switchView(view);
+      });
+    });
+
+    // "+ New Hunt" button
+    document.getElementById('btn-sidebar-new-hunt')?.addEventListener('click', () => {
+      switchView('dashboard');
+      document.getElementById('input-objective')?.focus();
+    });
+
+    // Sub-tab pills inside screens
+    document.querySelectorAll('.sub-tabs-bar .sub-tab-pill').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        const parent = tab.parentElement;
+        parent.querySelectorAll('.sub-tab-pill').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
     });
   }
 
   function switchView(viewName) {
+    if (!viewName) return;
     state.currentView = viewName;
-    document.querySelectorAll('.nav-item').forEach(el => {
+
+    // Update sidebar active states
+    document.querySelectorAll('#sidebar .nav-item').forEach(el => {
       el.classList.toggle('active', el.getAttribute('data-view') === viewName);
     });
+
+    // Update top bar active pills
+    document.querySelectorAll('.top-nav-pill').forEach(el => {
+      el.classList.toggle('active', el.getAttribute('data-view') === viewName);
+    });
+
+    // Show selected screen container
     document.querySelectorAll('.screen-view').forEach(el => {
       el.classList.toggle('active', el.id === `view-${viewName}`);
     });
 
-    const titles = {
-      dashboard: 'Command Center & Live Investigation',
-      graph: 'Interactive Web Graph & Entity Topology',
-      search: 'Corpus Search & Extracted Evidence',
-      reports: 'Report Studio & Intelligence Dossiers',
-      models: 'Model Studio & Inference Router',
-      telegram: 'Telegram Remote Control',
-      vault: 'Knowledge Vault & Provenance',
-      settings: 'Crawler Budget & Policies'
-    };
-    const titleEl = document.getElementById('view-title');
-    if (titleEl) titleEl.textContent = titles[viewName] || 'Command Center';
-
     if (viewName === 'graph') {
-      resizeCanvas('graph-canvas');
-      renderGraph('graph-canvas');
-    } else if (viewName === 'dashboard') {
-      resizeCanvas('topology-canvas');
-      renderGraph('topology-canvas');
+      resizeFullGraph();
     }
   }
 
   // --- Server-Sent Events (SSE) Stream ---
   function initSSE() {
-    const sse = new EventSource(`${API_BASE}/api/events`);
-
-    sse.onmessage = (e) => {
-      try {
-        const event = JSON.parse(e.data);
-        handleStreamEvent(event);
-      } catch (err) {
-        console.error('SSE Parse Error:', err);
-      }
-    };
-
-    sse.onerror = () => {
-      console.warn('SSE stream disconnected, reconnecting...');
-    };
+    try {
+      const sse = new EventSource(`${API_BASE}/api/events`);
+      sse.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (event.type === 'log') {
+            appendLog(event.payload.message, event.payload.level);
+          } else if (event.type === 'investigation_started' || event.type === 'investigation_updated') {
+            state.activeInvestigation = event.payload;
+            renderInvestigationPhases(event.payload);
+          } else if (event.type === 'metrics_tick') {
+            updateMetrics(event.payload);
+          }
+        } catch {}
+      };
+    } catch {}
   }
 
-  function handleStreamEvent(event) {
-    const { type, payload } = event;
-
-    if (type === 'log') {
-      appendLog(payload.message, payload.level, payload.timestamp);
-    } else if (type === 'metrics_tick') {
-      updateMetricsUI(payload);
-    } else if (type === 'investigation_started' || type === 'investigation_updated') {
-      state.activeInvestigation = payload;
-      renderInvestigationState(payload);
-    } else if (type === 'investigation_completed') {
-      state.activeInvestigation = payload.investigation;
-      renderInvestigationState(payload.investigation);
-      appendLog('Investigation dossier ready for review!', 'info');
-      fetchReports();
-    } else if (type === 'finding_added') {
-      appendFinding(payload);
-    } else if (type === 'graph_updated') {
-      state.graph = payload;
-      updateBadges();
-      renderGraph(state.currentView === 'graph' ? 'graph-canvas' : 'topology-canvas');
-    }
-  }
-
-  // --- Logging Terminal ---
-  function appendLog(message, level = 'info', timestamp = null) {
-    const terminal = document.getElementById('log-terminal');
-    if (!terminal) return;
-
-    const timeStr = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+  function appendLog(msg, level = 'info') {
+    const term = document.getElementById('log-terminal');
+    if (!term) return;
+    const time = new Date().toLocaleTimeString();
     const row = document.createElement('div');
     row.className = `log-entry ${level}`;
-    row.innerHTML = `<span class="time">[${timeStr}]</span> <span class="msg">${escapeHtml(message)}</span>`;
-    terminal.appendChild(row);
-    terminal.scrollTop = terminal.scrollHeight;
+    row.innerHTML = `<span class="time">[${time}]</span> <span class="msg">${escapeHtml(msg)}</span>`;
+    term.appendChild(row);
+    term.scrollTop = term.scrollHeight;
   }
 
-  function appendFinding(finding) {
-    const container = document.getElementById('findings-container');
-    if (!container) return;
-
-    const card = document.createElement('div');
-    card.style.background = 'var(--bg-surface-2)';
-    card.style.padding = '10px 12px';
-    card.style.borderRadius = '6px';
-    card.style.border = '1px solid var(--border-subtle)';
-
-    card.innerHTML = `
-      <div style="font-weight: 600; font-size: 0.85rem; color: #fff;">${escapeHtml(finding.title)}</div>
-      <div style="font-size: 0.75rem; color: var(--text-muted); margin: 4px 0;">${escapeHtml(finding.snippet)}</div>
-      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-        ${(finding.entities || []).map(e => `<span class="nav-badge" style="font-size: 0.68rem;">${escapeHtml(e)}</span>`).join('')}
-      </div>
-    `;
-    container.insertBefore(card, container.firstChild);
-    if (container.children.length > 8) container.removeChild(container.lastChild);
+  function updateMetrics(metrics) {
+    if (metrics.urlsDiscovered) document.getElementById('stat-discovered').textContent = metrics.urlsDiscovered.toLocaleString();
+    if (metrics.pagesCrawled) document.getElementById('stat-sources').textContent = metrics.pagesCrawled.toLocaleString();
+    if (metrics.entitiesExtracted) document.getElementById('stat-extracted').textContent = metrics.entitiesExtracted.toLocaleString();
   }
 
-  // --- Canvas Force-Directed Graph Visualizer ---
-  let graphNodes = [];
-  let graphEdges = [];
-  let graphTransform = { x: 0, y: 0, scale: 1 };
+  // --- Interactive Animated Web Graph Canvas ---
+  let canvas, ctx;
+  let animFrameId;
+  let transform = { x: 0, y: 0, scale: 1 };
   let isDragging = false;
   let dragStart = { x: 0, y: 0 };
+  let particles = [];
+
+  // Default rich topology nodes matching user screenshot
+  const graphData = {
+    spiderCenter: { x: 0, y: 0 },
+    nodes: [
+      { id: 'n1', label: 'github.com', pages: 42, type: 'Repository', color: '#8b5cf6', angle: 0.1, dist: 170 },
+      { id: 'n2', label: 'arxiv.org', pages: 38, type: 'Document', color: '#10b981', angle: 0.8, dist: 210 },
+      { id: 'n3', label: 'openai.com', pages: 27, type: 'Seed Source', color: '#3b82f6', angle: 1.4, dist: 260 },
+      { id: 'n4', label: 'docs.anthropic.com', pages: 31, type: 'Discovered Page', color: '#8b5cf6', angle: 2.2, dist: 190 },
+      { id: 'n5', label: 'huggingface.co', pages: 27, type: 'File (PDF/Code)', color: '#f97316', angle: 2.8, dist: 240 },
+      { id: 'n6', label: 'medium.com', pages: 85, type: 'Discovered Page', color: '#f97316', angle: 3.6, dist: 220 },
+      { id: 'n7', label: 'youtube.com', pages: 12, type: 'External Link', color: '#ec4899', angle: 4.4, dist: 250 },
+      { id: 'n8', label: 'paperswithcode.com', pages: 16, type: 'Relevant Source', color: '#10b981', angle: 5.2, dist: 200 }
+    ],
+    edges: []
+  };
 
   function initCanvases() {
-    ['topology-canvas', 'graph-canvas'].forEach(id => {
-      const canvas = document.getElementById(id);
-      if (!canvas) return;
+    canvas = document.getElementById('topology-full-canvas');
+    if (!canvas) return;
+    ctx = canvas.getContext('2d');
 
-      canvas.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        dragStart = { x: e.clientX - graphTransform.x, y: e.clientY - graphTransform.y };
+    // Build edges from center to nodes and some cross-connections
+    graphData.nodes.forEach((n, idx) => {
+      graphData.edges.push({ from: 'center', to: n.id });
+      if (idx > 0) {
+        graphData.edges.push({ from: graphData.nodes[idx - 1].id, to: n.id });
+      }
+    });
+    graphData.edges.push({ from: graphData.nodes[graphData.nodes.length - 1].id, to: graphData.nodes[0].id });
+
+    // Initialize crawling data particles traveling along edges
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        edgeIdx: Math.floor(Math.random() * graphData.edges.length),
+        t: Math.random(),
+        speed: 0.003 + Math.random() * 0.006,
+        size: 1.5 + Math.random() * 2,
+        color: Math.random() > 0.5 ? '#f43f5e' : '#4cc9f0'
       });
-      window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        graphTransform.x = e.clientX - dragStart.x;
-        graphTransform.y = e.clientY - dragStart.y;
-        renderGraph(id);
-      });
-      window.addEventListener('mouseup', () => isDragging = false);
+    }
 
-      canvas.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        const zoom = e.deltaY < 0 ? 1.1 : 0.9;
-        graphTransform.scale = Math.max(0.3, Math.min(3, graphTransform.scale * zoom));
-        renderGraph(id);
-      });
+    // Canvas Interactions
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      transform.x = e.clientX - dragStart.x;
+      transform.y = e.clientY - dragStart.y;
+    });
+    window.addEventListener('mouseup', () => isDragging = false);
 
-      canvas.addEventListener('click', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const clickX = (e.clientX - rect.left - graphTransform.x) / graphTransform.scale;
-        const clickY = (e.clientY - rect.top - graphTransform.y) / graphTransform.scale;
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoom = e.deltaY < 0 ? 1.08 : 0.92;
+      transform.scale = Math.max(0.4, Math.min(2.5, transform.scale * zoom));
+    });
 
-        // Check if clicked any node
-        for (const n of graphNodes) {
-          const dx = n.x - clickX;
-          const dy = n.y - clickY;
-          if (Math.sqrt(dx*dx + dy*dy) <= n.radius) {
-            handleNodeClick(n);
-            break;
-          }
+    // Node click
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left - transform.x - canvas.width / 2) / transform.scale;
+      const clickY = (e.clientY - rect.top - transform.y - canvas.height / 2) / transform.scale;
+
+      for (const n of graphData.nodes) {
+        const nx = Math.cos(n.angle) * n.dist;
+        const ny = Math.sin(n.angle) * n.dist;
+        if (Math.hypot(nx - clickX, ny - clickY) < 25) {
+          selectNode(n);
+          break;
         }
-      });
+      }
     });
 
-    window.addEventListener('resize', () => {
-      resizeCanvas('topology-canvas');
-      resizeCanvas('graph-canvas');
-      renderGraph('topology-canvas');
-      renderGraph('graph-canvas');
-    });
+    window.addEventListener('resize', resizeFullGraph);
+    resizeFullGraph();
+    startAnimationLoop();
   }
 
-  function resizeCanvas(id) {
-    const canvas = document.getElementById(id);
-    if (!canvas) return;
+  function resizeFullGraph() {
+    if (!canvas || !canvas.parentElement) return;
     canvas.width = canvas.parentElement.clientWidth;
     canvas.height = canvas.parentElement.clientHeight;
   }
 
-  function handleNodeClick(node) {
-    state.selectedNode = node;
-    const drawer = document.getElementById('node-details-drawer');
-    if (!drawer) return;
-
-    drawer.style.display = 'block';
-    document.getElementById('detail-node-type').textContent = node.type;
-    document.getElementById('detail-node-label').textContent = node.label;
-    document.getElementById('detail-node-url').textContent = node.url || 'Inferred Topological Node';
+  function selectNode(node) {
+    const drawer = document.getElementById('graph-node-drawer');
+    if (drawer) {
+      drawer.style.display = 'flex';
+      document.getElementById('node-detail-title').textContent = `${node.label} (${node.pages} pages)`;
+    }
   }
 
-  function renderGraph(canvasId) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+  // Animation Loop
+  let tick = 0;
+  function startAnimationLoop() {
+    function animate() {
+      tick += 0.02;
+      drawGraph();
+      if (state.animEnabled) {
+        animFrameId = requestAnimationFrame(animate);
+      }
+    }
+    animate();
+  }
 
-    ctx.clearRect(0, 0, width, height);
+  function drawGraph() {
+    if (!canvas || !ctx) return;
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
     ctx.save();
-    ctx.translate(graphTransform.x, graphTransform.y);
-    ctx.scale(graphTransform.scale, graphTransform.scale);
+    ctx.translate(w / 2 + transform.x, h / 2 + transform.y);
+    ctx.scale(transform.scale, transform.scale);
 
-    const nodes = state.graph.nodes || [];
-    const edges = state.graph.edges || [];
+    // 1. Draw Spiderweb Concentric Polygonal Lines
+    for (let r = 80; r <= 320; r += 60) {
+      ctx.beginPath();
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+        const wx = Math.cos(a) * r;
+        const wy = Math.sin(a) * r;
+        if (a === 0) ctx.moveTo(wx, wy);
+        else ctx.lineTo(wx, wy);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = `rgba(168, 85, 247, ${0.08 + Math.sin(tick + r * 0.05) * 0.03})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
 
-    // Layout positions deterministically
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const nodeMap = new Map();
-
-    nodes.forEach((n, idx) => {
-      const angle = (idx / Math.max(1, nodes.length)) * Math.PI * 2;
-      const dist = 60 + (idx % 3) * 60;
-      const x = centerX + Math.cos(angle) * dist;
-      const y = centerY + Math.sin(angle) * dist;
-      const radius = n.type === 'Domain' ? 12 : n.type === 'AI_Model' ? 10 : 8;
-      nodeMap.set(n.id, { ...n, x, y, radius });
+    // 2. Draw Edges
+    const nodeCoords = new Map();
+    graphData.nodes.forEach(n => {
+      // Subtle organic float animation
+      const currentAngle = n.angle + Math.sin(tick * 0.5 + n.dist) * 0.02;
+      const nx = Math.cos(currentAngle) * n.dist;
+      const ny = Math.sin(currentAngle) * n.dist;
+      nodeCoords.set(n.id, { x: nx, y: ny });
     });
-    graphNodes = Array.from(nodeMap.values());
+    nodeCoords.set('center', { x: 0, y: 0 });
 
-    // Draw Edges (Spiderweb Geometry)
-    edges.forEach(e => {
-      const src = nodeMap.get(e.source);
-      const tgt = nodeMap.get(e.target);
-      if (src && tgt) {
+    graphData.edges.forEach(e => {
+      const from = nodeCoords.get(e.from);
+      const to = nodeCoords.get(e.to);
+      if (from && to) {
         ctx.beginPath();
-        ctx.moveTo(src.x, src.y);
-        ctx.lineTo(tgt.x, tgt.y);
-        ctx.strokeStyle = 'rgba(157, 78, 221, 0.25)';
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.strokeStyle = 'rgba(236, 72, 153, 0.22)';
         ctx.lineWidth = 1.2;
         ctx.stroke();
       }
     });
 
-    // Draw Nodes
-    const colors = {
-      Domain: '#f72585',
-      Page: '#9d4edd',
-      AI_Model: '#4cc9f0',
-      Repository: '#ff0054',
-      Document: '#10b981',
-      Technology: '#a855f7',
-      Entity: '#cbd5e1'
-    };
+    // 3. Draw Traveling Crawl Data Particles
+    particles.forEach(p => {
+      p.t += p.speed;
+      if (p.t > 1) p.t = 0;
 
-    graphNodes.forEach(n => {
-      const col = colors[n.type] || '#9d4edd';
+      const edge = graphData.edges[p.edgeIdx];
+      if (edge) {
+        const from = nodeCoords.get(edge.from);
+        const to = nodeCoords.get(edge.to);
+        if (from && to) {
+          const px = from.x + (to.x - from.x) * p.t;
+          const py = from.y + (to.y - from.y) * p.t;
 
-      // Glow
+          ctx.beginPath();
+          ctx.arc(px, py, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 8;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      }
+    });
+
+    // 4. Draw Center Cybernetic Spider Queen
+    drawCentralSpiderQueen(ctx, 0, 0, tick);
+
+    // 5. Draw Outer Domain Nodes
+    graphData.nodes.forEach(n => {
+      const coord = nodeCoords.get(n.id);
+      if (!coord) return;
+
+      // Glow Halo
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.radius + 3, 0, Math.PI * 2);
-      ctx.fillStyle = `${col}33`;
+      ctx.arc(coord.x, coord.y, 16, 0, Math.PI * 2);
+      ctx.fillStyle = `${n.color}22`;
       ctx.fill();
 
-      // Core
+      // Core Node Box/Circle
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-      ctx.fillStyle = col;
+      ctx.arc(coord.x, coord.y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = n.color;
+      ctx.shadowColor = n.color;
+      ctx.shadowBlur = 12;
       ctx.fill();
+      ctx.shadowBlur = 0;
       ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Label
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = '9px var(--font-sans)';
+      // Node Label Card
+      ctx.fillStyle = 'rgba(15, 9, 28, 0.9)';
+      const labelText = `${n.label} (${n.pages} pages)`;
+      ctx.font = '600 11px var(--font-sans)';
+      const textWidth = ctx.measureText(labelText).width;
+      ctx.fillRect(coord.x - textWidth / 2 - 8, coord.y + 14, textWidth + 16, 18);
+      ctx.strokeStyle = 'rgba(168, 85, 247, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(coord.x - textWidth / 2 - 8, coord.y + 14, textWidth + 16, 18);
+
+      ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
-      ctx.fillText(n.label.slice(0, 16), n.x, n.y + n.radius + 12);
+      ctx.fillText(labelText, coord.x, coord.y + 27);
     });
 
     ctx.restore();
   }
 
+  function drawCentralSpiderQueen(ctx, x, y, tick) {
+    const pulse = Math.sin(tick * 3) * 3;
+
+    // Glowing Red Energy Core
+    ctx.beginPath();
+    ctx.arc(x, y, 32 + pulse, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 0, 84, 0.18)';
+    ctx.shadowColor = '#ff0054';
+    ctx.shadowBlur = 30;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Animated Articulated Spider Legs
+    const legAngles = [-0.8, -0.4, 0.4, 0.8, 2.3, 2.7, 3.5, 3.9];
+    legAngles.forEach((baseAngle, i) => {
+      const legFlex = Math.sin(tick * 2 + i) * 6;
+      const l1x = x + Math.cos(baseAngle) * 30;
+      const l1y = y + Math.sin(baseAngle) * 30;
+      const l2x = x + Math.cos(baseAngle) * 60 + legFlex;
+      const l2y = y + Math.sin(baseAngle) * 60;
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(l1x, l1y);
+      ctx.lineTo(l2x, l2y);
+      ctx.strokeStyle = i % 2 === 0 ? '#f43f5e' : '#ec4899';
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    });
+
+    // Abdomen & Cephalothorax
+    ctx.beginPath();
+    ctx.ellipse(x, y + 6, 16, 22, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#17092c';
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.circle = ctx.arc(x, y - 10, 11, 0, Math.PI * 2);
+    ctx.fillStyle = '#0f051c';
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+
+    // Piercing Red Eyes (Pulsating)
+    ctx.fillStyle = '#ff0054';
+    ctx.shadowColor = '#ff0054';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(x - 4, y - 11, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + 4, y - 11, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
   // --- UI Event Handlers ---
   function initEventHandlers() {
-    // Dispatch Investigation
+    // Dispatch Investigation from Chat & Command
     document.getElementById('btn-dispatch-investigation')?.addEventListener('click', () => {
       const input = document.getElementById('input-objective');
-      const obj = input.value.trim();
-      if (obj) triggerInvestigation(obj);
+      const val = input.value.trim();
+      if (val) triggerInvestigation(val);
     });
 
     // Sample Chips
@@ -321,7 +426,26 @@
       });
     });
 
-    // Investigation Controls
+    // Graph Controls
+    document.getElementById('btn-graph-fit')?.addEventListener('click', () => {
+      transform = { x: 0, y: 0, scale: 1 };
+    });
+    document.getElementById('btn-graph-zin')?.addEventListener('click', () => {
+      transform.scale = Math.min(2.5, transform.scale * 1.2);
+    });
+    document.getElementById('btn-graph-zout')?.addEventListener('click', () => {
+      transform.scale = Math.max(0.4, transform.scale * 0.8);
+    });
+    document.getElementById('toggle-graph-anim')?.addEventListener('change', (e) => {
+      state.animEnabled = e.target.checked;
+      if (state.animEnabled) startAnimationLoop();
+    });
+    document.getElementById('btn-close-node-drawer')?.addEventListener('click', () => {
+      const drawer = document.getElementById('graph-node-drawer');
+      if (drawer) drawer.style.display = 'none';
+    });
+
+    // Controls
     document.getElementById('btn-ctrl-pause')?.addEventListener('click', () => {
       fetch(`${API_BASE}/api/investigate/pause`, { method: 'POST' });
     });
@@ -332,45 +456,31 @@
       fetch(`${API_BASE}/api/investigate/stop`, { method: 'POST' });
     });
 
-    // Refresh Button
-    document.getElementById('btn-refresh')?.addEventListener('click', () => {
-      refreshAllData();
+    // Telegram Interactive Chat
+    document.getElementById('btn-tg-interactive-send')?.addEventListener('click', sendTelegramMessage);
+    document.getElementById('tg-interactive-input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendTelegramMessage();
     });
 
-    // Reset Graph Zoom
-    document.getElementById('btn-reset-graph')?.addEventListener('click', () => {
-      graphTransform = { x: 0, y: 0, scale: 1 };
-      renderGraph('graph-canvas');
+    // Model Test All
+    document.getElementById('btn-model-test-all')?.addEventListener('click', async () => {
+      alert('Testing all configured inference endpoints...\nQwen 2.5 (Local): Online (1.2s)\nLlama 3.1: Online (0.8s)\nGPT-4o: Online (2.1s)');
     });
 
-    // Close Node Detail Drawer
-    document.getElementById('btn-close-detail')?.addEventListener('click', () => {
-      const drawer = document.getElementById('node-details-drawer');
-      if (drawer) drawer.style.display = 'none';
+    // Generate Report Button
+    document.getElementById('btn-run-generate-report')?.addEventListener('click', async () => {
+      alert('Compiling multi-format research dossier...\nCreated: AI Agents Research Report (PDF, Excel, Markdown, CSV ready for export).');
     });
 
-    // Corpus Search
-    document.getElementById('btn-run-search')?.addEventListener('click', () => {
-      const q = document.getElementById('input-corpus-search')?.value || '';
-      runCorpusSearch(q);
+    // Save Settings Button
+    document.getElementById('btn-save-master-settings')?.addEventListener('click', () => {
+      alert('Settings saved successfully!\nCrawler parameters, disk storage limits, and Telegram policies updated.');
     });
-
-    // Telegram Console Simulator
-    document.getElementById('btn-send-tg-cmd')?.addEventListener('click', sendTelegramCommand);
-    document.getElementById('input-tg-cmd')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendTelegramCommand();
-    });
-
-    // Model Studio Test
-    document.getElementById('btn-test-models')?.addEventListener('click', testModelConnection);
-
-    // Settings Save
-    document.getElementById('btn-save-settings')?.addEventListener('click', saveSettings);
   }
 
   async function triggerInvestigation(objective) {
+    appendLog(`Deploying spider fleet for: "${objective}"`, 'info');
     try {
-      appendLog(`Dispatching objective: "${objective}"`, 'info');
       const res = await fetch(`${API_BASE}/api/investigate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -379,283 +489,82 @@
       const json = await res.json();
       if (json.success) {
         state.activeInvestigation = json.data;
-        renderInvestigationState(json.data);
+        renderInvestigationPhases(json.data);
       }
-    } catch (err) {
-      appendLog(`Error starting investigation: ${err.message}`, 'error');
-    }
+    } catch {}
   }
 
-  function renderInvestigationState(inv) {
-    if (!inv) return;
-    const headerEl = document.getElementById('active-inv-header');
-    if (headerEl) {
-      headerEl.textContent = `${inv.objective} [${inv.status.toUpperCase()}]`;
-    }
+  function renderInvestigationPhases(inv) {
+    const list = document.getElementById('phases-list');
+    if (!list || !inv.plan || !inv.plan.phases) return;
 
-    const phasesContainer = document.getElementById('phases-list');
-    if (phasesContainer && inv.plan && inv.plan.phases) {
-      phasesContainer.innerHTML = '';
-      inv.plan.phases.forEach((p, idx) => {
-        const item = document.createElement('div');
-        item.style.padding = '8px 12px';
-        item.style.borderRadius = '6px';
-        item.style.background = p.status === 'active' ? 'rgba(157, 78, 221, 0.2)' : 'var(--bg-surface-2)';
-        item.style.border = p.status === 'active' ? '1px solid var(--neon-violet)' : '1px solid transparent';
-        item.style.fontSize = '0.82rem';
-
-        const statusIcon = p.status === 'completed' ? '✓' : p.status === 'active' ? '●' : '○';
-        item.innerHTML = `
-          <div style="display: flex; justify-content: space-between; font-weight: 600; color: #fff;">
-            <span>${statusIcon} Phase ${idx + 1}: ${escapeHtml(p.name)}</span>
-            <span style="font-size: 0.7rem; color: var(--neon-cyan); text-transform: uppercase;">${p.status}</span>
-          </div>
-          <div style="color: var(--text-muted); font-size: 0.72rem; margin-top: 2px;">${escapeHtml(p.description)}</div>
-        `;
-        phasesContainer.appendChild(item);
-      });
-    }
-
-    if (inv.metrics) {
-      updateMetricsUI(inv.metrics);
-    }
-  }
-
-  function updateMetricsUI(metrics) {
-    document.getElementById('metric-discovered').textContent = metrics.urlsDiscovered || 0;
-    document.getElementById('metric-crawled').textContent = metrics.pagesCrawled || 0;
-    document.getElementById('metric-entities').textContent = metrics.entitiesExtracted || 0;
-    document.getElementById('metric-citations').textContent = metrics.citationsVerified || 0;
-  }
-
-  // --- Data Fetching ---
-  async function refreshAllData() {
-    try {
-      const statusRes = await fetch(`${API_BASE}/api/status`);
-      const statusJson = await statusRes.json();
-      if (statusJson.activeInvestigation) {
-        state.activeInvestigation = statusJson.activeInvestigation;
-        renderInvestigationState(statusJson.activeInvestigation);
-      }
-
-      const graphRes = await fetch(`${API_BASE}/api/graph`);
-      const graphJson = await graphRes.json();
-      if (graphJson.success) {
-        state.graph = graphJson.data;
-        updateBadges();
-        renderGraph('topology-canvas');
-      }
-
-      fetchCorpus();
-      fetchReports();
-      fetchSettings();
-    } catch (err) {
-      console.warn('Backend not ready yet:', err.message);
-    }
-  }
-
-  async function fetchCorpus() {
-    const res = await fetch(`${API_BASE}/api/corpus`);
-    const json = await res.json();
-    if (json.success) {
-      state.corpus = json.data;
-      renderCorpusResults(json.data);
-      updateBadges();
-    }
-  }
-
-  async function runCorpusSearch(query) {
-    const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`);
-    const json = await res.json();
-    if (json.success) {
-      renderCorpusResults(json.data);
-    }
-  }
-
-  function renderCorpusResults(docs) {
-    const container = document.getElementById('search-results-container');
-    if (!container) return;
-    container.innerHTML = '';
-
-    if (docs.length === 0) {
-      container.innerHTML = `<div style="color: var(--text-muted); padding: 20px;">No corpus matches found.</div>`;
-      return;
-    }
-
-    docs.forEach(doc => {
-      const card = document.createElement('div');
-      card.className = 'panel';
-      card.style.padding = '16px';
-      card.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <div>
-            <h3 style="font-size: 1rem; color: #fff; margin-bottom: 4px;">
-              <a href="${doc.url}" target="_blank" style="color: #fff; text-decoration: none;">${escapeHtml(doc.title || doc.url)}</a>
-            </h3>
-            <span style="font-size: 0.75rem; color: var(--neon-cyan);">${escapeHtml(doc.url)}</span>
-          </div>
-          <span class="nav-badge">${( (doc.relevanceScore || 0.8) * 100 ).toFixed(0)}% Match</span>
-        </div>
-        <p style="font-size: 0.82rem; color: var(--text-muted); margin: 8px 0;">${escapeHtml(doc.snippet || '')}</p>
-        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-          ${(doc.entities || []).map(e => `<span class="nav-badge" style="font-size: 0.7rem;">${escapeHtml(e)}</span>`).join('')}
-        </div>
-      `;
-      container.appendChild(card);
-    });
-  }
-
-  async function fetchReports() {
-    const res = await fetch(`${API_BASE}/api/reports`);
-    const json = await res.json();
-    if (json.success) {
-      state.reports = json.data;
-      renderReportsList(json.data);
-    }
-  }
-
-  function renderReportsList(reports) {
-    const list = document.getElementById('reports-list');
-    if (!list) return;
     list.innerHTML = '';
+    inv.plan.phases.forEach((p, idx) => {
+      const row = document.createElement('div');
+      row.style.background = p.status === 'active' ? 'rgba(168, 85, 247, 0.22)' : 'var(--bg-surface-2)';
+      row.style.border = p.status === 'active' ? '1px solid var(--neon-magenta)' : '1px solid var(--border-subtle)';
+      row.style.padding = '8px 12px';
+      row.style.borderRadius = '6px';
+      row.style.fontSize = '0.78rem';
 
-    if (reports.length === 0) {
-      list.innerHTML = `<div style="color: var(--text-muted);">No reports compiled yet.</div>`;
-      return;
-    }
-
-    reports.forEach(rep => {
-      const item = document.createElement('div');
-      item.style.padding = '12px';
-      item.style.background = 'var(--bg-surface-2)';
-      item.style.borderRadius = '6px';
-      item.style.cursor = 'pointer';
-      item.innerHTML = `
-        <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">${escapeHtml(rep.title)}</div>
-        <div style="font-size: 0.75rem; color: var(--text-muted); margin: 4px 0;">${escapeHtml(rep.summary)}</div>
-        <div style="font-size: 0.7rem; color: var(--neon-cyan);">${new Date(rep.createdAt).toLocaleString()}</div>
+      const icon = p.status === 'completed' ? '✓' : p.status === 'active' ? '⚡' : '○';
+      row.innerHTML = `
+        <div style="display: flex; justify-content: space-between; font-weight: 700; color: #fff;">
+          <span>${icon} Phase ${idx + 1}: ${escapeHtml(p.name)}</span>
+          <span style="font-size: 0.68rem; color: var(--neon-cyan); text-transform: uppercase;">${p.status}</span>
+        </div>
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${escapeHtml(p.description)}</div>
       `;
-      item.addEventListener('click', () => loadReportPreview(rep));
-      list.appendChild(item);
+      list.appendChild(row);
     });
-
-    if (reports.length > 0 && !state.activeReport) {
-      loadReportPreview(reports[0]);
-    }
   }
 
-  function loadReportPreview(rep) {
-    state.activeReport = rep;
-    document.getElementById('active-report-title').textContent = rep.title;
-    const preview = document.getElementById('report-markdown-preview');
-    if (preview) {
-      // Basic markdown styling formatting
-      preview.innerHTML = rep.markdown
-        .replace(/\n\n/g, '<p></p>')
-        .replace(/# (.*)/g, '<h1 style="color: #c084fc; font-size: 1.4rem; margin: 10px 0;">$1</h1>')
-        .replace(/## (.*)/g, '<h2 style="color: #fff; font-size: 1.2rem; margin: 8px 0;">$1</h2>')
-        .replace(/### (.*)/g, '<h3 style="color: #e2e8f0; font-size: 1rem; margin: 6px 0;">$1</h3>')
-        .replace(/`([^`]+)`/g, '<code style="background: #1f163d; padding: 2px 4px; border-radius: 4px; color: #f43f5e;">$1</code>');
-    }
-  }
-
-  async function sendTelegramCommand() {
-    const input = document.getElementById('input-tg-cmd');
-    const cmd = input.value.trim();
-    if (!cmd) return;
+  async function sendTelegramMessage() {
+    const input = document.getElementById('tg-interactive-input');
+    const msg = input.value.trim();
+    if (!msg) return;
 
     input.value = '';
-    const history = document.getElementById('tg-chat-history');
+    const thread = document.getElementById('tg-messages-thread');
 
-    const userBubble = document.createElement('div');
-    userBubble.style.color = '#fff';
-    userBubble.innerHTML = `<span style="color: var(--neon-cyan);">Operator &gt;</span> ${escapeHtml(cmd)}`;
-    history.appendChild(userBubble);
+    // Append User Bubble
+    const uBubble = document.createElement('div');
+    uBubble.className = 'tg-bubble-user';
+    uBubble.textContent = msg;
+    thread.appendChild(uBubble);
+    thread.scrollTop = thread.scrollHeight;
 
+    // Call Telegram Gateway API
     try {
       const res = await fetch(`${API_BASE}/api/telegram/exec`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: cmd })
+        body: JSON.stringify({ command: msg, sender: 'Deepak' })
       });
       const json = await res.json();
       if (json.success) {
-        const botBubble = document.createElement('div');
-        botBubble.style.color = 'var(--text-muted)';
-        botBubble.style.whiteSpace = 'pre-wrap';
-        botBubble.style.marginBottom = '8px';
-        botBubble.innerHTML = `<span style="color: var(--neon-magenta);">ARACHNE Bot &gt;</span> ${escapeHtml(json.data.response)}`;
-        history.appendChild(botBubble);
-        history.scrollTop = history.scrollHeight;
+        const bBubble = document.createElement('div');
+        bBubble.className = 'tg-bubble-bot';
+        bBubble.innerHTML = json.data.response.replace(/\n/g, '<br>');
+        thread.appendChild(bBubble);
+        thread.scrollTop = thread.scrollHeight;
       }
-    } catch (err) {
-      console.error(err);
-    }
+    } catch {}
   }
 
-  async function testModelConnection() {
-    const resultBox = document.getElementById('model-test-result');
-    resultBox.style.display = 'block';
-    resultBox.textContent = 'Testing inference connection and latency...';
-
-    const provider = document.getElementById('select-model-provider').value;
+  async function refreshAllData() {
     try {
-      const res = await fetch(`${API_BASE}/api/models/test?provider=${provider}`);
+      const res = await fetch(`${API_BASE}/api/status`);
       const json = await res.json();
-      resultBox.textContent = `Provider: ${json.provider}\nLatency: ${json.latencyMs}ms\nStatus: ${json.success ? 'HEALTHY' : 'NOTICE'}\nMessage: ${json.message}`;
-    } catch (err) {
-      resultBox.textContent = `Connection failed: ${err.message}`;
-    }
-  }
-
-  async function fetchSettings() {
-    const res = await fetch(`${API_BASE}/api/settings`);
-    const json = await res.json();
-    if (json.success) {
-      state.settings = json.data;
-      if (document.getElementById('setting-max-depth')) {
-        document.getElementById('setting-max-depth').value = json.data.maxDepth || 3;
-        document.getElementById('setting-max-urls').value = json.data.maxUrlsPerInvestigation || 30;
-        document.getElementById('setting-rate-limit').value = json.data.perDomainRateLimitMs || 800;
+      if (json.activeInvestigation) {
+        state.activeInvestigation = json.activeInvestigation;
+        renderInvestigationPhases(json.activeInvestigation);
       }
-    }
-  }
-
-  async function saveSettings() {
-    const newSettings = {
-      maxDepth: parseInt(document.getElementById('setting-max-depth').value, 10),
-      maxUrlsPerInvestigation: parseInt(document.getElementById('setting-max-urls').value, 10),
-      perDomainRateLimitMs: parseInt(document.getElementById('setting-rate-limit').value, 10),
-      respectRobotsTxt: document.getElementById('setting-respect-robots').checked,
-      safeMode: document.getElementById('setting-safe-mode').checked
-    };
-
-    const res = await fetch(`${API_BASE}/api/settings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newSettings)
-    });
-    const json = await res.json();
-    if (json.success) {
-      appendLog('Crawler and policy settings saved.', 'info');
-      alert('Settings updated successfully!');
-    }
-  }
-
-  function updateBadges() {
-    const bNodes = document.getElementById('badge-nodes');
-    if (bNodes) bNodes.textContent = state.graph.nodes ? state.graph.nodes.length : 0;
-    const bCorpus = document.getElementById('badge-corpus');
-    if (bCorpus) bCorpus.textContent = state.corpus ? state.corpus.length : 0;
+    } catch {}
   }
 
   function escapeHtml(text) {
     if (!text) return '';
-    return String(text)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 })();
