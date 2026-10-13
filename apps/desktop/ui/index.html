@@ -10,6 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- Ambient Animated Cybernetic Spiderweb Canvas Background -->
+  <canvas id="ambient-spiderweb-bg"></canvas>
+
   <div id="app-container">
     <!-- Left Navigation Sidebar -->
     <aside id="sidebar">
@@ -131,32 +134,10 @@
       <!-- SCREEN 1: MAIN DASHBOARD (Chat & Command Center) -->
       <!-- ======================================================== -->
       <section class="screen-view active" id="view-dashboard">
-        <!-- Hero Card with Mechanical Spider Graphic -->
+        <!-- Hero Card with Living Mechanical Spider Canvas -->
         <div class="hero-spider-card">
-          <!-- Cybernetic Spider Artwork SVG -->
-          <svg class="hero-spider-graphic" viewBox="0 0 200 200" fill="none">
-            <!-- Radial Web Lines -->
-            <path d="M100 100 L20 20 M100 100 L180 20 M100 100 L190 100 M100 100 L10 100 M100 100 L30 180 M100 100 L170 180 M100 100 L100 10 M100 100 L100 190" stroke="rgba(168, 85, 247, 0.25)" stroke-width="1.2"/>
-            <polygon points="100,40 145,55 160,100 145,145 100,160 55,145 40,100 55,55" stroke="rgba(236, 72, 153, 0.2)" stroke-width="1.2" fill="none"/>
-            <polygon points="100,60 130,70 140,100 130,130 100,140 70,130 60,100 70,70" stroke="rgba(244, 63, 94, 0.3)" stroke-width="1.2" fill="none"/>
-            <!-- Spider Body & Legs -->
-            <path d="M85 85 Q40 50 20 70" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M115 85 Q160 50 180 70" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M80 100 Q30 95 15 115" stroke="#ec4899" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M120 100 Q170 95 185 115" stroke="#ec4899" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M85 115 Q40 145 30 170" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M115 115 Q160 145 170 170" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round"/>
-            <!-- Abdomen -->
-            <ellipse cx="100" cy="118" rx="22" ry="28" fill="#150a2b" stroke="#f43f5e" stroke-width="2"/>
-            <polygon points="100,105 112,120 100,135 88,120" fill="#ff0054" opacity="0.6"/>
-            <!-- Cephalothorax -->
-            <circle cx="100" cy="85" r="14" fill="#0f0720" stroke="#a855f7" stroke-width="2"/>
-            <!-- Glowing Eyes -->
-            <circle cx="94" cy="83" r="3" fill="#ff0054"/>
-            <circle cx="106" cy="83" r="3" fill="#ff0054"/>
-            <circle cx="90" cy="87" r="1.5" fill="#4cc9f0"/>
-            <circle cx="110" cy="87" r="1.5" fill="#4cc9f0"/>
-          </svg>
+          <!-- 60FPS Cybernetic Spider Anatomy Canvas -->
+          <canvas id="hero-spider-canvas" width="280" height="250" class="hero-spider-canvas" title="Cybernetic Spider Intelligence Core - Tracks pointer & reacts to commands"></canvas>
 
           <div class="hero-greeting">
             <h2>What do you want to discover, Deepak?</h2>
@@ -381,94 +362,44 @@
           <!-- Left Filters Panel -->
           <div style="width: 260px; flex-shrink: 0;" class="panel">
             <div class="panel-title" style="margin-bottom: 12px;">Filters</div>
-            <input type="text" class="global-search-input" style="width: 100%; margin-bottom: 16px;" placeholder="Search results...">
+            <input type="text" id="results-filter-search" class="global-search-input" style="width: 100%; margin-bottom: 16px;" placeholder="Search results in real time...">
 
             <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Content Type</div>
             <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.76rem; color: var(--text-muted); margin-bottom: 18px;">
-              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" checked> Web Page</span> <span>(1,842)</span></label>
-              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" checked> Research Paper</span> <span>(342)</span></label>
-              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" checked> GitHub Repository</span> <span>(284)</span></label>
-              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" checked> Documentation</span> <span>(612)</span></label>
-              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox"> Dataset</span> <span>(86)</span></label>
-              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox"> Image</span> <span>(124)</span></label>
-              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox"> Video/Audio</span> <span>(42)</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" class="results-type-filter" value="Web Page" checked> Web Page</span> <span id="cnt-type-web">12</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" class="results-type-filter" value="Research Paper" checked> Research Paper</span> <span id="cnt-type-paper">8</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" class="results-type-filter" value="GitHub Repository" checked> GitHub Repository</span> <span id="cnt-type-repo">6</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" class="results-type-filter" value="Documentation" checked> Documentation</span> <span id="cnt-type-doc">4</span></label>
+              <label style="display: flex; align-items: center; justify-content: space-between;"><span style="display: flex; gap: 6px;"><input type="checkbox" class="results-type-filter" value="Dataset" checked> Dataset</span> <span id="cnt-type-dataset">2</span></label>
             </div>
 
-            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Relevance Score</div>
-            <input type="range" min="0" max="100" value="80" style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">
+              <span>Min Relevance</span>
+              <span id="results-relevance-val" style="color: var(--neon-magenta); font-family: var(--font-mono);">70%</span>
+            </div>
+            <input type="range" id="results-filter-relevance" min="0" max="100" value="70" style="margin-bottom: 16px;">
 
             <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Domain</div>
-            <input type="text" class="global-search-input" style="width: 100%;" value="arxiv.org, github.com">
+            <input type="text" id="results-filter-domain" class="global-search-input" style="width: 100%;" placeholder="Filter by domain (e.g. arxiv, github)">
           </div>
 
           <!-- Main Results List -->
           <div style="flex: 1;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-              <div style="font-size: 0.82rem; color: var(--text-muted);"><strong style="color: #fff;">1,842</strong> results found</div>
+              <div style="font-size: 0.82rem; color: var(--text-muted);"><strong id="results-count-label" style="color: #fff;">0</strong> results found</div>
               <div style="display: flex; gap: 10px;">
-                <button class="btn btn-secondary">Group by: Source ▾</button>
-                <button class="btn btn-secondary">Export ▾</button>
+                <select id="results-sort-by" class="btn btn-secondary" style="font-size: 0.78rem;">
+                  <option value="relevance">Sort: Relevance (High to Low)</option>
+                  <option value="date">Sort: Freshness (Newest)</option>
+                  <option value="title">Sort: Title (A-Z)</option>
+                </select>
+                <button class="btn btn-secondary" id="btn-results-export-json">Export JSON</button>
+                <button class="btn btn-secondary" id="btn-results-export-csv">Export CSV</button>
               </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              <!-- Card 1 -->
-              <div class="panel" style="padding: 16px;">
-                <div style="display: flex; justify-content: space-between;">
-                  <div>
-                    <span class="tag-badge cyan" style="margin-bottom: 6px;">Research Paper</span>
-                    <h3 style="font-size: 1rem; color: #fff; margin-bottom: 4px;">AutoGPT: Autonomous Agents for Real-World Tasks</h3>
-                    <div style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 8px;">Toran Bruce Richards et al. (2024) • arxiv.org</div>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">We present AutoGPT, a framework for creating, deploying, and managing autonomous AI agents that can perform complex, long-horizon tasks across web tools...</p>
-                  </div>
-                  <div style="text-align: right; min-width: 80px;">
-                    <div style="font-size: 1.4rem; font-weight: 800; color: var(--neon-green); font-family: var(--font-mono);">98</div>
-                    <div style="font-size: 0.68rem; color: var(--text-dim);">Relevance</div>
-                  </div>
-                </div>
-                <div style="margin-top: 10px; display: flex; gap: 6px;">
-                  <span class="tag-badge purple">AI Agents</span>
-                  <span class="tag-badge purple">Computer Use</span>
-                  <span class="tag-badge purple">LLM Agents</span>
-                </div>
-              </div>
-
-              <!-- Card 2 -->
-              <div class="panel" style="padding: 16px;">
-                <div style="display: flex; justify-content: space-between;">
-                  <div>
-                    <span class="tag-badge green" style="margin-bottom: 6px;">GitHub Repository</span>
-                    <h3 style="font-size: 1rem; color: #fff; margin-bottom: 4px;">browser-use: Make LLMs use your browser</h3>
-                    <div style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 8px;">github.com/browser-use • 12.4k stars</div>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">Enables AI agents to control the browser, perform real-world tasks like web research, form filling, and data extraction using Playwright coordinates...</p>
-                  </div>
-                  <div style="text-align: right; min-width: 80px;">
-                    <div style="font-size: 1.4rem; font-weight: 800; color: var(--neon-green); font-family: var(--font-mono);">95</div>
-                    <div style="font-size: 0.68rem; color: var(--text-dim);">Relevance</div>
-                  </div>
-                </div>
-                <div style="margin-top: 10px; display: flex; gap: 6px;">
-                  <span class="tag-badge purple">Automation</span>
-                  <span class="tag-badge purple">Browser Control</span>
-                  <span class="tag-badge purple">Tools</span>
-                </div>
-              </div>
-
-              <!-- Card 3 -->
-              <div class="panel" style="padding: 16px;">
-                <div style="display: flex; justify-content: space-between;">
-                  <div>
-                    <span class="tag-badge magenta" style="margin-bottom: 6px;">Technical Article</span>
-                    <h3 style="font-size: 1rem; color: #fff; margin-bottom: 4px;">A Survey of Autonomous Computer Use Agents</h3>
-                    <div style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 8px;">medium.com/@jasonwei • 15 min read</div>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">This survey covers recent advances in autonomous computer use agents, OSWorld benchmark comparisons, multimodal UI grounding, and open safety challenges.</p>
-                  </div>
-                  <div style="text-align: right; min-width: 80px;">
-                    <div style="font-size: 1.4rem; font-weight: 800; color: var(--neon-green); font-family: var(--font-mono);">92</div>
-                    <div style="font-size: 0.68rem; color: var(--text-dim);">Relevance</div>
-                  </div>
-                </div>
-              </div>
+            <div id="results-cards-container" style="display: flex; flex-direction: column; gap: 12px;">
+              <!-- Dynamically populated from /api/corpus and live crawls -->
             </div>
           </div>
         </div>
@@ -547,20 +478,20 @@
                 <th style="padding: 8px 10px;">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="recent-reports-table-body">
               <tr style="border-bottom: 1px solid var(--border-subtle);">
                 <td style="padding: 10px;"><strong style="color: #fff;">AI Agents Research Report</strong></td>
                 <td style="color: var(--text-muted);">AR-0042</td>
                 <td><span class="tag-badge magenta">PDF</span> <span class="tag-badge green">XLSX</span> <span class="tag-badge cyan">TXT</span></td>
                 <td style="color: var(--text-dim);">2 hours ago</td>
-                <td><button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">Download</button></td>
+                <td><button class="btn btn-secondary btn-download-report" data-id="rep-demo-1" style="padding: 3px 8px; font-size: 0.72rem;">Download</button></td>
               </tr>
               <tr style="border-bottom: 1px solid var(--border-subtle);">
                 <td style="padding: 10px;"><strong style="color: #fff;">Search Engines Comparison</strong></td>
                 <td style="color: var(--text-muted);">AR-0039</td>
                 <td><span class="tag-badge magenta">PDF</span> <span class="tag-badge purple">DOCX</span></td>
                 <td style="color: var(--text-dim);">1 day ago</td>
-                <td><button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">Download</button></td>
+                <td><button class="btn btn-secondary btn-download-report" data-id="rep-demo-2" style="padding: 3px 8px; font-size: 0.72rem;">Download</button></td>
               </tr>
             </tbody>
           </table>
@@ -600,8 +531,8 @@
                   <span>10:24 AM</span>
                 </div>
                 <div style="display: flex; gap: 8px; margin-top: 10px;">
-                  <button class="btn btn-secondary" style="flex: 1; padding: 5px;">View Progress</button>
-                  <button class="btn btn-secondary" style="flex: 1; padding: 5px;">Show Findings</button>
+                  <button class="btn btn-secondary tg-quick-cmd" data-cmd="/status" style="flex: 1; padding: 5px;">View Progress</button>
+                  <button class="btn btn-secondary tg-quick-cmd" data-cmd="/top5" style="flex: 1; padding: 5px;">Show Findings</button>
                 </div>
               </div>
             </div>
@@ -613,8 +544,18 @@
               3. <strong>MetaGPT</strong> (GitHub)<br>
               4. <strong>Computer Use Survey</strong> (arXiv)<br>
               5. <strong>Browser-Use</strong> (GitHub)<br><br>
-              <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.72rem;">View Details</button>
+              <button class="btn btn-primary tg-quick-cmd" data-cmd="/report" style="padding: 4px 10px; font-size: 0.72rem;">Generate Report</button>
             </div>
+          </div>
+
+          <!-- Quick Commands Row -->
+          <div style="padding: 8px 12px; background: var(--bg-surface-0); display: flex; gap: 6px; overflow-x: auto; border-top: 1px solid var(--border-subtle);">
+            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/status">/status</button>
+            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/hunt AI Agents">/hunt</button>
+            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/top5">/top5</button>
+            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/report">/report</button>
+            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/pause">/pause</button>
+            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/stop">/stop</button>
           </div>
 
           <div style="padding: 12px; background: var(--bg-surface-1); border-top: 1px solid var(--border-subtle); display: flex; gap: 10px;">
@@ -881,7 +822,7 @@
           <!-- Left: Filters & Search -->
           <div style="width: 240px; flex-shrink: 0;" class="panel">
             <div class="panel-title" style="margin-bottom: 10px;">Search Your Knowledge</div>
-            <input type="text" class="global-search-input" style="width: 100%; margin-bottom: 14px;" placeholder="Search collected data...">
+            <input type="text" id="vault-search-input" class="global-search-input" style="width: 100%; margin-bottom: 14px;" placeholder="Search collected data...">
             <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Content Type</div>
             <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: var(--text-muted);">
               <div>Web Pages (12,840)</div>
@@ -897,7 +838,7 @@
           <!-- Center: Results List -->
           <div style="flex: 1;" class="panel">
             <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-              <strong style="color: #fff; font-size: 0.85rem;">Results (12,840)</strong>
+              <strong style="color: #fff; font-size: 0.85rem;" id="vault-count-label">Results (8)</strong>
               <div style="display: flex; gap: 6px;">
                 <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">List</button>
                 <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">Grid</button>
@@ -905,49 +846,60 @@
               </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                <div style="display: flex; justify-content: space-between;">
-                  <strong style="color: #fff; font-size: 0.88rem;">OpenHands: Open Source AI Agent for Computer Control</strong>
-                  <span class="tag-badge green">★ 96</span>
-                </div>
-                <div style="font-size: 0.72rem; color: var(--neon-cyan); margin: 3px 0;">github.com/All-Hands-AI/OpenHands • 2 days ago • 2.4 MB</div>
-                <div style="font-size: 0.78rem; color: var(--text-muted);">OpenHands is an open source AI software developer agent that can run and edit code, browse the web, and perform complex tasks...</div>
-              </div>
-
-              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                <div style="display: flex; justify-content: space-between;">
-                  <strong style="color: #fff; font-size: 0.88rem;">AutoGPT: Autonomous Agents for Real-World Tasks</strong>
-                  <span class="tag-badge green">★ 94</span>
-                </div>
-                <div style="font-size: 0.72rem; color: var(--neon-cyan); margin: 3px 0;">arxiv.org/abs/2303.17580 • 5 days ago • 1.8 MB</div>
-                <div style="font-size: 0.78rem; color: var(--text-muted);">We present AutoGPT, a framework for creating, deploying, and managing autonomous AI agents...</div>
-              </div>
+            <div id="vault-items-container" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Dynamically populated from corpus -->
             </div>
           </div>
 
           <!-- Right: Preview Drawer -->
-          <div style="width: 300px; flex-shrink: 0;" class="panel">
+          <div style="width: 320px; flex-shrink: 0;" class="panel">
             <div class="sub-tabs-bar" style="margin-bottom: 10px;">
               <button class="sub-tab-pill active">Content</button>
               <button class="sub-tab-pill">Metadata</button>
               <button class="sub-tab-pill">Links</button>
             </div>
-            <strong style="color: #fff; font-size: 0.9rem; display: block; margin-bottom: 6px;">OpenHands: Open Source AI Agent</strong>
-            <div style="font-size: 0.72rem; color: var(--neon-cyan); margin-bottom: 12px;">GitHub Repository</div>
-            <div style="background: #000; border-radius: 6px; height: 130px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); margin-bottom: 14px; border: 1px solid var(--border-bright);">
-              <span style="font-size: 0.78rem;">[Preview Thumbnail]</span>
+            <strong style="color: #fff; font-size: 0.9rem; display: block; margin-bottom: 6px;" id="vault-preview-title">OpenHands: Open Source AI Agent</strong>
+            <div style="font-size: 0.72rem; color: var(--neon-cyan); margin-bottom: 12px;" id="vault-preview-type">GitHub Repository</div>
+            <div id="vault-preview-text" style="background: var(--bg-surface-2); border-radius: 6px; min-height: 140px; max-height: 240px; overflow-y: auto; padding: 12px; font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; border: 1px solid var(--border-bright);">
+              Select an item on the left to preview extracted intelligence.
             </div>
             <div style="display: flex; gap: 8px;">
-              <button class="btn btn-secondary" style="flex: 1; font-size: 0.72rem;">+ Collection</button>
-              <button class="btn btn-secondary" style="flex: 1; font-size: 0.72rem;">Export</button>
-              <button class="btn btn-primary" style="flex: 1; font-size: 0.72rem;">Report</button>
+              <button class="btn btn-secondary" id="btn-vault-add-collection" style="flex: 1; font-size: 0.72rem;">+ Collection</button>
+              <button class="btn btn-secondary" id="btn-vault-export" style="flex: 1; font-size: 0.72rem;">Export</button>
+              <button class="btn btn-primary" id="btn-vault-report" style="flex: 1; font-size: 0.72rem;">Report</button>
             </div>
           </div>
         </div>
       </section>
     </main>
   </div>
+
+  <!-- Document Inspection Modal -->
+  <div class="arachne-modal-overlay" id="document-detail-modal">
+    <div class="arachne-modal-card">
+      <div class="panel-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 0;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="tag-badge cyan" id="modal-doc-type">Research Paper</span>
+          <h3 id="modal-doc-title" style="font-size: 1.05rem; color: #fff; font-weight: 700;">Document Title</h3>
+        </div>
+        <button class="btn btn-secondary" id="btn-close-modal" style="padding: 3px 8px;">✕</button>
+      </div>
+      <div style="padding: 16px 20px; overflow-y: auto; max-height: 60vh;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--neon-cyan); margin-bottom: 12px; font-family: var(--font-mono);">
+          <span id="modal-doc-domain">domain.com</span>
+          <span id="modal-doc-relevance" style="color: var(--neon-green); font-weight: 700;">Relevance: 98%</span>
+        </div>
+        <div id="modal-doc-content" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-main); white-space: pre-wrap; font-family: var(--font-sans);"></div>
+      </div>
+      <div style="padding: 12px 20px; border-top: 1px solid var(--border-subtle); background: var(--bg-surface-0); display: flex; justify-content: space-between; align-items: center;">
+        <a id="modal-doc-url" href="#" target="_blank" class="btn btn-secondary" style="font-size: 0.78rem;">Open Live Source ↗</a>
+        <button class="btn btn-primary" id="btn-modal-add-vault">Add to Knowledge Vault ★</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="arachne-toast-container"></div>
 
   <script src="js/app.js"></script>
 </body>

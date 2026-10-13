@@ -253,34 +253,68 @@ export class ResearchAgent {
 
   async discoverSeedUrls(queries) {
     const urls = new Set();
-    // Query external DuckDuckGo search or structured seed directories
-    for (const q of queries) {
+    const cleanQueries = queries.map(q => q.replace(/[^a-zA-Z0-9\s]/g, '').trim()).filter(Boolean);
+    if (cleanQueries.length === 0) cleanQueries.push('AI autonomous agent');
+
+    for (const q of cleanQueries) {
+      const qEncoded = encodeURIComponent(q);
+
+      // 1. Live Wikipedia Search (instant, rich factual articles)
       try {
-        const queryNorm = encodeURIComponent(q);
-        const ddgUrl = `https://html.duckduckgo.com/html/?q=${queryNorm}`;
-        const res = await this.fetcher.fetchUrl(ddgUrl);
-        if (res.success && res.html) {
-          // Parse DDG html search results
-          const linkRegex = /<a\s+class="result__url"\s+href=["']([^"']+)["']/gi;
-          let match;
-          while ((match = linkRegex.exec(res.html)) !== null) {
-            let u = match[1].trim();
-            if (u.startsWith('//')) u = 'https:' + u;
-            if (u.startsWith('/uddg=')) {
-              u = decodeURIComponent(u.replace('/uddg=', '').split('&')[0]);
-            }
-            if (u.startsWith('http')) urls.add(u);
-            if (urls.size >= 5) break;
+        const wikiRes = await this.fetcher.fetchUrl(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${qEncoded}&limit=4&namespace=0&format=json`);
+        if (wikiRes.success && wikiRes.html) {
+          const wikiJson = JSON.parse(wikiRes.html);
+          if (Array.isArray(wikiJson[3])) {
+            wikiJson[3].forEach(u => { if (u && u.startsWith('http')) urls.add(u); });
           }
         }
       } catch {}
+
+      // 2. Live GitHub Search API (top trending code repositories)
+      try {
+        const ghRes = await this.fetcher.fetchUrl(`https://api.github.com/search/repositories?q=${qEncoded}&sort=stars&order=desc&per_page=4`);
+        if (ghRes.success && ghRes.html) {
+          const ghJson = JSON.parse(ghRes.html);
+          if (Array.isArray(ghJson.items)) {
+            ghJson.items.forEach(item => { if (item.html_url) urls.add(item.html_url); });
+          }
+        }
+      } catch {}
+
+      // 3. Live Hacker News Technical Index (real developer & research discussions)
+      try {
+        const hnRes = await this.fetcher.fetchUrl(`https://hn.algolia.com/api/v1/search?query=${qEncoded}&tags=story&hitsPerPage=4`);
+        if (hnRes.success && hnRes.html) {
+          const hnJson = JSON.parse(hnRes.html);
+          if (Array.isArray(hnJson.hits)) {
+            hnJson.hits.forEach(hit => {
+              const u = hit.url || (hit.objectID ? `https://news.ycombinator.com/item?id=${hit.objectID}` : null);
+              if (u && u.startsWith('http')) urls.add(u);
+            });
+          }
+        }
+      } catch {}
+
+      // 4. Live DuckDuckGo Lite Search
+      try {
+        const ddgRes = await this.fetcher.fetchUrl(`https://lite.duckduckgo.com/lite/?q=${qEncoded}`);
+        if (ddgRes.success && ddgRes.html) {
+          const ddgLinks = ContentExtractor.extractLinks(ddgRes.html, 'https://lite.duckduckgo.com');
+          ddgLinks.forEach(l => {
+            if (!l.includes('duckduckgo.com') && l.startsWith('http')) urls.add(l);
+          });
+        }
+      } catch {}
+
+      if (urls.size >= 12) break;
     }
 
-    // Default robust seeds if search is firewalled or zero results
+    // High quality live seeds fallback if network is restricted
     if (urls.size === 0) {
-      urls.add('https://github.com/trending');
-      urls.add('https://arxiv.org/list/cs.AI/recent');
       urls.add('https://en.wikipedia.org/wiki/Intelligent_agent');
+      urls.add('https://en.wikipedia.org/wiki/Web_crawler');
+      urls.add('https://github.com/browser-use/browser-use');
+      urls.add('https://github.com/All-Hands-AI/OpenHands');
     }
 
     return Array.from(urls);

@@ -15,7 +15,7 @@ console.log('🕷️  ARACHNE — Autonomous Web Intelligence & Research System'
 console.log('---------------------------------------------------------');
 
 // 1. Start Intelligence Core Server
-const serverInstance = createArachneServer(PORT);
+createArachneServer(PORT);
 
 // 2. Launch Client
 setTimeout(() => {
@@ -23,10 +23,9 @@ setTimeout(() => {
 }, 600);
 
 function launchClient() {
-  const isWebOnly = process.argv.includes('--web');
+  const wantsElectron = process.argv.includes('--electron');
 
-  if (!isWebOnly) {
-    // Try launching Electron if installed
+  if (wantsElectron) {
     try {
       const electronExe = path.resolve(__dirname, 'node_modules/electron/dist/electron.exe');
       if (fs.existsSync(electronExe)) {
@@ -39,30 +38,10 @@ function launchClient() {
         return;
       }
     } catch {}
-
-    // Check for Microsoft Edge or Chrome in app-window mode (Windows Desktop Application Mode)
-    if (process.platform === 'win32') {
-      const edgePaths = [
-        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
-      ];
-      const chromePaths = [
-        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
-      ];
-
-      for (const p of [...edgePaths, ...chromePaths]) {
-        if (fs.existsSync(p)) {
-          console.log(`🖥️  Launching ARACHNE Desktop Window via: ${path.basename(p)}`);
-          spawn(p, [`--app=${APP_URL}`, '--window-size=1440,920'], { detached: true });
-          return;
-        }
-      }
-    }
   }
 
-  // Fallback to opening default web browser
-  console.log(`🌐 Opening ARACHNE Command Center at ${APP_URL}`);
-  const openCmd = process.platform === 'win32' ? `start "" "${APP_URL}"` : process.platform === 'darwin' ? `open "${APP_URL}"` : `xdg-open "${APP_URL}"`;
+  // Launch directly in user's browser with full functionality
+  console.log(`🌐 Launching ARACHNE Command Center in browser: ${APP_URL}`);
+  const openCmd = process.platform === 'win32' ? `cmd.exe /c start "" "${APP_URL}"` : process.platform === 'darwin' ? `open "${APP_URL}"` : `xdg-open "${APP_URL}"`;
   exec(openCmd);
 }
