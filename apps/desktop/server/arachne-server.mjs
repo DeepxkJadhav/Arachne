@@ -279,6 +279,14 @@ export function createArachneServer(port = 3003) {
     }
   });
 
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`ℹ️  ARACHNE Server already active on port ${port}.`);
+    } else {
+      console.error('[ArachneServer] Server error:', err.message);
+    }
+  });
+
   server.listen(port, () => {
     console.log(`🕷️ ARACHNE Intelligence Server running at http://localhost:${port}`);
   });

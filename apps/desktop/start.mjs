@@ -28,14 +28,14 @@ function launchClient() {
   if (!isWebOnly) {
     // Try launching Electron if installed
     try {
-      const electronPath = path.resolve(__dirname, 'node_modules/.bin/electron');
-      if (fs.existsSync(electronPath) || fs.existsSync(`${electronPath}.cmd`)) {
+      const electronExe = path.resolve(__dirname, 'node_modules/electron/dist/electron.exe');
+      if (fs.existsSync(electronExe)) {
         console.log('🚀 Launching native Electron desktop window...');
-        const electronProc = spawn('npx', ['electron', path.join(__dirname, 'main.cjs')], {
+        const electronProc = spawn(electronExe, [path.join(__dirname, 'main.cjs')], {
           stdio: 'inherit',
-          shell: true
+          detached: true
         });
-        electronProc.on('exit', () => process.exit(0));
+        electronProc.unref();
         return;
       }
     } catch {}

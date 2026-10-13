@@ -9,6 +9,7 @@ function createWindow() {
     minHeight: 700,
     backgroundColor: '#07050f',
     title: 'ARACHNE — Autonomous Web Intelligence System',
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,

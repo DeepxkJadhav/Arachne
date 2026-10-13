@@ -19,5 +19,8 @@
     "deep-research"
   ],
   "author": "Deepak Jadhav <https://github.com/DeepxkJadhav>",
-  "license": "AGPL-3.0"
+  "license": "AGPL-3.0",
+  "devDependencies": {
+    "electron": "^44.7.0"
+  }
 }
