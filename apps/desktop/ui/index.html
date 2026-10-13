@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARACHNE — Autonomous Web Intelligence & Research System</title>
+  <link rel="stylesheet" href="css/arachne.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar">
+      <div class="brand-header">
+        <div class="brand-logo-container">
+          <!-- Cybernetic Spider Icon -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m8 6-5-4"/>
+            <path d="m16 6 5-4"/>
+            <path d="m19 12 3 3"/>
+            <path d="m5 12-3 3"/>
+            <path d="m18 19 3 3"/>
+            <path d="m6 19-3 3"/>
+            <rect width="8" height="12" x="8" y="6" rx="4"/>
+            <circle cx="12" cy="10" r="1" fill="#4cc9f0"/>
+            <circle cx="12" cy="14" r="1" fill="#f72585"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>ARACHNE</h1>
+          <span>Web Intelligence</span>
+        </div>
+      </div>
+
+      <ul class="nav-menu">
+        <li class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          Command Center
+        </li>
+        <li class="nav-item" data-view="graph">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+          Web Graph
+          <span class="nav-badge" id="badge-nodes">0</span>
+        </li>
+        <li class="nav-item" data-view="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          Corpus Search
+          <span class="nav-badge" id="badge-corpus">0</span>
+        </li>
+        <li class="nav-item" data-view="reports">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Report Studio
+        </li>
+        <li class="nav-item" data-view="models">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="M2 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M12 22v-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M22 12h-4"/><path d="m19.07 4.93-2.83 2.83"/><circle cx="12" cy="12" r="3"/></svg>
+          Model Studio
+        </li>
+        <li class="nav-item" data-view="telegram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          Telegram Remote
+        </li>
+        <li class="nav-item" data-view="vault">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+          Knowledge Vault
+        </li>
+        <li class="nav-item" data-view="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          Settings
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="system-status-indicator">
+          <div class="status-dot pulse" id="sys-status-dot"></div>
+          <span id="sys-status-text">Engine Ready</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Viewport -->
+    <main id="main-viewport">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div class="view-title-wrap">
+          <h2 id="view-title">Command Center</h2>
+        </div>
+        <div class="top-bar-actions">
+          <button class="btn btn-secondary btn-icon" id="btn-refresh" title="Refresh State">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+          </button>
+          <button class="btn btn-primary" id="btn-quick-investigate">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+            New Investigation
+          </button>
+        </div>
+      </header>
+
+      <!-- 1. SCREEN: COMMAND CENTER / DASHBOARD -->
+      <section class="screen-view active" id="view-dashboard">
+        <!-- Natural Language Command Input -->
+        <div class="panel" style="margin-bottom: 20px;">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--neon-violet)" stroke-width="2"><path d="m21 15-9-9-9 9"/><path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></svg>
+              Autonomous Investigation Directive
+            </div>
+            <div style="font-size: 0.75rem; color: var(--neon-cyan);">Qwen 2.5 / Deep-Research Reasoner Active</div>
+          </div>
+          <div class="command-input-bar">
+            <input type="text" id="input-objective" placeholder="Enter objective (e.g., 'Find the best open-source autonomous computer-use agents')...">
+            <button class="btn btn-primary" id="btn-dispatch-investigation">
+              <span>Execute</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </div>
+          <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <span class="chip chip-sample" data-sample="Find the best open-source autonomous computer-use agents">Computer Use Agents</span>
+            <span class="chip chip-sample" data-sample="Compare Playwright vs Selenium for stealth anti-bot crawling">Anti-bot Crawling</span>
+            <span class="chip chip-sample" data-sample="Investigate latest arXiv papers on agentic memory and knowledge graphs">Agent Memory Papers</span>
+          </div>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="grid-4" style="margin-bottom: 20px;">
+          <div class="metric-card">
+            <div class="label">URLs Discovered</div>
+            <div class="value" id="metric-discovered">0</div>
+            <div class="subtext">Frontier Queue Ready</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Pages Crawled</div>
+            <div class="value" id="metric-crawled">0</div>
+            <div class="subtext">Parsed & Cleaned</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Entities Extracted</div>
+            <div class="value" id="metric-entities">0</div>
+            <div class="subtext">Graph Linked</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Citations Verified</div>
+            <div class="value" id="metric-citations">0</div>
+            <div class="subtext">Academic & Repos</div>
+          </div>
+        </div>
+
+        <!-- Active Investigation Plan & Spider Topology -->
+        <div class="grid-2" style="margin-bottom: 20px;">
+          <!-- Left: Active Investigation Plan -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--neon-magenta)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Investigation State & Controls
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-secondary btn-icon" id="btn-ctrl-pause" title="Pause"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></button>
+                <button class="btn btn-secondary btn-icon" id="btn-ctrl-resume" title="Resume"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+                <button class="btn btn-danger btn-icon" id="btn-ctrl-stop" title="Stop"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></button>
+              </div>
+            </div>
+            <div id="active-inv-header" style="margin-bottom: 12px; font-weight: 600; font-size: 0.95rem; color: #fff;">No investigation active</div>
+            <div id="phases-list" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Rendered phases -->
+            </div>
+          </div>
+
+          <!-- Right: Interactive Spider Topology Preview -->
+          <div class="panel" style="display: flex; flex-direction: column; height: 340px;">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--neon-cyan)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                Spider Topology Centered
+              </div>
+              <button class="btn btn-secondary btn-icon" id="btn-expand-graph" title="Open Full Graph">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+              </button>
+            </div>
+            <div style="flex: 1; position: relative;">
+              <canvas id="topology-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Grid: Recent Findings & Execution Logs -->
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Recent Evidence & Findings</div>
+            </div>
+            <div id="findings-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 220px; overflow-y: auto;">
+              <!-- Findings items -->
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Real-time Execution Stream</div>
+            </div>
+            <div class="log-terminal" id="log-terminal">
+              <!-- Streaming logs -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. SCREEN: INTERACTIVE WEB GRAPH -->
+      <section class="screen-view" id="view-graph">
+        <div class="panel" style="height: calc(100vh - 120px); display: flex; flex-direction: column;">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--neon-violet)" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+              Multi-Entity Knowledge Graph Topology
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <select id="graph-filter-type" class="btn btn-secondary" style="font-size: 0.8rem;">
+                <option value="all">All Types</option>
+                <option value="Domain">Domains</option>
+                <option value="Page">Pages</option>
+                <option value="AI_Model">AI Models</option>
+                <option value="Repository">Repositories</option>
+                <option value="Document">Papers / Docs</option>
+              </select>
+              <button class="btn btn-secondary" id="btn-reset-graph">Reset Zoom</button>
+            </div>
+          </div>
+          <div style="flex: 1; position: relative;">
+            <canvas id="graph-canvas"></canvas>
+            <!-- Node Details Overlay Box -->
+            <div id="node-details-drawer" style="display: none; position: absolute; right: 20px; top: 20px; width: 300px; background: rgba(15, 9, 31, 0.95); border: 1px solid var(--border-bright); border-radius: 8px; padding: 16px; backdrop-filter: blur(8px);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span id="detail-node-type" class="nav-badge">Entity</span>
+                <button id="btn-close-detail" style="background: none; border: none; color: #fff; cursor: pointer;">✕</button>
+              </div>
+              <h3 id="detail-node-label" style="font-size: 1rem; color: #fff; margin-bottom: 8px;"></h3>
+              <p id="detail-node-url" style="font-size: 0.75rem; color: var(--neon-cyan); word-break: break-all; margin-bottom: 12px;"></p>
+              <button class="btn btn-primary" id="btn-expand-node-neighborhood" style="width: 100%; font-size: 0.8rem;">Expand Connections</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. SCREEN: RESULTS / SEARCH -->
+      <section class="screen-view" id="view-search">
+        <div class="panel" style="margin-bottom: 20px;">
+          <div class="command-input-bar">
+            <input type="text" id="input-corpus-search" placeholder="Search crawled corpus, titles, extracted text, and entities...">
+            <button class="btn btn-primary" id="btn-run-search">Search</button>
+          </div>
+        </div>
+        <div id="search-results-container" style="display: flex; flex-direction: column; gap: 12px;">
+          <!-- Result Cards -->
+        </div>
+      </section>
+
+      <!-- 4. SCREEN: REPORT STUDIO -->
+      <section class="screen-view" id="view-reports">
+        <div class="grid-2" style="height: calc(100vh - 120px);">
+          <!-- Left: Reports Library -->
+          <div class="panel" style="overflow-y: auto;">
+            <div class="panel-header">
+              <div class="panel-title">Generated Research Dossiers</div>
+            </div>
+            <div id="reports-list" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Reports items -->
+            </div>
+          </div>
+          <!-- Right: Report Viewer & Exporters -->
+          <div class="panel" style="overflow-y: auto; display: flex; flex-direction: column;">
+            <div class="panel-header">
+              <div class="panel-title" id="active-report-title">Report Preview</div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-icon" id="btn-download-md" title="Download Markdown">MD</button>
+                <button class="btn btn-secondary btn-icon" id="btn-download-html" title="Download HTML">HTML</button>
+                <button class="btn btn-secondary btn-icon" id="btn-download-csv" title="Download CSV">CSV</button>
+              </div>
+            </div>
+            <div id="report-markdown-preview" style="background: #05030a; border-radius: 6px; padding: 18px; font-family: var(--font-sans); line-height: 1.6; font-size: 0.88rem; flex: 1; overflow-y: auto;">
+              Select a report from the library to view.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. SCREEN: MODEL STUDIO -->
+      <section class="screen-view" id="view-models">
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Model Provider Configuration</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Active LLM Provider</label>
+                <select id="select-model-provider" class="btn btn-secondary" style="width: 100%;">
+                  <option value="qwen-local">Ollama (Qwen 2.5 / DeepSeek R1 Local)</option>
+                  <option value="openai">OpenAI (GPT-4o / GPT-4.5)</option>
+                  <option value="heuristic">ARACHNE Heuristic Offline Reasoner</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Ollama Endpoint URL</label>
+                <input type="text" id="input-ollama-url" class="command-input-bar" style="width: 100%;" value="http://localhost:11434">
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">OpenAI API Key (Optional)</label>
+                <input type="password" id="input-openai-key" class="command-input-bar" style="width: 100%;" placeholder="sk-...">
+              </div>
+              <button class="btn btn-primary" id="btn-test-models" style="margin-top: 10px;">
+                Test Provider Latency & Connection
+              </button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Model Role Routing</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem;">
+              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 6px;">
+                <div style="font-weight: 600; color: #fff;">1. Investigation Planner</div>
+                <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Decomposes objectives into 5 structured search phases.</div>
+              </div>
+              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 6px;">
+                <div style="font-weight: 600; color: #fff;">2. Entity & Citation Extractor</div>
+                <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Identifies models, repos, arXiv papers, and citations from raw markdown.</div>
+              </div>
+              <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 6px;">
+                <div style="font-weight: 600; color: #fff;">3. Evidence Synthesizer</div>
+                <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">Cross-checks claims and compiles intelligence dossiers.</div>
+              </div>
+              <div id="model-test-result" style="margin-top: 10px; font-family: var(--font-mono); font-size: 0.8rem; padding: 10px; border-radius: 6px; background: #05030a; display: none;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. SCREEN: TELEGRAM REMOTE CONTROL -->
+      <section class="screen-view" id="view-telegram">
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Telegram Bot Gateway</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Telegram Bot Token</label>
+                <input type="password" id="input-tg-token" class="command-input-bar" style="width: 100%;" placeholder="123456789:ABCdefGhIjk-...">
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Authorized Operator Chat ID</label>
+                <input type="text" id="input-tg-chat-id" class="command-input-bar" style="width: 100%;" placeholder="987654321">
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btn-save-tg">Save Token</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" style="display: flex; flex-direction: column; height: 460px;">
+            <div class="panel-header">
+              <div class="panel-title">Remote Command Simulator Console</div>
+            </div>
+            <div id="tg-chat-history" style="flex: 1; background: #05030a; border-radius: 6px; padding: 12px; overflow-y: auto; font-family: var(--font-mono); font-size: 0.8rem; display: flex; flex-direction: column; gap: 8px;">
+              <div style="color: var(--text-dim);">Simulation console connected. Try commands: /status, /investigate [topic], /report</div>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+              <input type="text" id="input-tg-cmd" class="command-input-bar" style="flex: 1;" placeholder="/status or /investigate ...">
+              <button class="btn btn-primary" id="btn-send-tg-cmd">Send</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. SCREEN: KNOWLEDGE VAULT -->
+      <section class="screen-view" id="view-vault">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Persistent Intelligence Collections & Bookmarks</div>
+          </div>
+          <div id="vault-items-container" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Bookmarked items -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. SCREEN: SETTINGS & POLICIES -->
+      <section class="screen-view" id="view-settings">
+        <div class="panel" style="max-width: 700px;">
+          <div class="panel-header">
+            <div class="panel-title">Crawler & Policy Settings</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <label style="font-size: 0.85rem; color: #fff; display: block; margin-bottom: 4px;">Maximum Crawl Depth</label>
+              <input type="number" id="setting-max-depth" class="command-input-bar" style="width: 100%;" value="3" min="1" max="10">
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; color: #fff; display: block; margin-bottom: 4px;">Max URLs Per Investigation</label>
+              <input type="number" id="setting-max-urls" class="command-input-bar" style="width: 100%;" value="30" min="5" max="200">
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; color: #fff; display: block; margin-bottom: 4px;">Per-Domain Rate Limit Delay (ms)</label>
+              <input type="number" id="setting-rate-limit" class="command-input-bar" style="width: 100%;" value="800" min="100" max="5000">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input type="checkbox" id="setting-respect-robots" checked style="width: 18px; height: 18px;">
+              <label for="setting-respect-robots" style="font-size: 0.85rem; color: #fff;">Strictly Respect Robots.txt</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input type="checkbox" id="setting-safe-mode" checked style="width: 18px; height: 18px;">
+              <label for="setting-safe-mode" style="font-size: 0.85rem; color: #fff;">Safe Mode (Domain threat protection & sandbox)</label>
+            </div>
+            <button class="btn btn-primary" id="btn-save-settings" style="width: 180px; margin-top: 10px;">Save Settings</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

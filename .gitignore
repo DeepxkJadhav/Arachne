@@ -3,6 +3,7 @@
 /dist/
 .env
 *.csv
+.arachne-vault/
 dump.rdb
 /mongo-data
 apps/js-sdk/node_modules/
