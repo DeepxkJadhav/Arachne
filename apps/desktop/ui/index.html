@@ -131,207 +131,145 @@
       </header>
 
       <!-- ======================================================== -->
-      <!-- SCREEN 1: SPIDER COMMAND & INTELLIGENCE CENTER (3 COLUMNS) -->
+      <!-- SCREEN 1: MAIN DASHBOARD (Chat & Command Center) -->
       <!-- ======================================================== -->
       <section class="screen-view active" id="view-dashboard">
-        <div class="command-center-layout">
-          
-          <!-- COLUMN 1: SPIDER COMMAND (Left Panel) -->
-          <div class="command-col spider-command-col">
-            <!-- Command Header -->
-            <div class="col-header-box">
-              <div class="col-header-icon spider-icon-pulse">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M12 9V3M12 15v6M9 12H3M15 12h6"/>
-                  <path d="m5.5 5.5 4.5 4.5M14 14l4.5 4.5M18.5 5.5 14 10M10 14l-4.5 4.5"/>
-                </svg>
-              </div>
-              <div class="col-header-text">
-                <h3>SPIDER COMMAND</h3>
-                <span>AUTONOMOUS AGENT CORE</span>
-              </div>
-              <div class="mode-badge-pill" id="hunt-state-indicator">IDLE</div>
-            </div>
+        <!-- Hero Card with Living Mechanical Spider Canvas -->
+        <div class="hero-spider-card">
+          <!-- 60FPS Cybernetic Spider Anatomy Canvas -->
+          <canvas id="hero-spider-canvas" width="300" height="260" class="hero-spider-canvas" title="Cybernetic Spider Intelligence Core - Tracks pointer & reacts to commands"></canvas>
 
-            <!-- Natural Prompt Input Box -->
-            <div class="command-input-card">
-              <label class="input-card-label">MISSION OBJECTIVE</label>
-              <textarea id="input-objective" rows="4" placeholder="What do you want ARACHNE to hunt? e.g. Find latest open-source AI agents for computer control, compare GitHub repos, arXiv papers, and synthesize technical report..."></textarea>
-              
-              <div class="prompt-mode-row">
+          <div class="hero-greeting">
+            <h2>What do you want to discover, Deepak?</h2>
+          </div>
+
+          <div class="hero-prompt-box">
+            <textarea id="input-objective" rows="3" placeholder="Find latest open-source AI agents for computer control. Compare GitHub repos, research papers, tutorials and real-world examples. Make a detailed report with pros/cons and implementation ideas."></textarea>
+            <div class="prompt-actions-row">
+              <div class="prompt-tags-wrap">
+                <button class="prompt-tag-btn" style="padding: 4px 7px;" title="Attach Context">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                </button>
                 <button class="prompt-tag-btn active" data-mode="deep-research">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/></svg>
                   Deep Research
                 </button>
                 <button class="prompt-tag-btn active" data-mode="search-engines">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   Search Engines
                 </button>
                 <button class="prompt-tag-btn active" data-mode="follow-links">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                   Follow Links
                 </button>
+                <button class="prompt-tag-btn" data-mode="extract-all">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Extract All
+                </button>
                 <button class="prompt-tag-btn" data-mode="ai-analysis">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
-                  AI Extraction
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+                  AI Analysis
                 </button>
               </div>
 
-              <div class="dispatch-action-row">
-                <button class="btn btn-primary btn-dispatch-hunt" id="btn-dispatch-investigation">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                  DISPATCH HUNT
-                </button>
-              </div>
-            </div>
-
-            <!-- Quick Mission Chips -->
-            <div class="quick-chips-wrapper">
-              <span class="chips-label">QUICK TARGETS:</span>
-              <div class="chips-container">
-                <button class="chip-sample-btn" data-sample="Research latest open-source autonomous computer-use agents">⚡ AI Agents</button>
-                <button class="chip-sample-btn" data-sample="Compare Playwright vs Selenium vs Firecrawl for stealth crawling">⚡ Crawlers</button>
-                <button class="chip-sample-btn" data-sample="Find benchmark datasets for multimodal computer agents">⚡ Datasets</button>
-                <button class="chip-sample-btn" data-sample="Monitor AI agent research trends on arXiv and GitHub">⚡ arXiv Trends</button>
-              </div>
-            </div>
-
-            <!-- Autonomous Investigation Pipeline Tracker -->
-            <div class="pipeline-tracker-card">
-              <div class="tracker-header-row">
-                <div class="tracker-title">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--neon-violet)"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-                  INVESTIGATION PIPELINE
-                </div>
-                <div class="tracker-controls">
-                  <button class="btn btn-secondary btn-mini" id="btn-ctrl-pause" title="Pause Hunt">⏸</button>
-                  <button class="btn btn-secondary btn-mini" id="btn-ctrl-resume" title="Resume Hunt">▶</button>
-                  <button class="btn btn-danger btn-mini" id="btn-ctrl-stop" title="Stop Hunt">⏹</button>
-                </div>
-              </div>
-              <div id="phases-list" class="phases-scroll-list">
-                <!-- Rendered 5 phases dynamically -->
-              </div>
-            </div>
-
-            <!-- Live Logs Terminal -->
-            <div class="mini-terminal-card">
-              <div class="terminal-card-header">
-                <span class="term-dot green"></span>
-                <span>EXECUTION TELEMETRY</span>
-              </div>
-              <div class="log-terminal" id="log-terminal"></div>
+              <button class="btn btn-primary" id="btn-dispatch-investigation" style="padding: 7px 18px; border-radius: 8px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
             </div>
           </div>
 
-          <!-- COLUMN 2: LIVING WEB TOPOLOGY & MECHANICAL SPIDER QUEEN (Center Panel) -->
-          <div class="command-col web-topology-col">
-            <!-- Topology HUD Header -->
-            <div class="topology-hud-top">
-              <div class="hud-stat-pill">
-                <span class="hud-dot pulsing-green"></span>
-                <span>NODES: <strong id="center-stat-nodes">12,840</strong></span>
-              </div>
-              <div class="hud-stat-pill">
-                <span class="hud-dot pulsing-violet"></span>
-                <span>EDGES: <strong id="center-stat-edges">38,421</strong></span>
-              </div>
-              <div class="hud-stat-pill">
-                <span>SPEED: <strong style="color:var(--neon-cyan);">64 req/s</strong></span>
-              </div>
-              
-              <div class="topology-hud-tools">
-                <button class="btn btn-secondary btn-mini" id="btn-center-zoom-in" title="Zoom In">+</button>
-                <button class="btn btn-secondary btn-mini" id="btn-center-zoom-out" title="Zoom Out">−</button>
-                <button class="btn btn-secondary btn-mini" id="btn-center-fit" title="Fit Web">Fit</button>
-                <button class="btn btn-secondary btn-mini" id="btn-center-reset" title="Center Queen">Queen</button>
-              </div>
+          <!-- Quick chips -->
+          <div style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="prompt-tag-btn chip-sample" data-sample="Research latest open-source autonomous computer-use agents">⚡ Research AI Agents</button>
+            <button class="prompt-tag-btn chip-sample" data-sample="Compare Playwright vs Selenium vs Firecrawl for stealth crawling">⚡ Compare Frameworks</button>
+            <button class="prompt-tag-btn chip-sample" data-sample="Find best benchmark datasets for multimodal computer agents">⚡ Find Datasets</button>
+            <button class="prompt-tag-btn chip-sample" data-sample="Monitor AI agent research trends on arXiv and GitHub">⚡ Monitor Trends</button>
+            <button class="prompt-tag-btn chip-sample" data-sample="Investigate Qwen 2.5 architecture and agent capabilities">⚡ Custom Hunt</button>
+          </div>
+        </div>
+
+        <!-- LIVE OVERVIEW Banner -->
+        <div style="margin-bottom: 12px; font-size: 0.76rem; font-weight: 700; color: var(--text-dim); letter-spacing: 1.2px;">LIVE OVERVIEW</div>
+        <div class="grid-5" style="margin-bottom: 22px;">
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(157, 78, 221, 0.15); color: var(--neon-violet);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
             </div>
-
-            <!-- Living Interactive Canvas -->
-            <div class="center-canvas-wrapper" id="center-canvas-container">
-              <canvas id="center-topology-canvas"></canvas>
-              
-              <!-- Subtle HUD Corner Brackets -->
-              <div class="hud-corner top-left"></div>
-              <div class="hud-corner top-right"></div>
-              <div class="hud-corner bottom-left"></div>
-              <div class="hud-corner bottom-right"></div>
-
-              <!-- Node Hover Tooltip -->
-              <div class="node-hover-tooltip" id="node-hover-tooltip" style="display:none;"></div>
-            </div>
-
-            <!-- Topology Bottom Telemetry Bar -->
-            <div class="topology-hud-bottom">
-              <div class="legend-strip">
-                <span class="legend-chip"><span class="legend-color-dot" style="background:#10b981;"></span> Processed</span>
-                <span class="legend-chip"><span class="legend-color-dot" style="background:#8b5cf6;"></span> Discovered</span>
-                <span class="legend-chip"><span class="legend-color-dot" style="background:#4cc9f0;"></span> Repos/Files</span>
-                <span class="legend-chip"><span class="legend-color-dot" style="background:#ef4444;"></span> Blocked</span>
-                <span class="legend-chip"><span class="legend-color-dot" style="background:#f72585;"></span> Spiderling Scout</span>
-              </div>
-              <div class="engine-state-ticker">
-                CORE: <span style="color:var(--neon-green);" id="engine-status-text">PATROLLING</span>
-              </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-discovered">12,840</div>
+              <div class="lbl">Pages Discovered</div>
             </div>
           </div>
 
-          <!-- COLUMN 3: INTELLIGENCE FEED (Right Panel) -->
-          <div class="command-col intelligence-feed-col">
-            <!-- Feed Header -->
-            <div class="col-header-box">
-              <div class="col-header-icon feed-icon-glow">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="16" y1="13" x2="8" y2="13"/>
-                  <line x1="16" y1="17" x2="8" y2="17"/>
-                </svg>
-              </div>
-              <div class="col-header-text">
-                <h3>INTELLIGENCE FEED</h3>
-                <span>DISCOVERED EVIDENCE</span>
-              </div>
-              <div class="feed-count-badge" id="feed-items-count">27 ITEMS</div>
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: var(--neon-green);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
             </div>
-
-            <!-- Feed Search / Filter Bar -->
-            <div class="feed-filter-bar">
-              <input type="text" id="feed-search-input" class="feed-search-input" placeholder="Filter findings...">
-              <div class="feed-filter-actions">
-                <button class="btn btn-secondary btn-mini" id="btn-export-feed-json" title="Export JSON">JSON</button>
-                <button class="btn btn-secondary btn-mini" id="btn-export-feed-csv" title="Export CSV">CSV</button>
-              </div>
-            </div>
-
-            <!-- Discovered Findings Cards Stream -->
-            <div class="findings-cards-stream" id="dashboard-findings-feed">
-              <!-- Rendered findings cards -->
-            </div>
-
-            <!-- Intelligence Feed Bottom Summary Bar -->
-            <div class="feed-summary-footer">
-              <div class="summary-metric">
-                <div class="val" id="stat-discovered">12,840</div>
-                <div class="lbl">Discovered</div>
-              </div>
-              <div class="summary-metric">
-                <div class="val" id="stat-sources" style="color:var(--neon-green);">420</div>
-                <div class="lbl">Verified</div>
-              </div>
-              <div class="summary-metric">
-                <div class="val" id="stat-extracted" style="color:var(--neon-cyan);">2,381</div>
-                <div class="lbl">Extracted</div>
-              </div>
-              <div class="summary-metric">
-                <div class="val" id="stat-size" style="color:var(--neon-magenta);">4.2 GB</div>
-                <div class="lbl">Vault Size</div>
-              </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-sources">420</div>
+              <div class="lbl">Relevant Sources</div>
             </div>
           </div>
 
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(76, 201, 240, 0.15); color: var(--neon-cyan);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-extracted">2,381</div>
+              <div class="lbl">Files Extracted</div>
+            </div>
+          </div>
+
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(247, 37, 133, 0.15); color: var(--neon-magenta);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+            </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-size">4.2 GB</div>
+              <div class="lbl">Data Size</div>
+            </div>
+          </div>
+
+          <div class="live-overview-card">
+            <div class="live-stat-icon-wrap" style="background: rgba(251, 191, 36, 0.15); color: var(--neon-yellow);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+            </div>
+            <div class="live-stat-text">
+              <div class="num" id="stat-workers">12</div>
+              <div class="lbl">Active Workers</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-time Terminal & Active State Row -->
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--neon-violet)"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                Autonomous Investigation Pipeline
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-secondary" id="btn-ctrl-pause" style="padding: 4px 8px; font-size: 0.75rem;">Pause</button>
+                <button class="btn btn-secondary" id="btn-ctrl-resume" style="padding: 4px 8px; font-size: 0.75rem;">Resume</button>
+                <button class="btn btn-danger" id="btn-ctrl-stop" style="padding: 4px 8px; font-size: 0.75rem;">Stop</button>
+              </div>
+            </div>
+            <div id="phases-list" style="display: flex; flex-direction: column; gap: 7px;">
+              <!-- Rendered phases -->
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--neon-cyan)"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                Real-Time Execution Logs
+              </div>
+            </div>
+            <div class="log-terminal" id="log-terminal" style="height: 190px;"></div>
+          </div>
         </div>
       </section>
 

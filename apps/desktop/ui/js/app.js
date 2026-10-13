@@ -25,6 +25,7 @@
   window.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initAmbientWebCanvas();
+    initHeroSpiderCanvas();
     initCenterTopologyCanvas();
     initWebGraphCanvas();
     initSearchAndCommand();
@@ -194,7 +195,200 @@
   }
 
   // =========================================================================
-  // 3. LIVING CENTER TOPOLOGY CANVAS & MECHANICAL SPIDER QUEEN (SCREEN 1)
+  // 3. LIVING MECHANICAL SPIDER IN HERO CARD (SCREEN 1)
+  // =========================================================================
+  function initHeroSpiderCanvas() {
+    const canvas = document.getElementById('hero-spider-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    let tick = 0;
+    canvas.addEventListener('click', () => {
+      triggerSpiderScurry();
+      showToast('🕷️ Arachne Core engaged. Sensory clusters active.', 'info');
+    });
+
+    function triggerSpiderScurry() {
+      state.spiderCrawling = true;
+      setTimeout(() => { state.spiderCrawling = false; }, 2600);
+    }
+    window.triggerSpiderScurry = triggerSpiderScurry;
+
+    function renderSpider() {
+      tick += state.spiderCrawling ? 0.08 : 0.025;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2 + 10;
+      const cy = canvas.height / 2;
+
+      // 1. Geometric Anchor Web in Background
+      ctx.save();
+      ctx.strokeStyle = 'rgba(168, 85, 247, 0.22)';
+      ctx.lineWidth = 1;
+      const webRadius = [45, 80, 115];
+      webRadius.forEach(r => {
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+          const wx = cx + Math.cos(a) * r;
+          const wy = cy + Math.sin(a) * r;
+          if (a === 0) ctx.moveTo(wx, wy);
+          else ctx.lineTo(wx, wy);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      });
+
+      // Radiating Silk Strands to card corners
+      const angles = [0, 0.78, 1.57, 2.35, 3.14, 3.92, 4.71, 5.49];
+      angles.forEach(a => {
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * 140, cy + Math.sin(a) * 140);
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      // Mouse look coordinates for eyes
+      const rect = canvas.getBoundingClientRect();
+      const targetX = state.mousePos.x - (rect.left + cx);
+      const targetY = state.mousePos.y - (rect.top + cy);
+      const lookDist = Math.hypot(targetX, targetY);
+      const lookNormX = lookDist > 0 ? (targetX / lookDist) * 3.5 : 0;
+      const lookNormY = lookDist > 0 ? (targetY / lookDist) * 3.5 : 0;
+
+      // 2. Articulated Legs (4 on left, 4 on right)
+      const legSides = [-1, 1];
+      const legAngles = [
+        { base: -0.65, length: 72, reach: 98 },
+        { base: -0.25, length: 82, reach: 110 },
+        { base: 0.25, length: 80, reach: 106 },
+        { base: 0.65, length: 70, reach: 94 }
+      ];
+
+      legSides.forEach(side => {
+        legAngles.forEach((leg, i) => {
+          const legPhase = tick * (state.spiderCrawling ? 6 : 2) + i * 0.9 + (side === 1 ? Math.PI : 0);
+          const flex = Math.sin(legPhase) * (state.spiderCrawling ? 14 : 5);
+
+          // Root joint
+          const r0x = cx + side * 14;
+          const r0y = cy - 5 + i * 9;
+
+          // Knee joint (trochanter/femur)
+          const angleKnee = leg.base + (side === 1 ? Math.PI : 0);
+          const kx = cx + Math.cos(angleKnee) * (leg.length * side) + flex * 0.5;
+          const ky = cy + Math.sin(angleKnee) * leg.length - 20;
+
+          // Tip joint (tarsus claw)
+          const tipX = cx + Math.cos(angleKnee) * (leg.reach * side) + flex;
+          const tipY = cy + Math.sin(angleKnee) * leg.reach + 25;
+
+          // Draw leg segment 1 (Metallic Femur)
+          ctx.beginPath();
+          ctx.moveTo(r0x, r0y);
+          ctx.lineTo(kx, ky);
+          ctx.strokeStyle = side === 1 ? '#f43f5e' : '#ec4899';
+          ctx.lineWidth = 2.8;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+
+          // Draw leg segment 2 (Neon Tibia & Claw)
+          ctx.beginPath();
+          ctx.moveTo(kx, ky);
+          ctx.lineTo(tipX, tipY);
+          ctx.strokeStyle = '#a855f7';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Glowing Joint Knuckle
+          ctx.beginPath();
+          ctx.arc(kx, ky, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#ff0054';
+          ctx.shadowColor = '#ff0054';
+          ctx.shadowBlur = 6;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        });
+      });
+
+      // 3. Abdomen (Carapace & Glowing Reactor Core)
+      const pulse = Math.sin(tick * 3) * 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 22, 22 + pulse * 0.5, 30 + pulse, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#140827';
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 2.2;
+      ctx.shadowColor = '#f43f5e';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Abdomen Reactor Emblem
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + 8);
+      ctx.lineTo(cx + 12, cy + 26);
+      ctx.lineTo(cx, cy + 44);
+      ctx.lineTo(cx - 12, cy + 26);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 0, 84, 0.7)';
+      ctx.shadowColor = '#ff0054';
+      ctx.shadowBlur = 14;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+
+      // 4. Cephalothorax (Head Shell)
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy - 10, 16, 0, Math.PI * 2);
+      ctx.fillStyle = '#0e051d';
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 2;
+      ctx.fill();
+      ctx.stroke();
+
+      // 5. Piercing Eyes Cluster (Pulsating & Cursor Tracking)
+      const eyeGlow = Math.sin(tick * 4) * 2;
+      ctx.fillStyle = '#ff0054';
+      ctx.shadowColor = '#ff0054';
+      ctx.shadowBlur = 10 + eyeGlow;
+
+      // Primary Optical Eyes
+      ctx.beginPath();
+      ctx.arc(cx - 5 + lookNormX, cy - 13 + lookNormY, 3, 0, Math.PI * 2);
+      ctx.arc(cx + 5 + lookNormX, cy - 13 + lookNormY, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Secondary Sensor Clusters (Cyan)
+      ctx.fillStyle = '#4cc9f0';
+      ctx.shadowColor = '#4cc9f0';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(cx - 9 + lookNormX * 0.6, cy - 8 + lookNormY * 0.6, 1.8, 0, Math.PI * 2);
+      ctx.arc(cx + 9 + lookNormX * 0.6, cy - 8 + lookNormY * 0.6, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Venom Fangs / Chelicerae
+      ctx.beginPath();
+      ctx.moveTo(cx - 6, cy - 1);
+      ctx.lineTo(cx - 8, cy + 7);
+      ctx.moveTo(cx + 6, cy - 1);
+      ctx.lineTo(cx + 8, cy + 7);
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.restore();
+
+      requestAnimationFrame(renderSpider);
+    }
+    renderSpider();
+  }
+
+  // =========================================================================
+  // 3B. LIVING CENTER TOPOLOGY CANVAS & MECHANICAL SPIDER QUEEN
   // =========================================================================
   let centerCanvas, centerCtx;
   let centerTransform = { x: 0, y: 0, scale: 1 };
