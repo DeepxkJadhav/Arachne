@@ -9,6 +9,7 @@ import { ModelRouter } from './models/model-router.mjs';
 import { ReportEngine } from './reports/report-engine.mjs';
 import { ResearchAgent } from './agent/research-agent.mjs';
 import { TelegramBotGateway } from './telegram/telegram-bot.mjs';
+import { ContentExtractor } from './crawler/extractor.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,7 +55,7 @@ export function createArachneServer(port = 3003) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -102,11 +103,31 @@ export function createArachneServer(port = 3003) {
     try {
       // --- REST API ENDPOINTS ---
 
+      // Root API status endpoint for CLI & SDK compatibility
+      if (pathname === '/' && req.method === 'GET') {
+        const accept = (req.headers.accept || '').toLowerCase();
+        if (accept.includes('application/json') || !accept.includes('text/html')) {
+          const inv = researchAgent.activeInvestigation;
+          return sendJson({
+            name: 'ARACHNE Web Intelligence Core',
+            message: 'Arachne API',
+            version: '2.0.0',
+            repository: 'https://github.com/DeepxkJadhav/Arachne',
+            documentation_url: 'https://github.com/DeepxkJadhav/Arachne#readme',
+            status: 'online',
+            mode: 'standalone-intelligence-core',
+            ui_url: `http://localhost:${port}/`,
+            activeInvestigation: inv ? { id: inv.id, objective: inv.objective, status: inv.status } : null
+          });
+        }
+      }
+
       // System Status
       if (pathname === '/api/status' && req.method === 'GET') {
         const inv = researchAgent.activeInvestigation;
         const graph = vaultStore.getGraph();
         const corpus = vaultStore.getCorpus();
+        const storage = vaultStore.getStorageMetrics();
         return sendJson({
           success: true,
           system: 'ARACHNE Web Intelligence Command Center',
@@ -116,7 +137,9 @@ export function createArachneServer(port = 3003) {
             totalNodes: graph.nodes.length,
             totalEdges: graph.edges.length,
             totalCorpusDocuments: corpus.length,
-            totalReports: vaultStore.getReports().length
+            totalReports: vaultStore.getReports().length,
+            storageMb: storage.totalMb,
+            pendingApprovals: vaultStore.getApprovals('pending').length
           }
         });
       }
@@ -150,12 +173,32 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, message: 'Stopped' });
       }
 
+      if (pathname === '/api/investigate/retry' && req.method === 'POST') {
+        const inv = await researchAgent.retry();
+        return sendJson({ success: true, data: inv });
+      }
+
+      // Human Approvals (Level 3 Intervention)
+      if ((pathname === '/api/approvals' || pathname === '/api/approvals/pending') && req.method === 'GET') {
+        const status = pathname === '/api/approvals/pending' ? 'pending' : (parsedUrl.searchParams.get('status') || null);
+        return sendJson({ success: true, data: vaultStore.getApprovals(status) });
+      }
+
+      if (pathname.startsWith('/api/approvals/') && pathname.endsWith('/resolve') && req.method === 'POST') {
+        const approvalId = pathname.split('/')[3];
+        const body = await readBody();
+        const resolved = await researchAgent.resolveApproval(approvalId, body.action || 'approved', body.note || '');
+        if (!resolved) return sendJson({ success: false, error: 'Approval not found' }, 404);
+        return sendJson({ success: true, data: resolved });
+      }
+
       // Web Graph
       if (pathname === '/api/graph' && req.method === 'GET') {
         const type = parsedUrl.searchParams.get('type') || null;
+        const status = parsedUrl.searchParams.get('status') || null;
         const minRelevance = parsedUrl.searchParams.get('minRelevance') || null;
         const domain = parsedUrl.searchParams.get('domain') || null;
-        const data = graphEngine.getGraphData({ type, minRelevance, domain });
+        const data = graphEngine.getGraphData({ type, status, minRelevance, domain });
         return sendJson({ success: true, data });
       }
 
@@ -165,17 +208,108 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data });
       }
 
+      if (pathname === '/api/graph/path' && req.method === 'GET') {
+        const start = parsedUrl.searchParams.get('start');
+        const end = parsedUrl.searchParams.get('end');
+        const result = graphEngine.findPath(start, end);
+        return sendJson({ success: true, data: result });
+      }
+
       // Search & Corpus
       if (pathname === '/api/search' && req.method === 'GET') {
         const q = parsedUrl.searchParams.get('q') || '';
         const domain = parsedUrl.searchParams.get('domain') || null;
         const type = parsedUrl.searchParams.get('type') || null;
         const results = vaultStore.searchCorpus(q, { domain, type });
+        if (q.trim()) vaultStore.saveQuery(q.trim());
         return sendJson({ success: true, data: results, count: results.length });
       }
 
       if (pathname === '/api/corpus' && req.method === 'GET') {
         return sendJson({ success: true, data: vaultStore.getCorpus() });
+      }
+
+      if (pathname.startsWith('/api/corpus/') && req.method === 'GET') {
+        const docId = pathname.replace('/api/corpus/', '');
+        const doc = vaultStore.getCorpus().find(d => d.id === docId);
+        if (!doc) return sendJson({ success: false, error: 'Document not found' }, 404);
+        return sendJson({ success: true, data: doc });
+      }
+
+      // Swarm Multi-Agent Intelligence
+      if (pathname === '/api/swarm' && req.method === 'GET') {
+        return sendJson({
+          success: true,
+          data: researchAgent.swarm.getSwarmState()
+        });
+      }
+
+      // Production RAG Pipeline: Hybrid Semantic Search
+      if (pathname === '/api/rag/search' && req.method === 'GET') {
+        const q = parsedUrl.searchParams.get('q') || '';
+        const limit = parseInt(parsedUrl.searchParams.get('limit') || '10', 10);
+        const results = researchAgent.rag.search(q, limit);
+        return sendJson({
+          success: true,
+          query: q,
+          count: results.length,
+          data: results
+        });
+      }
+
+      // Production RAG Pipeline: Contradiction & Claim Analysis
+      if (pathname === '/api/rag/contradictions' && req.method === 'GET') {
+        const contradictions = researchAgent.rag.detectContradictions();
+        return sendJson({
+          success: true,
+          count: contradictions.length,
+          data: contradictions
+        });
+      }
+
+      // Dynamic Architecture Self-Introspection Graph (agency-multi-agent & understand skills)
+      if (pathname === '/api/system/architecture' && req.method === 'GET') {
+        const graph = vaultStore.getGraph();
+        const corpus = vaultStore.getCorpus();
+        const inv = researchAgent.activeInvestigation;
+        const swarm = researchAgent.swarm.getSwarmState();
+
+        const architectureGraph = {
+          system: 'ARACHNE Web Intelligence System',
+          version: '2.0.0',
+          topology: 'Decoupled Event-Driven Microkernel + Hierarchical Evaluator-Optimizer Swarm',
+          components: [
+            { id: 'core-server', name: 'Arachne Server', type: 'Microkernel', status: 'active', port: port, protocol: 'HTTP/SSE' },
+            { id: 'swarm-lead', name: 'Research Agent Lead', type: 'Lead Orchestrator', status: inv ? inv.status : 'idle' },
+            { id: 'agent-scout', name: 'Scout Specialist', type: 'Subagent', status: swarm.agents[0].status, role: 'Discovery & Frontier' },
+            { id: 'agent-analyst', name: 'Technical Analyst', type: 'Subagent', status: swarm.agents[1].status, role: 'Deep Extraction & AST' },
+            { id: 'agent-verifier', name: 'Verifier & Gatekeeper', type: 'Subagent', status: swarm.agents[2].status, role: 'Contradiction & Trust Scoring' },
+            { id: 'agent-synthesizer', name: 'Dossier Synthesizer', type: 'Subagent', status: swarm.agents[3].status, role: 'Multi-Format Serializer' },
+            { id: 'crawler-frontier', name: 'URL Frontier', type: 'Engine', policy: 'Domain Politeness, Exponential Backoff' },
+            { id: 'knowledge-graph', name: 'Knowledge Graph Engine', type: 'Topology', nodes: graph.nodes.length, edges: graph.edges.length },
+            { id: 'rag-engine', name: 'Hybrid RAG Pipeline', type: 'Search/Retrieval', method: 'BM25 + 3-Gram Vector Cosine + RRF' },
+            { id: 'vault-store', name: 'Knowledge Vault Store', type: 'Persistence', documents: corpus.length },
+            { id: 'report-engine', name: 'Multi-Format Report Studio', type: 'Serializer', formats: ['md','pdf','docx','xlsx','pptx','html','json','csv','txt'] },
+            { id: 'model-router', name: 'Qwen & LLM Model Router', type: 'Inference Gateway', providers: ['ollama','lm-studio','vllm','openai'] },
+            { id: 'telegram-gateway', name: 'Telegram Bot Remote Gateway', type: 'Interface', status: 'active' }
+          ],
+          links: [
+            { source: 'core-server', target: 'swarm-lead', relation: 'dispatches_tasks' },
+            { source: 'swarm-lead', target: 'agent-scout', relation: 'orchestrates' },
+            { source: 'swarm-lead', target: 'agent-analyst', relation: 'orchestrates' },
+            { source: 'swarm-lead', target: 'agent-verifier', relation: 'evaluates_with' },
+            { source: 'swarm-lead', target: 'agent-synthesizer', relation: 'compiles_with' },
+            { source: 'agent-scout', target: 'crawler-frontier', relation: 'enqueues_urls' },
+            { source: 'crawler-frontier', target: 'agent-analyst', relation: 'feeds_raw_html' },
+            { source: 'agent-analyst', target: 'knowledge-graph', relation: 'ingests_entities' },
+            { source: 'agent-analyst', target: 'vault-store', relation: 'persists_corpus' },
+            { source: 'agent-verifier', target: 'rag-engine', relation: 'cross_references' },
+            { source: 'agent-synthesizer', target: 'report-engine', relation: 'generates_dossiers' },
+            { source: 'core-server', target: 'telegram-gateway', relation: 'remote_bidirectional_sync' }
+          ]
+        };
+
+        return sendJson({ success: true, data: architectureGraph });
       }
 
       // Reports
@@ -207,23 +341,45 @@ export function createArachneServer(port = 3003) {
       if (pathname.startsWith('/api/reports/') && pathname.includes('/download')) {
         const parts = pathname.split('/');
         const reportId = parts[3];
-        const format = parsedUrl.searchParams.get('format') || 'md';
+        const format = (parsedUrl.searchParams.get('format') || 'md').toLowerCase();
         const rep = vaultStore.getReports().find(r => r.id === reportId);
         if (!rep) return sendJson({ success: false, error: 'Report not found' }, 404);
 
-        let content = rep.markdown || '';
-        let mime = 'text/markdown';
-        let filename = `${reportId}.${format}`;
-        if (format === 'html') {
-          content = rep.html || '';
-          mime = 'text/html';
-        } else if (format === 'json') {
-          content = JSON.stringify(rep.json || {}, null, 2);
-          mime = 'application/json';
-        } else if (format === 'csv') {
-          content = rep.csv || '';
-          mime = 'text/csv';
+        const reportsDir = path.join(vaultStore.vaultDir, 'reports');
+        const diskFile = path.join(reportsDir, `${reportId}.${format}`);
+
+        const mimeTypes = {
+          'md': 'text/markdown; charset=utf-8',
+          'txt': 'text/plain; charset=utf-8',
+          'html': 'text/html; charset=utf-8',
+          'csv': 'text/csv; charset=utf-8',
+          'json': 'application/json; charset=utf-8',
+          'pdf': 'application/pdf',
+          'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        };
+
+        const mime = mimeTypes[format] || 'application/octet-stream';
+        const filename = `${reportId}.${format}`;
+
+        if (fs.existsSync(diskFile)) {
+          const fileData = fs.readFileSync(diskFile);
+          res.writeHead(200, {
+            'Content-Type': mime,
+            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Content-Length': fileData.length
+          });
+          res.end(fileData);
+          return;
         }
+
+        // In-memory fallback
+        let content = rep.markdown || '';
+        if (format === 'html') content = rep.html || '';
+        else if (format === 'json') content = JSON.stringify(rep.json || {}, null, 2);
+        else if (format === 'csv') content = rep.csv || '';
+        else if (format === 'txt') content = rep.txt || rep.markdown || '';
 
         res.writeHead(200, {
           'Content-Type': mime,
@@ -240,11 +396,20 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: rep });
       }
 
-      // Model Studio & Connection Test
+      // Model Studio
+      if (pathname === '/api/models' && req.method === 'GET') {
+        return sendJson({ success: true, data: modelRouter.getModels() });
+      }
+
       if (pathname === '/api/models/test' && req.method === 'GET') {
         const provider = parsedUrl.searchParams.get('provider') || null;
         const testRes = await modelRouter.testConnection(provider);
         return sendJson(testRes);
+      }
+
+      if (pathname === '/api/models/test-all' && req.method === 'GET') {
+        const results = await modelRouter.testAllConnections();
+        return sendJson({ success: true, data: results });
       }
 
       // Telegram Remote Control
@@ -258,7 +423,7 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: vaultStore.getTelegramLogs() });
       }
 
-      // Knowledge Vault Bookmarks
+      // Knowledge Vault
       if (pathname === '/api/vault/bookmarks' && req.method === 'GET') {
         return sendJson({ success: true, data: vaultStore.getBookmarks() });
       }
@@ -267,6 +432,24 @@ export function createArachneServer(port = 3003) {
         const body = await readBody();
         const resData = vaultStore.toggleBookmark(body);
         return sendJson({ success: true, data: resData });
+      }
+
+      if (pathname === '/api/vault/collections' && req.method === 'GET') {
+        return sendJson({ success: true, data: vaultStore.getCollections() });
+      }
+
+      if (pathname === '/api/vault/collection/add' && req.method === 'POST') {
+        const body = await readBody();
+        const col = vaultStore.addToCollection(body.collectionId || 'col-default', body.item);
+        return sendJson({ success: true, data: col });
+      }
+
+      if (pathname === '/api/vault/stats' && req.method === 'GET') {
+        return sendJson({ success: true, data: vaultStore.getStorageMetrics() });
+      }
+
+      if (pathname === '/api/vault/saved-queries' && req.method === 'GET') {
+        return sendJson({ success: true, data: vaultStore.getSavedQueries() });
       }
 
       // Settings
@@ -280,7 +463,7 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: updated });
       }
 
-      // Backwards-compatible /v1/scrape API endpoint
+      // Compatibility: /v1/scrape API endpoint
       if (pathname === '/v1/scrape' && req.method === 'POST') {
         const body = await readBody();
         const url = body.url;
@@ -293,8 +476,23 @@ export function createArachneServer(port = 3003) {
           data: {
             markdown: md,
             html: fetchRes.html,
+            contentHash: fetchRes.contentHash,
             metadata: { title: url, sourceURL: url, statusCode: fetchRes.status }
           }
+        });
+      }
+
+      // Compatibility: /v1/map API endpoint
+      if (pathname === '/v1/map' && req.method === 'POST') {
+        const body = await readBody();
+        const url = body.url;
+        if (!url) return sendJson({ success: false, error: 'URL required' }, 400);
+
+        const fetchRes = await researchAgent.fetcher.fetchUrl(url);
+        const links = ContentExtractor.extractLinks(fetchRes.html, url);
+        return sendJson({
+          success: fetchRes.success,
+          links
         });
       }
 
@@ -306,10 +504,10 @@ export function createArachneServer(port = 3003) {
 
       const ext = path.extname(filePath).toLowerCase();
       const mimeTypes = {
-        '.html': 'text/html',
-        '.js': 'application/javascript',
-        '.css': 'text/css',
-        '.json': 'application/json',
+        '.html': 'text/html; charset=utf-8',
+        '.js': 'application/javascript; charset=utf-8',
+        '.css': 'text/css; charset=utf-8',
+        '.json': 'application/json; charset=utf-8',
         '.png': 'image/png',
         '.jpg': 'image/jpeg',
         '.svg': 'image/svg+xml',
@@ -343,7 +541,6 @@ export function createArachneServer(port = 3003) {
 }
 
 function seedInitialDemoData(vaultStore, graphEngine, researchAgent) {
-  // Seed high-value initial intelligence items so the UI opens populated with real graph and corpus
   const initialDocs = [
     {
       url: 'https://arxiv.org/abs/2303.17580',
@@ -468,21 +665,24 @@ function seedInitialDemoData(vaultStore, graphEngine, researchAgent) {
       id: 'AR-0042',
       objective: 'Find latest open-source AI agents for computer control. Compare GitHub repos, research papers, tutorials and real-world examples.',
       title: 'Autonomous AI Agents Investigation',
-      status: 'completed',
+      status: 'COMPLETED',
       createdAt: new Date(Date.now() - 3600000).toISOString(),
       plan: {
         phases: [
-          { name: 'Scoping & Problem Formulation', status: 'completed', description: 'Identify foundational taxonomy, core definitions, and key actors in AI agent architectures.' },
-          { name: 'Primary Source Discovery', status: 'completed', description: 'Identify top open-source repositories, arXiv papers, and benchmark leaderboards.' },
-          { name: 'Deep Crawling & Technical Inspection', status: 'completed', description: 'Traverse documentation, architecture specs, code implementations, and citations.' },
-          { name: 'Cross-Verification & Contradiction Analysis', status: 'completed', description: 'Cross-examine benchmarks, claims, license limitations, and architectural trade-offs.' },
-          { name: 'Deliverable Synthesis & Dossier Compilation', status: 'completed', description: 'Synthesize structured findings, evidence matrix, and actionable executive summary.' }
+          { name: 'Scoping & Problem Formulation', status: 'completed', description: 'Taxonomy of computer-use agents' },
+          { name: 'Primary Source Discovery', status: 'completed', description: 'GitHub repos, arXiv papers, benchmarks' },
+          { name: 'Deep Crawling & Technical Inspection', status: 'completed', description: 'Architecture, browser-use, sandboxing' },
+          { name: 'Cross-Verification & Contradiction Analysis', status: 'completed', description: 'OSWorld benchmarks & limitations' },
+          { name: 'Deliverable Synthesis & Dossier Compilation', status: 'completed', description: 'Executive summary & comparison matrix' }
         ]
       },
       metrics: {
         urlsDiscovered: 12840,
         pagesCrawled: 420,
-        entitiesExtracted: 2381
+        entitiesExtracted: 2381,
+        citationsVerified: 142,
+        retriesCount: 0,
+        durationSeconds: 184
       },
       logs: [
         { message: 'Initiated autonomous investigation: "Find latest open-source AI agents for computer control"', level: 'info', timestamp: new Date(Date.now() - 3600000).toISOString() },

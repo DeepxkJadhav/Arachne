@@ -119,7 +119,14 @@
         </div>
 
         <div class="top-nav-right">
-          <input type="text" class="global-search-input" placeholder="Search anything...">
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="text" class="global-search-input" id="global-search-input" placeholder="Search anything... (Ctrl+K)">
+            <span style="position: absolute; right: 10px; font-size: 0.68rem; font-family: var(--font-mono); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 1px 5px; color: var(--neon-cyan); pointer-events: none;">Ctrl+K</span>
+          </div>
+          <button class="btn-audio-toggle" id="btn-toggle-soundscape" title="Toggle Synthesized Web Audio Soundscape">
+            <span id="audio-toggle-icon">🔊</span>
+            <span id="audio-toggle-label">AUDIO: ON</span>
+          </button>
           <button class="btn btn-secondary" style="padding: 5px 8px;" title="Notifications">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           </button>
@@ -188,6 +195,61 @@
           </div>
         </div>
 
+        <!-- SWARM MULTI-AGENT TELEMETRY (Hierarchical Evaluator-Optimizer) -->
+        <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-dim); letter-spacing: 1.2px;">SWARM AGENT TELEMETRY // HIERARCHICAL OPTIMIZER</div>
+          <span style="font-size: 0.7rem; font-family: var(--font-mono); color: var(--neon-cyan);">4 Subagents Online</span>
+        </div>
+        <div class="swarm-deck-grid" id="swarm-deck-container">
+          <div class="swarm-agent-card" id="swarm-card-scout">
+            <div class="swarm-agent-header">
+              <span class="swarm-agent-title">🕷️ Scout Specialist</span>
+              <span class="swarm-agent-badge idle" id="swarm-status-scout">IDLE</span>
+            </div>
+            <div class="swarm-agent-desc">Frontier crawler, sitemap & RSS explorer, search expansion</div>
+            <div class="swarm-agent-stats">
+              <span>Target: <strong id="swarm-target-scout" style="color: #fff;">None</strong></span>
+              <span>Done: <strong id="swarm-done-scout" style="color: var(--neon-magenta);">0</strong></span>
+            </div>
+          </div>
+
+          <div class="swarm-agent-card" id="swarm-card-analyst">
+            <div class="swarm-agent-header">
+              <span class="swarm-agent-title">🔬 Technical Analyst</span>
+              <span class="swarm-agent-badge idle" id="swarm-status-analyst">IDLE</span>
+            </div>
+            <div class="swarm-agent-desc">Deep content extraction, AST parsing, schema classification</div>
+            <div class="swarm-agent-stats">
+              <span>Target: <strong id="swarm-target-analyst" style="color: #fff;">None</strong></span>
+              <span>Done: <strong id="swarm-done-analyst" style="color: var(--neon-magenta);">0</strong></span>
+            </div>
+          </div>
+
+          <div class="swarm-agent-card" id="swarm-card-verifier">
+            <div class="swarm-agent-header">
+              <span class="swarm-agent-title">⚖️ Verifier & Gatekeeper</span>
+              <span class="swarm-agent-badge idle" id="swarm-status-verifier">IDLE</span>
+            </div>
+            <div class="swarm-agent-desc">Cross-source contradiction detection & provenance scoring</div>
+            <div class="swarm-agent-stats">
+              <span>Target: <strong id="swarm-target-verifier" style="color: #fff;">None</strong></span>
+              <span>Done: <strong id="swarm-done-verifier" style="color: var(--neon-magenta);">0</strong></span>
+            </div>
+          </div>
+
+          <div class="swarm-agent-card" id="swarm-card-synthesizer">
+            <div class="swarm-agent-header">
+              <span class="swarm-agent-title">📑 Dossier Synthesizer</span>
+              <span class="swarm-agent-badge idle" id="swarm-status-synthesizer">IDLE</span>
+            </div>
+            <div class="swarm-agent-desc">Multi-format dossier compilation across 9 media formats</div>
+            <div class="swarm-agent-stats">
+              <span>Target: <strong id="swarm-target-synthesizer" style="color: #fff;">None</strong></span>
+              <span>Done: <strong id="swarm-done-synthesizer" style="color: var(--neon-magenta);">0</strong></span>
+            </div>
+          </div>
+        </div>
+
         <!-- LIVE OVERVIEW Banner -->
         <div style="margin-bottom: 12px; font-size: 0.76rem; font-weight: 700; color: var(--text-dim); letter-spacing: 1.2px;">LIVE OVERVIEW</div>
         <div class="grid-5" style="margin-bottom: 22px;">
@@ -242,6 +304,21 @@
           </div>
         </div>
 
+        <!-- Human Approval Alert Banner (Level 3 Gate) -->
+        <div id="approval-alert-banner" class="approval-banner" style="display: none;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: rgba(247, 37, 133, 0.2); border: 1px solid var(--neon-magenta); border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--neon-magenta); flex-shrink: 0;">⚠️</div>
+            <div>
+              <strong style="color: #fff; font-size: 0.88rem;" id="approval-banner-title">Level 3 Human Approval Required</strong>
+              <div style="font-size: 0.74rem; color: var(--text-dim);" id="approval-banner-desc">Crawler requested access to external domain outside current allowlist.</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" id="btn-banner-approve" style="padding: 5px 14px; font-size: 0.75rem;">Approve</button>
+            <button class="btn btn-danger" id="btn-banner-reject" style="padding: 5px 14px; font-size: 0.75rem;">Reject</button>
+          </div>
+        </div>
+
         <!-- Real-time Terminal & Active State Row -->
         <div class="grid-2">
           <div class="panel">
@@ -253,6 +330,7 @@
               <div style="display: flex; gap: 6px;">
                 <button class="btn btn-secondary" id="btn-ctrl-pause" style="padding: 4px 8px; font-size: 0.75rem;">Pause</button>
                 <button class="btn btn-secondary" id="btn-ctrl-resume" style="padding: 4px 8px; font-size: 0.75rem;">Resume</button>
+                <button class="btn btn-secondary" id="btn-ctrl-retry" style="padding: 4px 8px; font-size: 0.75rem;">Retry</button>
                 <button class="btn btn-danger" id="btn-ctrl-stop" style="padding: 4px 8px; font-size: 0.75rem;">Stop</button>
               </div>
             </div>
@@ -391,6 +469,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
               <div style="font-size: 0.82rem; color: var(--text-muted);"><strong id="results-count-label" style="color: #fff;">0</strong> results found</div>
               <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" id="btn-toggle-contradictions" style="color: var(--neon-magenta); border-color: rgba(247,37,133,0.4);">⚖️ Contradictions (<span id="cnt-contradictions-badge">0</span>)</button>
                 <select id="results-sort-by" class="btn btn-secondary" style="font-size: 0.78rem;">
                   <option value="relevance">Sort: Relevance (High to Low)</option>
                   <option value="date">Sort: Freshness (Newest)</option>
@@ -399,6 +478,11 @@
                 <button class="btn btn-secondary" id="btn-results-export-json">Export JSON</button>
                 <button class="btn btn-secondary" id="btn-results-export-csv">Export CSV</button>
               </div>
+            </div>
+
+            <!-- Contradiction Matrix Drawer -->
+            <div id="contradictions-deck-container" style="display: none; margin-bottom: 16px; flex-direction: column; gap: 10px;">
+              <!-- Dynamically populated from /api/rag/contradictions -->
             </div>
 
             <div id="results-cards-container" style="display: flex; flex-direction: column; gap: 12px;">
@@ -430,15 +514,16 @@
           <!-- Col 2: Suggested Formats -->
           <div class="panel">
             <div class="panel-title" style="margin-bottom: 12px;">2. Suggested Formats (by Qwen)</div>
-            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.78rem;">
-              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> <strong>PDF</strong> (Research Report)</label>
-              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> <strong>Excel</strong> (Comparison Table)</label>
-              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> <strong>Markdown</strong> (Detailed Notes)</label>
-              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>DOCX</strong> (Editable Report)</label>
-              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>PowerPoint</strong> (Presentation)</label>
-              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>CSV</strong> (Raw Data)</label>
-              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>JSON</strong> (Structured Data)</label>
-              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> <strong>HTML</strong> (Web Report)</label>
+            <div style="display: flex; flex-direction: column; gap: 7px; font-size: 0.78rem;" id="report-format-checkboxes">
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" class="report-fmt-choice" value="pdf" checked> <strong>PDF</strong> (Research Report)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" class="report-fmt-choice" value="xlsx" checked> <strong>Excel (.xlsx)</strong> (Comparison Table)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" class="report-fmt-choice" value="md" checked> <strong>Markdown (.md)</strong> (Detailed Notes)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" class="report-fmt-choice" value="docx" checked> <strong>DOCX</strong> (Editable Report)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" class="report-fmt-choice" value="pptx"> <strong>PowerPoint (.pptx)</strong> (Presentation)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" class="report-fmt-choice" value="csv"> <strong>CSV</strong> (Raw Data)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" class="report-fmt-choice" value="json"> <strong>JSON</strong> (Structured Data)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" class="report-fmt-choice" value="html"> <strong>HTML</strong> (Interactive Web)</label>
+              <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" class="report-fmt-choice" value="txt"> <strong>Text (.txt)</strong> (Plain Text Summary)</label>
             </div>
           </div>
 
@@ -599,45 +684,74 @@
           <!-- Col 1: Connected Models -->
           <div class="panel">
             <div class="panel-title" style="margin-bottom: 12px;">Connected Models</div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              <!-- Model Card 1 -->
-              <div style="background: var(--bg-surface-2); border: 1px solid var(--neon-magenta); border-radius: 8px; padding: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 10px;" id="connected-models-list">
+              <!-- Model Card 1: Qwen Local -->
+              <div class="model-fleet-card active" id="model-card-qwen" data-model="qwen-2.5-local" style="background: var(--bg-surface-2); border: 1px solid var(--neon-magenta); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                  <strong style="color: #fff; font-size: 0.9rem;">Qwen2.5 (Local)</strong>
+                  <strong style="color: #fff; font-size: 0.9rem;">Qwen 2.5 (Local)</strong>
                   <span class="tag-badge green">Primary</span>
                 </div>
                 <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Local (Ollama) • Online</div>
-                <div style="display: flex; gap: 6px; margin: 8px 0;">
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin: 6px 0;">
                   <span class="tag-badge purple">Reasoning</span>
                   <span class="tag-badge purple">Planning</span>
                   <span class="tag-badge purple">Analysis</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">
                   <span>Context: 32K</span>
-                  <span>Response: 1.2s</span>
+                  <span style="color: var(--neon-cyan);">Latency: 42ms</span>
                 </div>
               </div>
 
-              <!-- Model Card 2 -->
-              <div style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;">
+              <!-- Model Card 2: Llama 3.1 Local -->
+              <div class="model-fleet-card" id="model-card-llama" data-model="llama-3.1-local" style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                   <strong style="color: #fff; font-size: 0.9rem;">Llama 3.1 (Local)</strong>
                   <span class="tag-badge cyan">Specialist</span>
                 </div>
                 <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Local (LM Studio) • Online</div>
-                <div style="display: flex; gap: 6px; margin: 8px 0;">
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin: 6px 0;">
                   <span class="tag-badge purple">Extraction</span>
                   <span class="tag-badge purple">Classification</span>
                 </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">
+                  <span>Context: 128K</span>
+                  <span style="color: var(--neon-cyan);">Latency: 58ms</span>
+                </div>
               </div>
 
-              <!-- Model Card 3 -->
-              <div style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;">
+              <!-- Model Card 3: GPT-4o API -->
+              <div class="model-fleet-card" id="model-card-gpt4o" data-model="gpt-4o-api" style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                   <strong style="color: #fff; font-size: 0.9rem;">GPT-4o (API)</strong>
                   <span class="tag-badge magenta">Fallback</span>
                 </div>
-                <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Cloud (OpenAI) • Online</div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Cloud (OpenAI) • Ready</div>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin: 6px 0;">
+                  <span class="tag-badge purple">Verification</span>
+                  <span class="tag-badge purple">Synthesis</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">
+                  <span>Context: 128K</span>
+                  <span style="color: var(--text-muted);">Cloud API</span>
+                </div>
+              </div>
+
+              <!-- Model Card 4: Claude 3.5 API -->
+              <div class="model-fleet-card" id="model-card-claude" data-model="claude-3.5-api" style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <strong style="color: #fff; font-size: 0.9rem;">Claude 3.5 Sonnet (API)</strong>
+                  <span class="tag-badge magenta">Advanced</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Cloud (Anthropic) • Ready</div>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin: 6px 0;">
+                  <span class="tag-badge purple">Deep Analysis</span>
+                  <span class="tag-badge purple">Code Extraction</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">
+                  <span>Context: 200K</span>
+                  <span style="color: var(--text-muted);">Cloud API</span>
+                </div>
               </div>
             </div>
           </div>
@@ -646,44 +760,88 @@
           <div class="panel">
             <div class="panel-title" style="margin-bottom: 12px;">Add New Model</div>
             <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-              <button class="btn btn-secondary active" style="font-size: 0.72rem; padding: 4px 8px;">Local Server</button>
-              <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 8px;">API Provider</button>
-              <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 8px;">OpenAI Comp.</button>
+              <button class="btn btn-secondary active" id="tab-model-type-local" style="font-size: 0.72rem; padding: 4px 8px;">Local Server</button>
+              <button class="btn btn-secondary" id="tab-model-type-api" style="font-size: 0.72rem; padding: 4px 8px;">API Provider</button>
+              <button class="btn btn-secondary" id="tab-model-type-custom" style="font-size: 0.72rem; padding: 4px 8px;">Custom</button>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.78rem;">
               <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Server Type</label>
-                <select class="btn btn-secondary" style="width: 100%;"><option>Ollama (Local)</option><option>LM Studio</option><option>vLLM</option></select>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Server / Provider Type</label>
+                <select class="btn btn-secondary" id="select-model-server" style="width: 100%;">
+                  <option value="ollama">Ollama (Local)</option>
+                  <option value="lmstudio">LM Studio (Local)</option>
+                  <option value="vllm">vLLM Server</option>
+                  <option value="openai">OpenAI Compatible</option>
+                  <option value="anthropic">Anthropic API</option>
+                </select>
               </div>
               <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Endpoint URL</label>
-                <input type="text" class="global-search-input" style="width: 100%;" value="http://localhost:11434">
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Endpoint URL</label>
+                <input type="text" id="input-model-endpoint" class="global-search-input" style="width: 100%;" value="http://localhost:11434">
               </div>
               <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Model Name</label>
-                <input type="text" class="global-search-input" style="width: 100%;" value="qwen2.5:14b">
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Model Identifier</label>
+                <input type="text" id="input-model-name" class="global-search-input" style="width: 100%;" value="qwen2.5:14b">
               </div>
               <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Model Role</label>
-                <select class="btn btn-secondary" style="width: 100%;"><option>Primary Reasoning Model</option><option>Extraction Specialist</option></select>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">API Key (if required)</label>
+                <input type="password" id="input-model-key" class="global-search-input" style="width: 100%;" placeholder="sk-...">
               </div>
-              <button class="btn btn-primary" style="margin-top: 8px;">+ Add Model</button>
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Model Role</label>
+                <select class="btn btn-secondary" id="select-model-role" style="width: 100%;">
+                  <option value="primary">Primary Reasoning Model</option>
+                  <option value="specialist">Extraction Specialist</option>
+                  <option value="fallback">Fallback Model</option>
+                  <option value="verifier">Fact Verification Gate</option>
+                </select>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">Assigned Capabilities:</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.72rem;">
+                <label style="display: flex; gap: 6px;"><input type="checkbox" checked> Reasoning</label>
+                <label style="display: flex; gap: 6px;"><input type="checkbox" checked> Planning</label>
+                <label style="display: flex; gap: 6px;"><input type="checkbox" checked> Extraction</label>
+                <label style="display: flex; gap: 6px;"><input type="checkbox" checked> Reports</label>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 6px;">
+                <button class="btn btn-secondary" id="btn-model-test-new" style="flex: 1; padding: 6px;">Test</button>
+                <button class="btn btn-primary" id="btn-add-model" style="flex: 1; padding: 6px;">+ Add Model</button>
+              </div>
             </div>
           </div>
 
           <!-- Col 3: Model Configuration -->
           <div class="panel">
             <div class="panel-title" style="margin-bottom: 12px;">Model Configuration</div>
-            <div style="background: var(--bg-surface-2); padding: 12px; border-radius: 8px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 8px;">
-              <div style="display: flex; justify-content: space-between;"><span>Provider:</span> <strong style="color: #fff;">Ollama (Local)</strong></div>
-              <div style="display: flex; justify-content: space-between;"><span>Model:</span> <strong style="color: #fff;">qwen2.5:14b</strong></div>
-              <div style="display: flex; justify-content: space-between;"><span>Role:</span> <strong style="color: var(--neon-magenta);">Primary</strong></div>
-              <div style="display: flex; justify-content: space-between;"><span>Context Length:</span> <span>32K</span></div>
-              <div style="display: flex; justify-content: space-between;"><span>Temperature:</span> <span>0.7</span></div>
-              <div style="display: flex; justify-content: space-between;"><span>Max Tokens:</span> <span>4096</span></div>
-              <div style="display: flex; gap: 8px; margin-top: 14px;">
-                <button class="btn btn-danger" style="flex: 1;">Disconnect</button>
-                <button class="btn btn-primary" style="flex: 1;">Save Changes</button>
+            <div style="background: var(--bg-surface-2); padding: 14px; border-radius: 8px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-dim);">Provider:</span> <strong style="color: #fff;" id="cfg-model-provider">Ollama (Local)</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-dim);">Model:</span> <strong style="color: #fff;" id="cfg-model-name">Qwen 2.5 (Local)</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-dim);">Role:</span> <strong style="color: var(--neon-magenta);" id="cfg-model-role">Primary</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-dim);">Context Length:</span> <span id="cfg-model-context">32,768 tokens</span></div>
+              
+              <div style="margin-top: 4px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                  <span style="color: var(--text-dim);">Temperature</span>
+                  <strong style="color: #fff;" id="val-model-temp">0.7</strong>
+                </div>
+                <input type="range" id="model-cfg-temp" min="0" max="1" step="0.05" value="0.7">
+              </div>
+
+              <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                  <span style="color: var(--text-dim);">Max Output Tokens</span>
+                  <strong style="color: #fff;" id="val-model-tokens">4096</strong>
+                </div>
+                <input type="range" id="model-cfg-tokens" min="1024" max="16384" step="512" value="4096">
+              </div>
+
+              <div style="display: flex; gap: 6px; margin-top: 10px;">
+                <button class="btn btn-secondary" id="btn-model-test-selected" style="flex: 1; font-size: 0.72rem; padding: 6px;">Test Latency</button>
+                <button class="btn btn-secondary" id="btn-model-set-primary" style="flex: 1; font-size: 0.72rem; padding: 6px;">Make Primary</button>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-danger" id="btn-model-disconnect" style="flex: 1; font-size: 0.72rem; padding: 6px;">Disconnect</button>
+                <button class="btn btn-primary" id="btn-model-save-cfg" style="flex: 1; font-size: 0.72rem; padding: 6px;">Save Changes</button>
               </div>
             </div>
           </div>
@@ -705,102 +863,149 @@
           <button class="sub-tab-pill">Advanced</button>
         </div>
 
-        <div class="grid-3" style="margin-bottom: 18px;">
+        <div class="settings-five-cols">
           <!-- Panel 1: Crawling Settings -->
           <div class="panel">
             <div class="panel-title" style="margin-bottom: 12px;">🕷️ Crawling Settings</div>
-            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.78rem;">
+            <div style="display: flex; flex-direction: column; gap: 11px; font-size: 0.78rem;">
               <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Max Concurrent Requests</span> <strong>20</strong></div>
-                <input type="range" min="1" max="50" value="20">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;"><span>Max Concurrent</span> <strong id="val-max-concurrent">20</strong></div>
+                <input type="range" id="cfg-max-concurrent" min="1" max="50" value="20">
               </div>
               <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Request Delay (seconds)</span> <strong>1.0</strong></div>
-                <input type="range" min="0" max="5" step="0.5" value="1.0">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;"><span>Request Delay (s)</span> <strong id="val-req-delay">1.0</strong></div>
+                <input type="range" id="cfg-req-delay" min="0" max="5" step="0.5" value="1.0">
               </div>
               <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Max Crawl Depth</span> <strong>5</strong></div>
-                <input type="range" min="1" max="10" value="5">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;"><span>Max Crawl Depth</span> <strong id="val-max-depth">5</strong></div>
+                <input type="range" id="cfg-max-depth" min="1" max="10" value="5">
               </div>
-              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px;">
-                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> Respect robots.txt</label>
-                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> Follow sitemaps</label>
-                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox"> Crawl subdomains</label>
-                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" checked> Enable JavaScript parsing</label>
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
+                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" id="cfg-robots" checked> Respect robots.txt</label>
+                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" id="cfg-sitemaps" checked> Follow sitemaps</label>
+                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" id="cfg-subdomains"> Crawl subdomains</label>
+                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" id="cfg-js" checked> Enable JS parsing</label>
               </div>
             </div>
           </div>
 
           <!-- Panel 2: Permissions & Access Control -->
           <div class="panel">
-            <div class="panel-title" style="margin-bottom: 12px;">🛡️ Permissions & Access Control</div>
-            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+            <div class="panel-title" style="margin-bottom: 12px;">🛡️ Permissions & Scope</div>
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.78rem;">
               <div style="font-weight: 600; color: #fff;">Crawl Scope</div>
-              <label style="display: flex; gap: 8px;"><input type="radio" name="scope" checked> All public web (respect policies)</label>
-              <label style="display: flex; gap: 8px;"><input type="radio" name="scope"> Only specified domains</label>
-              <label style="display: flex; gap: 8px;"><input type="radio" name="scope"> Use allowlist / blocklist</label>
+              <label style="display: flex; gap: 7px;"><input type="radio" name="scope" value="all" checked> Public web (respect policies)</label>
+              <label style="display: flex; gap: 7px;"><input type="radio" name="scope" value="domain"> Specified domains only</label>
+              <label style="display: flex; gap: 7px;"><input type="radio" name="scope" value="allowlist"> Strict allowlist only</label>
 
-              <div style="margin-top: 10px; font-weight: 600; color: #fff;">Domain Controls</div>
-              <div style="display: flex; gap: 6px;">
-                <input type="text" class="global-search-input" style="flex: 1;" placeholder="example.com">
-                <button class="btn btn-secondary">+ Add Domain</button>
+              <div style="margin-top: 6px; font-weight: 600; color: #fff;">Allowlist Domains</div>
+              <div style="display: flex; gap: 5px;">
+                <input type="text" id="cfg-new-domain" class="global-search-input" style="flex: 1; font-size: 0.74rem;" placeholder="e.g. huggingface.co">
+                <button class="btn btn-secondary" id="btn-add-domain" style="padding: 4px 8px; font-size: 0.72rem;">+ Add</button>
+              </div>
+              <div id="cfg-domain-tags" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
+                <span class="tag-badge purple" style="cursor: pointer;" title="Click to remove">arxiv.org ✕</span>
+                <span class="tag-badge purple" style="cursor: pointer;" title="Click to remove">github.com ✕</span>
+                <span class="tag-badge purple" style="cursor: pointer;" title="Click to remove">paperswithcode.com ✕</span>
+              </div>
+              <div style="margin-top: 4px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                  <span style="color: var(--text-dim);">Domain Rate Limit</span>
+                  <span style="color: var(--neon-cyan); font-family: var(--font-mono);">2.0 req/s</span>
+                </div>
+                <input type="range" id="cfg-domain-rate" min="0.5" max="10" step="0.5" value="2">
               </div>
             </div>
           </div>
 
           <!-- Panel 3: Storage & Data Management -->
           <div class="panel">
-            <div class="panel-title" style="margin-bottom: 12px;">💾 Storage & Data Management</div>
-            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+            <div class="panel-title" style="margin-bottom: 12px;">💾 Storage & Vault</div>
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.78rem;">
               <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Data Storage Location</label>
-                <div style="display: flex; gap: 6px;">
-                  <input type="text" class="global-search-input" style="flex: 1;" value="D:\ARACHNE\data">
-                  <button class="btn btn-secondary">Browse</button>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Storage Location</label>
+                <div style="display: flex; gap: 5px;">
+                  <input type="text" id="cfg-storage-path" class="global-search-input" style="flex: 1; font-size: 0.74rem;" value=".arachne-vault/data">
+                  <button class="btn btn-secondary" id="btn-browse-storage" style="padding: 4px 8px; font-size: 0.72rem;">Browse</button>
                 </div>
               </div>
               <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Disk Usage Limit (GB)</span> <strong>500</strong></div>
-                <input type="range" min="50" max="1000" value="500">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;"><span>Disk Limit</span> <strong id="val-disk-limit">500 GB</strong></div>
+                <input type="range" id="cfg-disk-limit" min="50" max="1000" step="50" value="500">
               </div>
-              <div style="display: flex; flex-direction: column; gap: 6px;">
-                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> Compress stored content</label>
-                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> Deduplicate similar content</label>
+              <div style="background: var(--bg-surface-2); padding: 8px; border-radius: 6px; font-size: 0.72rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                  <span>Vault Usage</span>
+                  <strong style="color: var(--neon-cyan);">4.2 GB / 500 GB</strong>
+                </div>
+                <div style="height: 5px; background: var(--bg-surface-3); border-radius: 3px; overflow: hidden;">
+                  <div style="width: 1%; height: 100%; background: var(--neon-magenta);"></div>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 2px;">
+                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-compress" checked> Compress stored content</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-dedup" checked> Deduplicate SHA-256</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-autoprune" checked> Auto-prune HTML > 30d</label>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="grid-2">
           <!-- Panel 4: Telegram Integration -->
           <div class="panel">
-            <div class="panel-title" style="margin-bottom: 12px;">📱 Telegram Integration</div>
-            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+            <div class="panel-title" style="margin-bottom: 12px;">📱 Telegram Bridge</div>
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.78rem;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span>Enable Telegram Control</span>
-                <label class="switch-toggle"><input type="checkbox" checked><span class="switch-slider"></span></label>
+                <label class="switch-toggle"><input type="checkbox" id="cfg-tg-enabled" checked><span class="switch-slider"></span></label>
               </div>
               <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Bot Token</label>
-                <div style="display: flex; gap: 6px;">
-                  <input type="password" class="global-search-input" style="flex: 1;" value="••••••••••••••••">
-                  <button class="btn btn-secondary">Test</button>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Bot Token</label>
+                <div style="display: flex; gap: 5px;">
+                  <input type="password" id="cfg-tg-token" class="global-search-input" style="flex: 1; font-size: 0.74rem;" value="••••••••••••••••">
+                  <button class="btn btn-secondary" id="btn-test-tg" style="padding: 4px 8px; font-size: 0.72rem;">Test</button>
                 </div>
+              </div>
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Allowed User IDs</label>
+                <input type="text" id="cfg-tg-users" class="global-search-input" style="width: 100%; font-size: 0.74rem;" value="12345678, 87654321">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 2px;">
+                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-tg-alerts" checked> Task completion alerts</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-tg-approvals" checked> Level 3 Approval prompts</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-tg-remote-rep" checked> Remote report requests</label>
               </div>
             </div>
           </div>
 
-          <!-- Panel 5: Appearance -->
+          <!-- Panel 5: Appearance & Theme -->
           <div class="panel">
-            <div class="panel-title" style="margin-bottom: 12px;">🎨 Appearance & Theme</div>
-            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.78rem;">
+            <div class="panel-title" style="margin-bottom: 12px;">🎨 Theme & System</div>
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.78rem;">
               <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Theme</label>
-                <select class="btn btn-secondary" style="width: 100%;"><option>Dark (Spider Void)</option><option>Cyberpunk Neon</option></select>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Visual Theme</label>
+                <select class="btn btn-secondary" id="cfg-theme" style="width: 100%;">
+                  <option value="void">Dark (Spider Void)</option>
+                  <option value="cyberpunk">Cyberpunk Neon</option>
+                  <option value="crimson">Obsidian Crimson</option>
+                </select>
               </div>
-              <div style="margin-top: 10px; display: flex; gap: 10px;">
-                <button class="btn btn-primary" id="btn-save-master-settings">Save All Settings</button>
-                <button class="btn btn-danger">Reset Settings</button>
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Accent Glow Color</label>
+                <div class="accent-color-picker" id="accent-swatches">
+                  <div class="color-swatch active" style="background: #9d4edd;" data-color="#9d4edd" title="Violet"></div>
+                  <div class="color-swatch" style="background: #f72585;" data-color="#f72585" title="Magenta"></div>
+                  <div class="color-swatch" style="background: #ff0054;" data-color="#ff0054" title="Crimson"></div>
+                  <div class="color-swatch" style="background: #4cc9f0;" data-color="#4cc9f0" title="Cyan"></div>
+                  <div class="color-swatch" style="background: #10b981;" data-color="#10b981" title="Emerald"></div>
+                </div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                <span>System Telemetry</span>
+                <label class="switch-toggle"><input type="checkbox" id="cfg-telemetry" checked><span class="switch-slider"></span></label>
+              </div>
+              <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+                <button class="btn btn-primary" id="btn-save-master-settings" style="width: 100%; padding: 7px;">Save All Settings</button>
+                <button class="btn btn-secondary" id="btn-reset-settings" style="width: 100%; padding: 5px; font-size: 0.74rem;">Reset Defaults</button>
               </div>
             </div>
           </div>
@@ -825,16 +1030,31 @@
           <!-- Left: Filters & Search -->
           <div style="width: 240px; flex-shrink: 0;" class="panel">
             <div class="panel-title" style="margin-bottom: 10px;">Search Your Knowledge</div>
-            <input type="text" id="vault-search-input" class="global-search-input" style="width: 100%; margin-bottom: 14px;" placeholder="Search collected data...">
-            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 8px;">Content Type</div>
-            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: var(--text-muted);">
-              <div>Web Pages (12,840)</div>
-              <div>Research Papers (420)</div>
-              <div>PDF Documents (1,231)</div>
-              <div>Source Code (892)</div>
-              <div>Datasets (160)</div>
-              <div>Images (3,410)</div>
-              <div>Video/Audio (86)</div>
+            <input type="text" id="vault-search-input" class="global-search-input" style="width: 100%; margin-bottom: 12px;" placeholder="Search collected data...">
+            
+            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 4px;">Time Horizon</div>
+            <select id="vault-filter-date" class="btn btn-secondary" style="width: 100%; margin-bottom: 12px; font-size: 0.74rem;">
+              <option value="all">All Time</option>
+              <option value="24h">Past 24 Hours</option>
+              <option value="7d">Past 7 Days</option>
+              <option value="30d">Past 30 Days</option>
+            </select>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 6px;">Content Types</div>
+            <div style="display: flex; flex-direction: column; gap: 5px; font-size: 0.74rem; color: var(--text-muted);">
+              <div style="display: flex; justify-content: space-between;"><span>Web Pages</span> <strong style="color: #fff;" id="vault-cnt-web">12,840</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Research Papers</span> <strong style="color: #fff;" id="vault-cnt-papers">420</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>PDF Documents</span> <strong style="color: #fff;" id="vault-cnt-pdf">1,231</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Source Code</span> <strong style="color: #fff;" id="vault-cnt-code">892</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Datasets</span> <strong style="color: #fff;" id="vault-cnt-datasets">160</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Documentation</span> <strong style="color: #fff;" id="vault-cnt-docs">640</strong></div>
+            </div>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: #fff; margin-top: 14px; margin-bottom: 6px;">Collections</div>
+            <div id="vault-collections-list" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.74rem;">
+              <div style="padding: 4px 6px; border-radius: 4px; background: rgba(157, 78, 221, 0.15); color: var(--neon-violet); cursor: pointer;">📁 Computer Use Agents (18)</div>
+              <div style="padding: 4px 6px; border-radius: 4px; background: var(--bg-surface-2); color: var(--text-muted); cursor: pointer;">📁 Stealth Crawling (9)</div>
+              <div style="padding: 4px 6px; border-radius: 4px; background: var(--bg-surface-2); color: var(--text-muted); cursor: pointer;">📁 Model Benchmarks (12)</div>
             </div>
           </div>
 
@@ -843,9 +1063,9 @@
             <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
               <strong style="color: #fff; font-size: 0.85rem;" id="vault-count-label">Results (8)</strong>
               <div style="display: flex; gap: 6px;">
-                <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">List</button>
-                <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">Grid</button>
-                <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.72rem;">Cards</button>
+                <button class="btn btn-secondary active" id="btn-vault-view-list" style="padding: 3px 8px; font-size: 0.72rem;">List</button>
+                <button class="btn btn-secondary" id="btn-vault-view-grid" style="padding: 3px 8px; font-size: 0.72rem;">Grid</button>
+                <button class="btn btn-secondary" id="btn-vault-view-cards" style="padding: 3px 8px; font-size: 0.72rem;">Cards</button>
               </div>
             </div>
 
@@ -855,17 +1075,19 @@
           </div>
 
           <!-- Right: Preview Drawer -->
-          <div style="width: 320px; flex-shrink: 0;" class="panel">
-            <div class="sub-tabs-bar" style="margin-bottom: 10px;">
-              <button class="sub-tab-pill active">Content</button>
-              <button class="sub-tab-pill">Metadata</button>
-              <button class="sub-tab-pill">Links</button>
+          <div style="width: 330px; flex-shrink: 0;" class="panel">
+            <div class="sub-tabs-bar" style="margin-bottom: 10px;" id="vault-preview-tabs">
+              <button class="sub-tab-pill active" data-tab="content">Content</button>
+              <button class="sub-tab-pill" data-tab="meta">Metadata</button>
+              <button class="sub-tab-pill" data-tab="links">Links</button>
+              <button class="sub-tab-pill" data-tab="entities">Entities</button>
             </div>
             <strong style="color: #fff; font-size: 0.9rem; display: block; margin-bottom: 6px;" id="vault-preview-title">OpenHands: Open Source AI Agent</strong>
             <div style="font-size: 0.72rem; color: var(--neon-cyan); margin-bottom: 12px;" id="vault-preview-type">GitHub Repository</div>
             <div id="vault-preview-text" style="background: var(--bg-surface-2); border-radius: 6px; min-height: 140px; max-height: 240px; overflow-y: auto; padding: 12px; font-size: 0.76rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; border: 1px solid var(--border-bright);">
               Select an item on the left to preview extracted intelligence.
             </div>
+            <div id="vault-preview-meta" style="display: none; background: var(--bg-surface-2); border-radius: 6px; min-height: 140px; max-height: 240px; overflow-y: auto; padding: 12px; font-size: 0.73rem; color: var(--neon-cyan); font-family: var(--font-mono); line-height: 1.5; margin-bottom: 14px; border: 1px solid var(--border-bright); white-space: pre-wrap;"></div>
             <div style="display: flex; gap: 8px;">
               <button class="btn btn-secondary" id="btn-vault-add-collection" style="flex: 1; font-size: 0.72rem;">+ Collection</button>
               <button class="btn btn-secondary" id="btn-vault-export" style="flex: 1; font-size: 0.72rem;">Export</button>
@@ -964,6 +1186,20 @@
           <button class="btn btn-secondary" id="btn-autopsy-add-report">Add to Report</button>
           <a class="btn btn-primary" id="btn-autopsy-open-browser" href="#" target="_blank">Open Source ↗</a>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARACHNE Global Command Palette (Ctrl+K) -->
+  <div class="command-palette-overlay" id="command-palette-modal">
+    <div class="command-palette-card">
+      <div class="palette-input-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--neon-magenta)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="palette-search-input" id="palette-input" placeholder="Type a command or jump to screen... (Esc to close)">
+        <span class="palette-item-shortcut">ESC</span>
+      </div>
+      <div class="palette-list" id="palette-list">
+        <!-- Dynamically rendered commands -->
       </div>
     </div>
   </div>
