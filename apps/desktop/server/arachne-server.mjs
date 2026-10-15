@@ -66,8 +66,12 @@ export function createArachneServer(port = 3003) {
     researchAgent
   });
 
-  // Seed default graph, findings, and active investigation if empty so user has immediate rich interactive content
-  seedInitialDemoData(vaultStore, graphEngine, researchAgent);
+  researchAgent.setTelegramGateway(telegramGateway);
+
+  const isDemo = process.argv.includes('--demo') || process.env.ARACHNE_DEMO_MODE === 'true';
+  if (isDemo) {
+    seedInitialDemoData(vaultStore, graphEngine, researchAgent);
+  }
 
   const server = http.createServer(async (req, res) => {
     // Enable CORS
@@ -150,6 +154,7 @@ export function createArachneServer(port = 3003) {
           success: true,
           system: 'ARACHNE Web Intelligence Command Center',
           version: '2.0.0',
+          uptime: process.uptime(),
           activeInvestigation: inv,
           metrics: {
             totalNodes: graph.nodes.length,
@@ -176,22 +181,32 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: inv });
       }
 
-      if (pathname === '/api/investigate/pause' && req.method === 'POST') {
+      if ((pathname === '/api/investigation/current' || pathname === '/api/investigate/current') && req.method === 'GET') {
+        return sendJson({ success: true, data: researchAgent.activeInvestigation || null });
+      }
+
+      if ((pathname === '/api/investigation/ignored-items' || pathname === '/api/ignored-items') && req.method === 'GET') {
+        const invId = parsedUrl.searchParams.get('investigationId') || null;
+        const limit = parseInt(parsedUrl.searchParams.get('limit') || '50', 10);
+        return sendJson({ success: true, data: vaultStore.getIgnoredItems(invId, limit) });
+      }
+
+      if ((pathname === '/api/investigate/pause' || pathname === '/api/investigation/pause') && req.method === 'POST') {
         researchAgent.pause();
         return sendJson({ success: true, message: 'Paused' });
       }
 
-      if (pathname === '/api/investigate/resume' && req.method === 'POST') {
+      if ((pathname === '/api/investigate/resume' || pathname === '/api/investigation/resume') && req.method === 'POST') {
         researchAgent.resume();
         return sendJson({ success: true, message: 'Resumed' });
       }
 
-      if (pathname === '/api/investigate/stop' && req.method === 'POST') {
+      if ((pathname === '/api/investigate/stop' || pathname === '/api/investigation/stop') && req.method === 'POST') {
         researchAgent.stop();
         return sendJson({ success: true, message: 'Stopped' });
       }
 
-      if (pathname === '/api/investigate/retry' && req.method === 'POST') {
+      if ((pathname === '/api/investigate/retry' || pathname === '/api/investigation/retry') && req.method === 'POST') {
         const inv = await researchAgent.retry();
         return sendJson({ success: true, data: inv });
       }
@@ -356,6 +371,20 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: rep });
       }
 
+      if (pathname === '/api/reports/export' && req.method === 'POST') {
+        const body = await readBody();
+        const { reportId, format, destinationPath } = body;
+        if (!reportId || !format || !destinationPath) {
+          return sendJson({ success: false, error: 'reportId, format, and destinationPath are required' }, 400);
+        }
+        try {
+          const exportRes = reportEngine.exportToFile(reportId, format, destinationPath);
+          return sendJson(exportRes);
+        } catch (err) {
+          return sendJson({ success: false, error: err.message }, 500);
+        }
+      }
+
       if (pathname.startsWith('/api/reports/') && pathname.includes('/download')) {
         const parts = pathname.split('/');
         const reportId = path.basename(parts[3] || '');
@@ -465,6 +494,23 @@ export function createArachneServer(port = 3003) {
       if (pathname === '/api/browser/tabs/close' && req.method === 'POST') {
         await researchAgent.browserManager.closeAllTaskTabs();
         return sendJson({ success: true, message: 'All ARACHNE task tabs closed.' });
+      }
+
+      if (pathname === '/api/browser/tabs' && req.method === 'GET') {
+        const tabs = Array.from(researchAgent.browserManager.activeTaskTabs).map(id => ({
+          id,
+          active: id === researchAgent.browserManager.currentTaskTabId,
+          url: researchAgent.browserManager.activeUrl
+        }));
+        return sendJson({
+          success: true,
+          data: {
+            activeTaskTabs: tabs,
+            count: tabs.length,
+            currentTaskTabId: researchAgent.browserManager.currentTaskTabId,
+            activeUrl: researchAgent.browserManager.activeUrl
+          }
+        });
       }
 
       // Telegram Remote Control & Gateway
@@ -752,48 +798,6 @@ function seedInitialDemoData(vaultStore, graphEngine, researchAgent) {
       entities: doc.entities.map(e => ({ name: e, type: e.includes('Claude') || e.includes('AutoGPT') ? 'AI_Model' : 'Technology', confidence: 0.95 })),
       citations: doc.citations.map(c => ({ identifier: c, title: c, url: `https://doi.org/${c}`, type: 'Document' }))
     });
-  }
-
-  if (researchAgent && !researchAgent.activeInvestigation) {
-    researchAgent.activeInvestigation = {
-      id: 'AR-0042',
-      objective: 'Find latest open-source AI agents for computer control. Compare GitHub repos, research papers, tutorials and real-world examples.',
-      title: 'Autonomous AI Agents Investigation',
-      status: 'COMPLETED',
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-      plan: {
-        phases: [
-          { name: 'Scoping & Problem Formulation', status: 'completed', description: 'Taxonomy of computer-use agents' },
-          { name: 'Primary Source Discovery', status: 'completed', description: 'GitHub repos, arXiv papers, benchmarks' },
-          { name: 'Deep Crawling & Technical Inspection', status: 'completed', description: 'Architecture, browser-use, sandboxing' },
-          { name: 'Cross-Verification & Contradiction Analysis', status: 'completed', description: 'OSWorld benchmarks & limitations' },
-          { name: 'Deliverable Synthesis & Dossier Compilation', status: 'completed', description: 'Executive summary & comparison matrix' }
-        ]
-      },
-      metrics: {
-        urlsDiscovered: 12840,
-        pagesCrawled: 420,
-        entitiesExtracted: 2381,
-        citationsVerified: 142,
-        retriesCount: 0,
-        durationSeconds: 184
-      },
-      logs: [
-        { message: 'Initiated autonomous investigation: "Find latest open-source AI agents for computer control"', level: 'info', timestamp: new Date(Date.now() - 3600000).toISOString() },
-        { message: 'Phase [1/5]: Scoping & Problem Formulation', level: 'info', timestamp: new Date(Date.now() - 3550000).toISOString() },
-        { message: 'Crawling target [depth 0]: https://github.com/trending', level: 'info', timestamp: new Date(Date.now() - 3500000).toISOString() },
-        { message: 'Crawling target [depth 0]: https://arxiv.org/list/cs.AI/recent', level: 'info', timestamp: new Date(Date.now() - 3450000).toISOString() },
-        { message: 'Phase [2/5]: Primary Source Discovery', level: 'info', timestamp: new Date(Date.now() - 3400000).toISOString() },
-        { message: 'Crawling target [depth 1]: https://github.com/All-Hands-AI/OpenHands', level: 'info', timestamp: new Date(Date.now() - 3350000).toISOString() },
-        { message: 'Crawling target [depth 1]: https://arxiv.org/abs/2303.17580', level: 'info', timestamp: new Date(Date.now() - 3300000).toISOString() },
-        { message: 'Phase [3/5]: Deep Crawling & Technical Inspection', level: 'info', timestamp: new Date(Date.now() - 3250000).toISOString() },
-        { message: 'Crawling target [depth 2]: https://github.com/browser-use/browser-use', level: 'info', timestamp: new Date(Date.now() - 3200000).toISOString() },
-        { message: 'Extracted 149 nodes & 280 edges into live topological graph.', level: 'info', timestamp: new Date(Date.now() - 3150000).toISOString() },
-        { message: 'Phase [4/5]: Cross-Verification & Contradiction Analysis', level: 'info', timestamp: new Date(Date.now() - 3100000).toISOString() },
-        { message: 'Phase [5/5]: Deliverable Synthesis & Dossier Compilation', level: 'info', timestamp: new Date(Date.now() - 3050000).toISOString() },
-        { message: 'Investigation AR-0042 completed. Evidence compiled to vault.', level: 'info', timestamp: new Date(Date.now() - 3000000).toISOString() }
-      ]
-    };
   }
 }
 

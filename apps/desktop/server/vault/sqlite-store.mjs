@@ -160,6 +160,18 @@ export class SqliteStore {
         size_bytes INTEGER DEFAULT 0,
         created_at TEXT
       );
+
+      CREATE TABLE IF NOT EXISTS ignored_items (
+        id TEXT PRIMARY KEY,
+        investigation_id TEXT,
+        url TEXT,
+        title TEXT,
+        reason TEXT,
+        stage TEXT,
+        will_retry INTEGER DEFAULT 0,
+        continues INTEGER DEFAULT 1,
+        created_at TEXT
+      );
     `);
   }
 
@@ -701,12 +713,42 @@ export class SqliteStore {
     return stmt.all(limit);
   }
 
+  // --- Ignored Items ---
+  addIgnoredItem(item) {
+    const id = item.id || `ign-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const stmt = this.db.prepare(`
+      INSERT INTO ignored_items (id, investigation_id, url, title, reason, stage, will_retry, continues, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      id,
+      item.investigationId || 'unknown',
+      item.url || '',
+      item.title || '',
+      item.reason || '',
+      item.stage || '',
+      item.willRetry ? 1 : 0,
+      item.continues !== false ? 1 : 0,
+      item.timestamp || item.createdAt || new Date().toISOString()
+    );
+    return id;
+  }
+
+  getIgnoredItems(investigationId = null, limit = 50) {
+    if (investigationId) {
+      const stmt = this.db.prepare('SELECT * FROM ignored_items WHERE investigation_id = ? ORDER BY created_at DESC LIMIT ?');
+      return stmt.all(investigationId, limit);
+    }
+    const stmt = this.db.prepare('SELECT * FROM ignored_items ORDER BY created_at DESC LIMIT ?');
+    return stmt.all(limit);
+  }
+
   // --- Metrics ---
   getStorageMetrics() {
     const tables = [
       'investigations', 'checkpoints', 'corpus_documents',
       'evidence_records', 'approvals', 'settings',
-      'telegram_logs', 'graph_nodes', 'graph_edges', 'reports', 'collections'
+      'telegram_logs', 'ignored_items', 'graph_nodes', 'graph_edges', 'reports', 'collections'
     ];
     const counts = {};
     for (const t of tables) {

@@ -37,6 +37,8 @@ export class ResearchAgent {
       extractor: ContentExtractor
     });
 
+    this.telegramGateway = null;
+
     // Wire Swarm events to live SSE broadcaster and logs
     this.swarm.on('swarm_update', (state) => {
       this.emit('swarm_update', state);
@@ -47,8 +49,46 @@ export class ResearchAgent {
     });
   }
 
+  setTelegramGateway(gateway) {
+    this.telegramGateway = gateway;
+  }
+
   emit(type, payload) {
     this.broadcaster({ type, payload, timestamp: new Date().toISOString() });
+  }
+
+  recordIgnoredItem({ url, title = '', reason, stage, willRetry = false, continues = true }) {
+    const item = {
+      id: `ign-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      investigationId: this.activeInvestigation?.id || 'unknown',
+      url: url || '',
+      title: title || '',
+      reason: reason || 'UNSPECIFIED_REASON',
+      stage: stage || 'DISCOVERY',
+      willRetry: !!willRetry,
+      continues: continues !== false,
+      timestamp: new Date().toISOString()
+    };
+
+    if (this.activeInvestigation) {
+      if (!this.activeInvestigation.ignoredItems) this.activeInvestigation.ignoredItems = [];
+      this.activeInvestigation.ignoredItems.push(item);
+      if (!this.activeInvestigation.metrics.ignoredItemsCount) {
+        this.activeInvestigation.metrics.ignoredItemsCount = 0;
+      }
+      this.activeInvestigation.metrics.ignoredItemsCount++;
+      this.vaultStore.saveInvestigation(this.activeInvestigation);
+    }
+
+    this.vaultStore.addIgnoredItem(item);
+    this.emit('item_ignored', item);
+    this.log(`Item Ignored [${item.stage}]: ${item.url} (${item.reason})`, 'warn');
+
+    if (this.telegramGateway && typeof this.telegramGateway.handleIgnoredItem === 'function') {
+      this.telegramGateway.handleIgnoredItem(item).catch(() => {});
+    }
+
+    return item;
   }
 
   log(message, level = 'info') {
@@ -276,8 +316,18 @@ export class ResearchAgent {
         // Tool validation for each discovered seed
         for (const url of allSeeds) {
           const check = this.modelRouter.validateToolCall('crawl_url', { url });
-          if (check.valid && frontier.isUrlPermitted(url).permitted) {
+          const permitted = frontier.isUrlPermitted(url);
+          if (check.valid && permitted.permitted) {
             frontier.enqueue(url, 0, 8, 'search-discovery');
+          } else {
+            this.recordIgnoredItem({
+              url,
+              title: '',
+              reason: !check.valid ? check.reason : permitted.reason,
+              stage: 'SEED_DISCOVERY',
+              willRetry: false,
+              continues: true
+            });
           }
         }
         inv.metrics.urlsDiscovered += allSeeds.length;
@@ -301,6 +351,14 @@ export class ResearchAgent {
           const permCheck = frontier.isUrlPermitted(target.url);
           if (!permCheck.permitted) {
             this.log(`Skipping restricted URL ${target.url}: ${permCheck.reason}`, 'warn');
+            this.recordIgnoredItem({
+              url: target.url,
+              title: '',
+              reason: permCheck.reason,
+              stage: 'SCOPE_RESTRICTION',
+              willRetry: false,
+              continues: true
+            });
             continue;
           }
 
@@ -320,6 +378,14 @@ export class ResearchAgent {
               const robotsTxt = await this.fetcher.fetchRobotsTxt(domain);
               if (!frontier.isAllowedByRobots(target.url, robotsTxt)) {
                 this.log(`Robots.txt forbids crawling path for: ${target.url}`, 'warn');
+                this.recordIgnoredItem({
+                  url: target.url,
+                  title: '',
+                  reason: 'ROBOTS_TXT_FORBIDDEN',
+                  stage: 'ROBOTS_POLICY',
+                  willRetry: false,
+                  continues: true
+                });
                 continue;
               }
             } catch {}
@@ -366,6 +432,15 @@ export class ResearchAgent {
           if (!fetchResult.success) {
             const classification = frontier.classifyError(fetchResult.error, fetchResult.status);
             this.log(`Fetch error on ${target.url}: ${classification} (status: ${fetchResult.status || 'ERR'})`, 'warn');
+
+            this.recordIgnoredItem({
+              url: target.url,
+              title: fetchResult.title || '',
+              reason: `FETCH_FAILURE: ${classification} (${fetchResult.error || fetchResult.status || 'UNKNOWN_ERROR'})`,
+              stage: 'PAGE_FETCH',
+              willRetry: classification !== 'CAPTCHA_CHALLENGE' && classification !== 'REQUIRES_AUTHENTICATION',
+              continues: true
+            });
 
             if (classification === 'CAPTCHA_CHALLENGE' || classification === 'REQUIRES_AUTHENTICATION') {
               this.log(`Level 3 Intervention Required: ${classification} on ${target.url}`, 'error');
@@ -556,6 +631,19 @@ export class ResearchAgent {
               candidates: scoredCandidates
             });
 
+            for (const cand of scoredCandidates) {
+              if (cand.decision === 'REJECTED') {
+                this.recordIgnoredItem({
+                  url: cand.url,
+                  title: '',
+                  reason: cand.reason,
+                  stage: 'LINK_EVALUATION',
+                  willRetry: false,
+                  continues: true
+                });
+              }
+            }
+
             const acceptedLinks = scoredCandidates
               .filter(c => c.decision === 'ACCEPTED')
               .map(c => c.url)
@@ -618,6 +706,11 @@ export class ResearchAgent {
     } finally {
       clearInterval(timerInterval);
       await this.browserManager.closeAllTaskTabs();
+      if (this.telegramGateway && typeof this.telegramGateway.flushIgnoredBatch === 'function') {
+        try {
+          await this.telegramGateway.flushIgnoredBatch();
+        } catch {}
+      }
     }
   }
 

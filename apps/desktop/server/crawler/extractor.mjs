@@ -205,4 +205,23 @@ export class ContentExtractor {
     const normalized = text.toLowerCase().replace(/\s+/g, ' ').trim();
     return crypto.createHash('sha256').update(normalized).digest('hex');
   }
+
+  static extract(url, html, text) {
+    const metadata = this.extractMetadata(html, url);
+    const entities = this.extractEntities(text || html, url);
+    const citations = this.extractCitations(text || html, url);
+    const links = this.extractLinks(html, url);
+    const snippet = this.generateSnippet(text || html);
+    const contentHash = this.computeContentHash(text || html);
+    return {
+      url,
+      title: metadata.title || url,
+      metadata,
+      entities,
+      citations,
+      links,
+      snippet,
+      contentHash
+    };
+  }
 }

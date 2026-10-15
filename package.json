@@ -7,6 +7,7 @@
     "arachne": "./bin/arachne.mjs"
   },
   "scripts": {
+    "start": "node bin/arachne.mjs",
     "cli": "node bin/arachne.mjs",
     "arachne": "node bin/arachne.mjs",
     "desktop": "node apps/desktop/start.mjs",

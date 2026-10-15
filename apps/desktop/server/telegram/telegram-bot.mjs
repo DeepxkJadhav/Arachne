@@ -10,6 +10,7 @@ export class TelegramBotGateway {
     this.botInfo = null;
     this.status = 'idle'; // 'idle' | 'polling' | 'error' | 'stopped'
     this.lastError = null;
+    this.ignoredBatch = [];
 
     // Masked token utility
     this.maskToken = (token) => {
@@ -124,9 +125,10 @@ export class TelegramBotGateway {
     const token = this.getBotToken();
     if (!token || !chatId) return { success: false, error: 'Token or Chat ID missing' };
 
+    const safeText = String(text || '').slice(0, 4000);
     const payload = JSON.stringify({
       chat_id: chatId,
-      text,
+      text: safeText,
       parse_mode: options.parseMode || 'Markdown',
       disable_web_page_preview: options.disablePreview !== false
     });
@@ -161,6 +163,67 @@ export class TelegramBotGateway {
       req.write(payload);
       req.end();
     });
+  }
+
+  async handleIgnoredItem(item) {
+    const settings = this.getSettings();
+    const policy = (settings.telegramIgnoredItemsPolicy || 'important').toLowerCase();
+    if (policy === 'disabled') return { success: true, policy: 'disabled' };
+
+    const operatorChatId = settings.telegramOperatorChatId || (settings.allowedTelegramUserIds?.[0]) || null;
+    if (!operatorChatId) return { success: false, reason: 'No operator chat ID configured' };
+
+    const isImportant = 
+      item.stage === 'SCOPE_VALIDATION' || 
+      item.stage === 'SCOPE_RESTRICTION' ||
+      item.stage === 'SECURITY_GATE' ||
+      (item.reason && (
+        item.reason.includes('SSRF') || 
+        item.reason.includes('ROBOTS') || 
+        item.reason.includes('RESTRICTED') ||
+        item.reason.includes('CAPTCHA') ||
+        item.reason.includes('AUTH')
+      ));
+
+    if (policy === 'all' || (policy === 'important' && isImportant)) {
+      const msg = `⚠️ *ARACHNE Item Ignored*\n` +
+        `• *Task ID:* \`${item.investigationId || 'N/A'}\`\n` +
+        `• *URL:* ${item.url}\n` +
+        (item.title ? `• *Title:* ${item.title}\n` : '') +
+        `• *Stage:* \`${item.stage}\`\n` +
+        `• *Reason:* ${item.reason}\n` +
+        `• *Will Retry:* ${item.willRetry ? 'Yes' : 'No'}\n` +
+        `• *Investigation Continues:* ${item.continues ? 'Yes' : 'No'}`;
+
+      return await this.sendMessage(operatorChatId, msg);
+    } else if (policy === 'batch' || (policy === 'important' && !isImportant)) {
+      if (!this.ignoredBatch) this.ignoredBatch = [];
+      this.ignoredBatch.push(item);
+      if (this.ignoredBatch.length >= 5) {
+        return await this.flushIgnoredBatch(operatorChatId);
+      }
+      return { success: true, batched: true, count: this.ignoredBatch.length };
+    }
+  }
+
+  async flushIgnoredBatch(chatId = null) {
+    if (!this.ignoredBatch || this.ignoredBatch.length === 0) return { success: true, count: 0 };
+    const settings = this.getSettings();
+    const targetChat = chatId || settings.telegramOperatorChatId || (settings.allowedTelegramUserIds?.[0]) || null;
+    if (!targetChat) return { success: false, reason: 'No operator chat ID' };
+
+    const items = [...this.ignoredBatch];
+    this.ignoredBatch = [];
+    const count = items.length;
+
+    const summaryLines = items.slice(0, 5).map((it, idx) => 
+      `${idx + 1}. \`${it.stage}\`: ${it.url.slice(0, 45)}...\n   ↳ _${it.reason}_`
+    ).join('\n');
+
+    const msg = `📋 *ARACHNE Ignored Items Batch Summary (${count} items)*\n\n${summaryLines}` +
+      (count > 5 ? `\n... and ${count - 5} more items.` : '');
+
+    return await this.sendMessage(targetChat, msg);
   }
 
   async processIncomingMessage({ text, senderId, chatId, messageId = null }) {
@@ -302,6 +365,14 @@ export class TelegramBotGateway {
         `• *Corpus Documents:* ${corpus.length}\n` +
         `• *Saved Bookmarks:* ${bookmarks.length}\n` +
         `• *Vault Storage:* ${storage.totalMb} MB (${storage.totalRecords || 0} records)`;
+    } else if (cmd === '/ignored') {
+      const ignored = this.vaultStore.getIgnoredItems(null, 10);
+      if (ignored.length === 0) {
+        reply = `✅ No ignored or skipped items recorded.`;
+      } else {
+        reply = `⚠️ *Recent Ignored/Skipped Items (${ignored.length}):*\n\n` +
+          ignored.map((it, i) => `${i + 1}. *[${it.stage}]* ${it.url}\n   • Reason: ${it.reason}\n   • Retry: ${it.will_retry ? 'Yes' : 'No'}`).join('\n\n');
+      }
     } else if (raw.startsWith('/')) {
       reply = `❓ Unknown command: \`${cmd}\`. Type \`/help\` for available commands.`;
     } else {
@@ -428,13 +499,20 @@ export class TelegramBotGateway {
   }
 
   getStatus() {
+    const settings = this.getSettings();
+    const token = this.getBotToken();
     return {
       isPolling: this.isPolling,
       status: this.status,
       lastError: this.lastError,
       lastUpdateId: this.lastUpdateId,
       botInfo: this.botInfo,
-      maskedToken: this.maskToken(this.getBotToken())
+      botUsername: this.botInfo?.username || null,
+      maskedToken: this.maskToken(token),
+      configured: Boolean(token),
+      connected: this.status === 'polling' || Boolean(this.botInfo),
+      chatId: settings.telegramOperatorChatId || (settings.allowedTelegramUserIds?.[0]) || null,
+      ignoredItemsPolicy: settings.telegramIgnoredItemsPolicy || 'important'
     };
   }
 }

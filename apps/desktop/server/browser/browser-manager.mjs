@@ -80,6 +80,8 @@ export class BrowserManager {
     const dedicatedDir = BrowserDetector.getDedicatedProfileDir(this.vaultDir, this.selectedBrowser);
     const args = [
       `--remote-debugging-port=${this.remoteDebuggingPort}`,
+      '--remote-debugging-address=127.0.0.1',
+      '--remote-allow-origins=*',
       `--user-data-dir=${dedicatedDir}`,
       '--no-first-run',
       '--no-default-browser-check',

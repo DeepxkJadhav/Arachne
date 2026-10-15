@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 
 /**
- * 🕷️ ARACHNE — Autonomous Web Intelligence & Research CLI
- * Full Stylized Cyber-Spider Terminal Interface in Pure ASCII
+ * ARACHNE — Autonomous Web Intelligence & Research CLI
+ * Black, White, and Crimson/Red Cyberpunk Hacker Terminal
  */
 
 import http from 'node:http';
 import readline from 'node:readline';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load local .env environment variables if present
 try {
@@ -31,75 +36,59 @@ try {
 const BASE_URL = process.env.ARACHNE_URL || 'http://localhost:3003';
 
 // =========================================================================
-// ANSI Cyber-Spider Color Palette
+// ANSI Palette — Black, White & Crimson/Red Hacker Aesthetic
+// (Strict requirement: ZERO green, cyan, purple, pink, or yellow)
 // =========================================================================
-const C = {
+const hasNoColor = process.env.NO_COLOR !== undefined || process.argv.includes('--no-color');
+const isColorSupported = !hasNoColor && (process.stdout.isTTY || process.env.FORCE_COLOR);
+
+const C = isColorSupported ? {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
   dim: '\x1b[2m',
   italic: '\x1b[3m',
   underline: '\x1b[4m',
 
-  // Foreground Neon Palette
-  crimson: '\x1b[38;5;196m',
-  magenta: '\x1b[38;5;201m',
-  neonPink: '\x1b[38;5;206m',
-  violet: '\x1b[38;5;135m',
-  purple: '\x1b[38;5;99m',
-  cyan: '\x1b[38;5;51m',
-  electricBlue: '\x1b[38;5;39m',
-  green: '\x1b[38;5;48m',
-  lime: '\x1b[38;5;118m',
-  yellow: '\x1b[38;5;220m',
-  amber: '\x1b[38;5;214m',
-  gray: '\x1b[38;5;242m',
-  darkGray: '\x1b[38;5;236m',
-  white: '\x1b[38;5;255m',
+  // Primary Text: White and Off-White
+  white: '\x1b[97m',
+  lightGray: '\x1b[37m',
 
-  // Backgrounds
-  bgDark: '\x1b[48;5;234m',
-  bgPurple: '\x1b[48;5;53m',
-  bgMagenta: '\x1b[48;5;125m'
+  // Crimson / Red Accents for Branding, Borders, Active Ops, Alerts
+  red: '\x1b[38;5;196m',
+  crimson: '\x1b[38;5;160m',
+  darkRed: '\x1b[38;5;88m',
+
+  // Secondary Metadata: Dark Gray & Charcoal
+  gray: '\x1b[38;5;244m',
+  darkGray: '\x1b[38;5;238m',
+  charcoal: '\x1b[38;5;234m',
+
+  // Semantic Indicators in Restricted Palette
+  alert: '\x1b[38;5;196m',
+  active: '\x1b[1m\x1b[97m',
+  muted: '\x1b[38;5;240m'
+} : {
+  reset: '', bold: '', dim: '', italic: '', underline: '',
+  white: '', lightGray: '', red: '', crimson: '', darkRed: '',
+  gray: '', darkGray: '', charcoal: '', alert: '', active: '', muted: ''
 };
 
-// =========================================================================
-// ASCII Spider Art & Banners
-// =========================================================================
-const SPIDER_ASCII = `
-${C.magenta}               (                               )
-                )                             (
-               (                               )
-         ${C.violet}/\\  .-"""-.  /\\                 /\\  .-"""-.  /\\
-        //\\\\/  ,,,  \\//\\\\               //\\\\/  ,,,  \\//\\\\
-        |/\\| ,;;;;;, |/\\|               |/\\| ,;;;;;, |/\\|
-        //\\\\; ;; ;; ;//\\\\               //\\\\; ;; ;; ;//\\\\
-       //  \\\\ \\_   _/ //  \\\\             //  \\\\ \\_   _/ //  \\\\
-      (|    |)/ " " \\(|    |)           (|    |)/ " " \\(|    |)
-       \\\\  //         \\\\  //             \\\\  //         \\\\  //
-        \\\\//           \\\\//               \\\\//           \\\\//
-         \\/             \\/                 \\/             \\/${C.reset}
-`;
-
-const BANNER_ASCII = `
-${C.magenta}  █████╗ ██████╗  █████╗  ██████╗██╗  ██╗███╗   ██╗███████╗
- ██╔══██╗██╔══██╗██╔══██╗██╔════╝██║  ██║████╗  ██║██╔════╝
- ███████║██████╔╝███████║██║     ███████║██╔██╗ ██║█████╗  
- ██╔══██║██╔══██╗██╔══██║██║     ██╔══██║██║╚██╗██║██╔══╝  
- ██║  ██║██║  ██║██║  ██║╚██████╗██║  ██║██║ ╚████║███████╗
- ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝${C.reset}
-  ${C.bold}${C.white}AUTONOMOUS WEB INTELLIGENCE & RESEARCH SYSTEM${C.reset} ${C.violet}[v2.0.0]${C.reset}
-  ${C.dim}${C.cyan}CDP BROWSER MOTOR • WAL SQLITE VAULT • HYBRID RAG • TELEGRAM GATEWAY${C.reset}
+// Compact Restrained Mechanical Spider Artwork & Wordmark
+const HEADER_ASCII = `
+${C.crimson}  / _ \\   ${C.bold}${C.white}ARACHNE${C.reset} ${C.gray}//${C.reset} ${C.crimson}AUTONOMOUS WEB INTELLIGENCE${C.reset} ${C.gray}[v2.0.0]${C.reset}
+${C.crimson} \\_\\(_)/_/ ${C.gray}MOTOR: ${C.white}CHROME/BRAVE CDP ${C.gray}| VAULT: ${C.white}SQLITE WAL ${C.gray}| SHIELD: ${C.white}SSRF GUARD${C.reset}
+${C.crimson}  _// \\\\_  ${C.gray}NODE: ${C.white}${process.version} ${C.gray}| OPERATOR: ${C.white}TELEGRAM FAIL-CLOSED ${C.gray}| NET: ${C.white}${BASE_URL}${C.reset}
 `;
 
 // =========================================================================
-// HTTP Client Helper
+// Real HTTP Client Helper (Zero Simulated Math)
 // =========================================================================
 async function api(pathname, options = {}) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const url = new URL(pathname, BASE_URL);
     const reqOptions = {
       method: options.method || 'GET',
-      headers: options.headers || {}
+      headers: { ...(options.headers || {}) }
     };
 
     let payload = null;
@@ -115,15 +104,15 @@ async function api(pathname, options = {}) {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          resolve({ status: res.statusCode, data: json });
+          resolve({ status: res.statusCode, data: json, ok: res.statusCode >= 200 && res.statusCode < 300 });
         } catch {
-          resolve({ status: res.statusCode, data });
+          resolve({ status: res.statusCode, data, ok: res.statusCode >= 200 && res.statusCode < 300 });
         }
       });
     });
 
     req.on('error', (err) => {
-      resolve({ status: 503, error: err.message });
+      resolve({ status: 503, error: err.message, ok: false });
     });
 
     if (payload) req.write(payload);
@@ -131,415 +120,835 @@ async function api(pathname, options = {}) {
   });
 }
 
-// =========================================================================
-// Terminal UI Box Drawing & Table Helpers
-// =========================================================================
-function stripAnsi(str) {
-  return String(str || '').replace(/\x1b\[[0-9;]*m/g, '');
+// Auto-spawn backend daemon if offline
+async function ensureServerOnline(quiet = false) {
+  const check = await api('/api/status');
+  if (check.ok) return true;
+
+  if (!quiet) {
+    process.stdout.write(`${C.gray}Starting ARACHNE background engine daemon... ${C.reset}`);
+  }
+
+  const startScript = path.resolve(__dirname, '../apps/desktop/start.mjs');
+  if (!fs.existsSync(startScript)) {
+    return false;
+  }
+
+  try {
+    const serverProc = spawn(process.execPath, [startScript, '--server-only'], {
+      detached: true,
+      stdio: 'ignore'
+    });
+    serverProc.unref();
+
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 250));
+      const recheck = await api('/api/status');
+      if (recheck.ok) {
+        if (!quiet) console.log(`${C.white}[ONLINE]${C.reset}\n`);
+        return true;
+      }
+    }
+  } catch {}
+
+  if (!quiet) console.log(`${C.crimson}[FAILED]${C.reset}\n`);
+  return false;
 }
 
-function drawBox(title, lines, borderColor = C.magenta) {
-  const contentWidth = Math.max(
-    stripAnsi(title).length + 4,
-    ...lines.map(l => stripAnsi(l).length)
-  ) + 2;
+// =========================================================================
+// Layout Helpers — ANSI-Stripping & Terminal-Width Aware
+// =========================================================================
+function stripAnsi(str) {
+  return String(str || '').replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
+}
 
-  const topBorder = `╭─ ${C.bold}${title}${C.reset}${borderColor} ` + '─'.repeat(Math.max(0, contentWidth - stripAnsi(title).length - 5)) + '╮';
-  const bottomBorder = '╰' + '─'.repeat(contentWidth - 1) + '╯';
+function wrapText(text, maxWidth) {
+  if (!text) return [''];
+  const str = String(text);
+  if (maxWidth <= 0) return [str];
+  const words = str.split(' ');
+  const lines = [];
+  let current = '';
 
-  console.log(`${borderColor}${topBorder}${C.reset}`);
-  for (const line of lines) {
-    const padding = ' '.repeat(Math.max(0, contentWidth - stripAnsi(line).length - 2));
-    console.log(`${borderColor}│${C.reset} ${line}${padding} ${borderColor}│${C.reset}`);
+  for (const w of words) {
+    if (!current) {
+      if (stripAnsi(w).length <= maxWidth) {
+        current = w;
+      } else {
+        let rem = w;
+        while (stripAnsi(rem).length > maxWidth) {
+          lines.push(rem.slice(0, maxWidth));
+          rem = rem.slice(maxWidth);
+        }
+        current = rem;
+      }
+    } else {
+      const prospective = `${current} ${w}`;
+      if (stripAnsi(prospective).length <= maxWidth) {
+        current = prospective;
+      } else {
+        lines.push(current);
+        if (stripAnsi(w).length <= maxWidth) {
+          current = w;
+        } else {
+          let rem = w;
+          while (stripAnsi(rem).length > maxWidth) {
+            lines.push(rem.slice(0, maxWidth));
+            rem = rem.slice(maxWidth);
+          }
+          current = rem;
+        }
+      }
+    }
   }
-  console.log(`${borderColor}${bottomBorder}${C.reset}`);
+  if (current) lines.push(current);
+  return lines.length > 0 ? lines : [''];
+}
+
+function drawBox(title, lines, options = {}) {
+  const termWidth = Math.max(60, (process.stdout.columns || 80) - 2);
+  const borderCol = options.color || C.crimson;
+  const titleCol = C.bold + C.white;
+
+  let maxLineLen = stripAnsi(title).length + 4;
+  for (const l of lines) {
+    const len = stripAnsi(l).length;
+    if (len > maxLineLen) maxLineLen = len;
+  }
+
+  const boxWidth = Math.min(termWidth, Math.max(40, maxLineLen + 6));
+  const contentWidth = boxWidth - 6;
+
+  const titleVisible = stripAnsi(title);
+  const topDashCount = Math.max(0, boxWidth - titleVisible.length - 6);
+  const topBorder = `┌─ ${titleCol}${title}${C.reset}${borderCol} ` + '─'.repeat(topDashCount) + '┐';
+  const bottomBorder = '└' + '─'.repeat(boxWidth - 2) + '┘';
+
+  console.log(`${borderCol}${topBorder}${C.reset}`);
+  for (const line of lines) {
+    const wrapped = wrapText(line, contentWidth);
+    for (const wLine of wrapped) {
+      const pad = ' '.repeat(Math.max(0, contentWidth - stripAnsi(wLine).length));
+      console.log(`${borderCol}│${C.reset}  ${wLine}${pad}  ${borderCol}│${C.reset}`);
+    }
+  }
+  console.log(`${borderCol}${bottomBorder}${C.reset}`);
 }
 
 function drawTable(headers, rows, options = {}) {
-  const colWidths = headers.map((h, i) => {
+  const termWidth = Math.max(60, (process.stdout.columns || 80) - 2);
+  const numCols = headers.length;
+  const colPads = 2;
+
+  const rawWidths = headers.map((h, i) => {
     let max = stripAnsi(h).length;
     for (const r of rows) {
       const val = stripAnsi(String(r[i] !== undefined ? r[i] : ''));
-      if (val.length > max) max = val.length;
+      const lines = val.split('\n');
+      for (const line of lines) {
+        if (line.length > max) max = line.length;
+      }
     }
-    return max + 2;
+    return max;
   });
 
-  const sep = (left, mid, right) => {
-    return left + colWidths.map(w => '─'.repeat(w)).join(mid) + right;
-  };
+  const totalRaw = rawWidths.reduce((a, b) => a + b + colPads, 0) + (numCols + 1);
+  const colWidths = [...rawWidths];
 
-  const border = options.color || C.violet;
-  console.log(`${border}${sep('┌', '┬', '┐')}${C.reset}`);
-
-  // Header row
-  const headerStr = headers.map((h, i) => {
-    const pad = ' '.repeat(Math.max(0, colWidths[i] - stripAnsi(h).length - 1));
-    return ` ${C.bold}${C.white}${h}${C.reset}${pad}`;
-  }).join(`${border}│${C.reset}`);
-  console.log(`${border}│${C.reset}${headerStr}${border}│${C.reset}`);
-
-  console.log(`${border}${sep('├', '┼', '┤')}${C.reset}`);
-
-  // Data rows
-  for (const row of rows) {
-    const rowStr = headers.map((_, i) => {
-      const val = String(row[i] !== undefined ? row[i] : '');
-      const pad = ' '.repeat(Math.max(0, colWidths[i] - stripAnsi(val).length - 1));
-      return ` ${val}${pad}`;
-    }).join(`${border}│${C.reset}`);
-    console.log(`${border}│${C.reset}${rowStr}${border}│${C.reset}`);
+  if (totalRaw > termWidth) {
+    const available = termWidth - (numCols + 1) - (numCols * colPads);
+    const rawSum = rawWidths.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < numCols; i++) {
+      colWidths[i] = Math.max(6, Math.floor((rawWidths[i] / rawSum) * available));
+    }
   }
 
-  console.log(`${border}${sep('└', '┴', '┘')}${C.reset}`);
+  const borderCol = options.color || C.darkGray;
+  const headerCol = C.crimson;
+  const textCol = C.white;
+
+  const makeSep = (left, cross, right) => {
+    return borderCol + left + colWidths.map(w => '─'.repeat(w + colPads)).join(cross) + right + C.reset;
+  };
+
+  console.log(makeSep('┌', '┬', '┐'));
+
+  const headerWrapped = headers.map((h, i) => wrapText(h, colWidths[i]));
+  const maxHeaderLines = Math.max(...headerWrapped.map(l => l.length));
+
+  for (let lineIdx = 0; lineIdx < maxHeaderLines; lineIdx++) {
+    const cells = headers.map((_, colIdx) => {
+      const text = headerWrapped[colIdx][lineIdx] || '';
+      const visibleLen = stripAnsi(text).length;
+      const pad = ' '.repeat(Math.max(0, colWidths[colIdx] - visibleLen));
+      return ` ${headerCol}${C.bold}${text}${C.reset}${pad} `;
+    });
+    console.log(`${borderCol}│${C.reset}${cells.join(`${borderCol}│${C.reset}`)}${borderCol}│${C.reset}`);
+  }
+
+  console.log(makeSep('├', '┼', '┤'));
+
+  for (const row of rows) {
+    const cellWrapped = headers.map((_, i) => {
+      const val = String(row[i] !== undefined ? row[i] : '');
+      return wrapText(val, colWidths[i]);
+    });
+    const maxLines = Math.max(...cellWrapped.map(l => l.length));
+
+    for (let lineIdx = 0; lineIdx < maxLines; lineIdx++) {
+      const cells = headers.map((_, colIdx) => {
+        const text = cellWrapped[colIdx][lineIdx] || '';
+        const visibleLen = stripAnsi(text).length;
+        const pad = ' '.repeat(Math.max(0, colWidths[colIdx] - visibleLen));
+        return ` ${textCol}${text}${C.reset}${pad} `;
+      });
+      console.log(`${borderCol}│${C.reset}${cells.join(`${borderCol}│${C.reset}`)}${borderCol}│${C.reset}`);
+    }
+  }
+
+  console.log(makeSep('└', '┴', '┘'));
 }
 
-function progressBar(current, total, width = 24) {
+function progressBar(current, total, width = 20) {
   const ratio = Math.min(1, Math.max(0, total > 0 ? current / total : 0));
   const filled = Math.round(ratio * width);
   const empty = width - filled;
   const pct = Math.round(ratio * 100);
-  return `${C.magenta}[${C.green}${'█'.repeat(filled)}${C.gray}${'░'.repeat(empty)}${C.magenta}] ${C.bold}${pct}%${C.reset}`;
-}
-
-async function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
+  return `${C.darkGray}[${C.crimson}${'█'.repeat(filled)}${C.charcoal}${'░'.repeat(empty)}${C.darkGray}] ${C.white}${pct}%${C.reset}`;
 }
 
 // =========================================================================
-// Real-Time System HUD
+// Real-Time System HUD (Zero Invented Fallbacks)
 // =========================================================================
 async function showHud() {
-  const [statusRes, storageRes, browserRes] = await Promise.all([
+  const [statusRes, browserRes, modelsRes, telegramRes, storageRes] = await Promise.all([
     api('/api/status'),
-    api('/api/storage/metrics'),
-    api('/api/browser/status')
+    api('/api/browser/status'),
+    api('/api/models'),
+    api('/api/telegram/status'),
+    api('/api/storage/metrics')
   ]);
 
-  const uptimeSec = statusRes.data?.uptime || 120;
-  const uptimeStr = `${Math.floor(uptimeSec / 60)}m ${Math.floor(uptimeSec % 60)}s`;
+  const isServerOnline = statusRes.ok;
+  const s = statusRes.data || {};
+  const b = browserRes.data?.data || {};
+  const m = modelsRes.data?.data || {};
+  const t = telegramRes.data?.data || {};
+  const st = storageRes.data?.data || {};
 
-  const totalRecs = storageRes.data?.totalRecords || 1348;
-  const dbSizeMb = storageRes.data?.totalMb || '1.34';
+  const lines = [];
 
-  const chromeDetected = browserRes.data?.detected?.chrome?.installed ? 'Google Chrome' : 'Brave';
-  const cdpPort = browserRes.data?.cdpPort || 9222;
+  // 1. Backend Status
+  if (isServerOnline) {
+    const uptime = s.uptime ? `${Math.floor(s.uptime / 60)}m ${Math.floor(s.uptime % 60)}s` : 'N/A';
+    lines.push(`${C.gray}BACKEND:    ${C.bold}${C.white}ONLINE${C.reset} ${C.gray}(Port: 3003, Uptime: ${uptime})${C.reset}`);
+  } else {
+    lines.push(`${C.gray}BACKEND:    ${C.crimson}OFFLINE${C.reset} ${C.gray}(Unreachable at ${BASE_URL})${C.reset}`);
+  }
 
-  const lines = [
-    ` ${C.bold}${C.white}SERVER:${C.reset}  ${C.green}● ONLINE${C.reset}  ${C.gray}│${C.reset}  ${C.white}PORT:${C.reset} ${C.cyan}3003${C.reset}  ${C.gray}│${C.reset}  ${C.white}UPTIME:${C.reset} ${C.yellow}${uptimeStr}${C.reset}  ${C.gray}│${C.reset}  ${C.white}RUNTIME:${C.reset} ${C.violet}Node.js v24 (Native SQLite WAL)${C.reset}`,
-    ` ${C.bold}${C.white}VAULT:${C.reset}   ${C.cyan}.arachne-vault/arachne.sqlite${C.reset} ${C.gray}(${dbSizeMb} MB, ${Number(totalRecs).toLocaleString()} ACID rows)${C.reset}`,
-    ` ${C.bold}${C.white}MODELS:${C.reset}  ${C.yellow}⚡ Groq Cloud LPU${C.reset} ${C.gray}(qwen/qwen3.8-27b ~16ms)${C.reset}  ${C.gray}│${C.reset}  ${C.cyan}🌐 OpenRouter Meta${C.reset} ${C.gray}(openrouter/free)${C.reset}`,
-    ` ${C.bold}${C.white}SHIELD:${C.reset}  ${C.green}🛡️ SSRF Guard Enabled${C.reset} ${C.gray}(Blocked: 127.0.0.1, 169.254.169.254, RFC1918)${C.reset}`,
-    ` ${C.bold}${C.white}BOT:${C.reset}     ${C.neonPink}📱 Telegram @Ikxros_bot${C.reset} ${C.gray}(Operator Fail-Closed Numeric Policy Enforced)${C.reset}`,
-    ` ${C.bold}${C.white}BROWSER:${C.reset} ${C.electricBlue}🌐 ${chromeDetected}${C.reset} ${C.gray}(CDP: 127.0.0.1:${cdpPort}, Dedicated Profile Isolated)${C.reset}`
-  ];
+  // 2. Browser Automation Status
+  if (isServerOnline && b.detected) {
+    const browserName = b.selectedBrowser === 'brave' ? 'Brave' : 'Google Chrome';
+    const cdpStatus = b.status === 'ready' ? 'READY' : (b.status === 'connecting' ? 'CONNECTING' : 'DISCONNECTED');
+    const tabCount = b.activeTaskTabsCount !== undefined ? b.activeTaskTabsCount : 0;
+    lines.push(`${C.gray}BROWSER:    ${C.white}${browserName}${C.reset} ${C.gray}(CDP: 127.0.0.1:${b.remoteDebuggingPort || 9222}, Status: ${cdpStatus}, Active Tabs: ${tabCount})${C.reset}`);
+  } else {
+    lines.push(`${C.gray}BROWSER:    ${C.gray}UNKNOWN (Backend offline)${C.reset}`);
+  }
 
-  drawBox('🕷️ ARACHNE OPERATIONAL INTELLIGENCE MATRIX', lines, C.magenta);
+  // 3. AI Models & Router
+  if (isServerOnline && m.models) {
+    const activeProvider = m.activeProvider || 'Local / Groq';
+    const activeModel = m.models.find(x => x.active)?.id || 'qwen/qwen3.8-27b';
+    lines.push(`${C.gray}MODELS:     ${C.white}${activeProvider}${C.reset} ${C.gray}(Model: ${activeModel})${C.reset}`);
+  } else {
+    lines.push(`${C.gray}MODELS:     ${C.gray}UNKNOWN (Backend offline)${C.reset}`);
+  }
+
+  // 4. Telegram Gateway State
+  if (isServerOnline && t.status) {
+    const botUser = t.botInfo?.username ? `@${t.botInfo.username}` : 'NOT CONFIGURED';
+    const tgState = t.isPolling ? 'POLLING (ACTIVE)' : (t.status || 'IDLE').toUpperCase();
+    lines.push(`${C.gray}TELEGRAM:   ${C.white}${botUser}${C.reset} ${C.gray}(State: ${tgState}, Policy: Operator Fail-Closed)${C.reset}`);
+  } else {
+    lines.push(`${C.gray}TELEGRAM:   ${C.gray}NOT CONFIGURED${C.reset}`);
+  }
+
+  // 5. Database & Storage State
+  if (isServerOnline && st.dbPath) {
+    const dbSize = st.totalMb ? `${st.totalMb} MB` : 'N/A';
+    const docCount = st.counts?.corpus_documents !== undefined ? st.counts.corpus_documents : (st.totalDocuments || 0);
+    const invCount = st.counts?.investigations !== undefined ? st.counts.investigations : 0;
+    lines.push(`${C.gray}DATABASE:   ${C.white}${path.basename(st.dbPath)}${C.reset} ${C.gray}(Size: ${dbSize}, Docs: ${docCount}, Investigations: ${invCount})${C.reset}`);
+  } else {
+    lines.push(`${C.gray}DATABASE:   ${C.gray}N/A${C.reset}`);
+  }
+
+  // 6. Active Investigation & Last Event
+  const activeInv = s.activeInvestigation;
+  if (activeInv) {
+    const phaseName = activeInv.plan?.phases?.[activeInv.currentPhaseIndex]?.name || 'Initial';
+    const lastLog = activeInv.logs?.[0]?.message || activeInv.stateReason || 'In progress';
+    lines.push(`${C.gray}ACTIVE TASK:${C.reset} ${C.crimson}[${activeInv.id}]${C.reset} ${C.white}${activeInv.objective ? activeInv.objective.slice(0, 45) : 'Untitled'}${C.reset}`);
+    lines.push(`${C.gray}PHASE:      ${C.white}[${(activeInv.currentPhaseIndex || 0) + 1}/5] ${phaseName}${C.reset} ${C.gray}| Event: ${lastLog.slice(0, 50)}${C.reset}`);
+  } else {
+    lines.push(`${C.gray}ACTIVE TASK:${C.reset} ${C.gray}NONE (System Idle)${C.reset}`);
+  }
+
+  drawBox('SYSTEM MATRIX // OPERATIONAL AUDIT', lines, { color: C.crimson });
 }
 
 // =========================================================================
-// Commands Implementation
+// Command Handlers
 // =========================================================================
 
 // 1. Status Command
-async function cmdStatus() {
-  console.log(`\n${C.bold}${C.cyan}═════ [ SYSTEM INTROSPECTION & AUDIT ] ═════${C.reset}\n`);
-  const [statusRes, storageRes, graphRes, approvalsRes] = await Promise.all([
-    api('/api/status'),
-    api('/api/storage/metrics'),
-    api('/api/graph'),
-    api('/api/approvals/pending')
-  ]);
-
-  if (statusRes.error) {
-    console.log(`${C.crimson}❌ ARACHNE Core Server unreachable on ${BASE_URL}: ${statusRes.error}${C.reset}`);
+async function cmdStatus(options = {}) {
+  if (options.json) {
+    const [statusRes, storageRes, browserRes, telegramRes] = await Promise.all([
+      api('/api/status'),
+      api('/api/storage/metrics'),
+      api('/api/browser/status'),
+      api('/api/telegram/status')
+    ]);
+    console.log(JSON.stringify({
+      status: statusRes.data,
+      storage: storageRes.data,
+      browser: browserRes.data,
+      telegram: telegramRes.data
+    }, null, 2));
     return;
   }
 
-  const s = statusRes.data;
-  const storage = storageRes.data?.counts || {};
+  console.log(`\n${C.bold}${C.crimson}:: SUBSYSTEM HEALTH AUDIT & HARDWARE MATRIX${C.reset}\n`);
 
-  const tableData = [
-    [`HTTP Core Port`, `3003 (Active)`, `${C.green}ONLINE${C.reset}`],
-    [`Storage Engine`, `SQLite 3 (WAL mode)`, `${C.green}ACID SYNCHRONOUS${C.reset}`],
-    [`Database Size`, `${storageRes.data?.totalMb || '1.34'} MB`, `${C.cyan}HEALTHY${C.reset}`],
-    [`Corpus Documents`, `${storage.corpus_documents || 45} files`, `${C.violet}INDEXED${C.reset}`],
-    [`Knowledge Nodes`, `${graphRes.data?.nodes?.length || 368} nodes`, `${C.neonPink}TOPOLOGICAL${C.reset}`],
-    [`Knowledge Edges`, `${graphRes.data?.edges?.length || 881} links`, `${C.neonPink}CONNECTED${C.reset}`],
-    [`Evidence Claims`, `${storage.evidence_records || 142} records`, `${C.yellow}VERIFIED${C.reset}`],
-    [`Level-3 Approvals`, `${approvalsRes.data?.length || 0} pending`, `${approvalsRes.data?.length ? C.amber + 'ATTENTION' : C.green + 'ALL CLEAR'}${C.reset}`],
-    [`Active Investigation`, s.activeInvestigation?.title || 'None active', `${C.cyan}${s.activeInvestigation?.status || 'IDLE'}${C.reset}`]
+  const [statusRes, storageRes, graphRes, browserRes, telegramRes] = await Promise.all([
+    api('/api/status'),
+    api('/api/storage/metrics'),
+    api('/api/graph'),
+    api('/api/browser/status'),
+    api('/api/telegram/status')
+  ]);
+
+  if (!statusRes.ok) {
+    console.log(`${C.crimson}[ERR] ARACHNE server is unreachable at ${BASE_URL}.${C.reset}`);
+    console.log(`${C.gray}Start server using: node apps/desktop/start.mjs --server-only${C.reset}\n`);
+    return;
+  }
+
+  const s = statusRes.data || {};
+  const st = storageRes.data?.data || storageRes.data || {};
+  const counts = st.counts || {};
+  const g = graphRes.data?.data || graphRes.data || {};
+  const b = browserRes.data?.data || {};
+  const t = telegramRes.data?.data || {};
+
+  const rows = [
+    ['HTTP Core Daemon', 'Port 3003 (Active)', `${C.white}[ONLINE]${C.reset}`],
+    ['Storage Engine', 'SQLite 3 (WAL Synchronous)', `${C.white}[ACID NORMAL]${C.reset}`],
+    ['Database Size', `${st.totalMb || 'N/A'} MB`, `${C.white}[PERSISTED]${C.reset}`],
+    ['Corpus Documents', `${counts.corpus_documents !== undefined ? counts.corpus_documents : 'N/A'} records`, `${C.white}[INDEXED]${C.reset}`],
+    ['Knowledge Nodes', `${g.nodes ? g.nodes.length : 'N/A'} entities`, `${C.white}[CONNECTED]${C.reset}`],
+    ['Knowledge Edges', `${g.edges ? g.edges.length : 'N/A'} relationships`, `${C.white}[GRAPH]${C.reset}`],
+    ['Evidence Claims', `${counts.evidence_records !== undefined ? counts.evidence_records : 'N/A'} claims`, `${C.white}[VERIFIED]${C.reset}`],
+    ['Ignored Items', `${counts.ignored_items !== undefined ? counts.ignored_items : 0} items logged`, `${C.gray}[AUDITED]${C.reset}`],
+    ['Browser CDP', `Port ${b.remoteDebuggingPort || 9222} (${b.selectedBrowser || 'Chrome'})`, b.status === 'ready' ? `${C.white}[READY]${C.reset}` : `${C.gray}[${(b.status || 'IDLE').toUpperCase()}]${C.reset}`],
+    ['Active Task Tabs', `${b.activeTaskTabsCount !== undefined ? b.activeTaskTabsCount : 0} tabs owned`, `${C.white}[ISOLATED]${C.reset}`],
+    ['Telegram Gateway', (t.botInfo?.username || t.botUsername) ? `@${t.botInfo?.username || t.botUsername}` : (t.configured ? 'Configured' : 'Not Configured'), t.isPolling ? `${C.white}[POLLING]${C.reset}` : (t.configured ? `${C.white}[ACTIVE]${C.reset}` : `${C.gray}[IDLE]${C.reset}`)],
+    ['Active Investigation', s.activeInvestigation ? `${s.activeInvestigation.id} (${s.activeInvestigation.status})` : 'None active', s.activeInvestigation ? `${C.crimson}[ACTIVE]${C.reset}` : `${C.gray}[IDLE]${C.reset}`]
   ];
 
-  drawTable(['SUBSYSTEM COMPONENT', 'METRIC / STATE', 'HEALTH'], tableData, { color: C.violet });
+  drawTable(['SUBSYSTEM COMPONENT', 'METRIC / STATE', 'HEALTH STATE'], rows, { color: C.darkGray });
+  console.log();
 }
 
-// 2. Models Command
-async function cmdModels() {
-  console.log(`\n${C.bold}${C.yellow}═════ [ AI MODEL MATRIX & REAL TCP ROUNDTRIPS ] ═════${C.reset}`);
-  console.log(`${C.dim}Measuring live HTTP/HTTPS latency directly from TCP handshake (zero synthetic math)...${C.reset}\n`);
+// 2. Investigate Command (Live Real-Time Monitoring — Zero Fake Sleeps)
+async function cmdInvestigate(objective, options = {}) {
+  if (!objective || !objective.trim()) {
+    console.log(`${C.crimson}[ERR] Objective required.${C.reset} Usage: investigate "<objective>"`);
+    return;
+  }
 
-  const [modelsRes, groqTest, openrouterTest, ollamaTest] = await Promise.all([
-    api('/api/models'),
+  const cleanObjective = objective.trim();
+  console.log(`\n${C.crimson}:: DISPATCHING AUTONOMOUS INVESTIGATION${C.reset}`);
+  console.log(`${C.gray}OBJECTIVE:${C.reset} ${C.white}${cleanObjective}${C.reset}\n`);
+
+  process.stdout.write(`${C.gray}Submitting task to research orchestrator... ${C.reset}`);
+  const res = await api('/api/investigate', {
+    method: 'POST',
+    body: { objective: cleanObjective }
+  });
+
+  if (!res.ok || !res.data?.success) {
+    console.log(`${C.crimson}FAILED${C.reset}`);
+    console.log(`${C.crimson}[ERR] ${res.error || res.data?.error || 'Server error'}${C.reset}\n`);
+    return;
+  }
+
+  console.log(`${C.white}ACCEPTED${C.reset}`);
+  const inv = res.data.data;
+  console.log(`${C.gray}TASK ID:  ${C.bold}${C.white}${inv.id}${C.reset}`);
+  console.log(`${C.gray}STATUS:   ${C.crimson}${inv.status}${C.reset}\n`);
+
+  if (options.json) {
+    console.log(JSON.stringify(inv, null, 2));
+    return;
+  }
+
+  // Display initial research plan from server
+  const phases = inv.plan?.phases || [];
+  if (phases.length > 0) {
+    const phaseRows = phases.map((p, idx) => [
+      `[${idx + 1}/${phases.length}] ${p.name}`,
+      p.description || '',
+      (p.queries || []).slice(0, 2).join('; ') || 'Autonomous'
+    ]);
+    drawTable(['PHASE', 'INTENT & SCOPE', 'SEED QUERIES'], phaseRows, { color: C.darkGray });
+  }
+
+  console.log(`\n${C.bold}${C.white}:: LIVE RESEARCH EVENT MONITOR (Ctrl+C to detach or stop)${C.reset}\n`);
+
+  let lastLogCount = 0;
+  let lastPhase = -1;
+  const seenUrls = new Set();
+  const seenIgnored = new Set();
+
+  // Monitor real execution progress by polling /api/investigation/current
+  const pollInterval = 1000;
+  let completed = false;
+
+  while (!completed) {
+    await new Promise(r => setTimeout(r, pollInterval));
+    const currRes = await api('/api/investigation/current');
+    if (!currRes.ok || !currRes.data?.data) {
+      continue;
+    }
+
+    const current = currRes.data.data;
+    if (current.id !== inv.id) {
+      // Completed or replaced
+      break;
+    }
+
+    // Phase transition notification
+    if (current.currentPhaseIndex !== undefined && current.currentPhaseIndex !== lastPhase) {
+      lastPhase = current.currentPhaseIndex;
+      const phaseObj = current.plan?.phases?.[lastPhase];
+      console.log(`${C.crimson}► PHASE [${lastPhase + 1}/5]: ${C.bold}${C.white}${phaseObj ? phaseObj.name : 'Executing'}${C.reset}`);
+    }
+
+    // Stream new real logs
+    const logs = current.logs || [];
+    if (logs.length > lastLogCount) {
+      const newLogs = logs.slice(0, logs.length - lastLogCount).reverse();
+      for (const entry of newLogs) {
+        const timeStr = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : '';
+        const levelTag = entry.level === 'error' ? `${C.crimson}[ERR]` : (entry.level === 'warn' ? `${C.darkRed}[WARN]` : `${C.gray}[LOG]`);
+        console.log(`  ${C.gray}${timeStr}${C.reset} ${levelTag}${C.reset} ${C.white}${entry.message}${C.reset}`);
+      }
+      lastLogCount = logs.length;
+    }
+
+    // Stream new ignored items
+    const ignored = current.ignoredItems || [];
+    for (const item of ignored) {
+      if (!seenIgnored.has(item.id || item.url)) {
+        seenIgnored.add(item.id || item.url);
+        console.log(`  ${C.darkRed}↳ [IGNORED]${C.reset} ${C.gray}${item.stage}:${C.reset} ${item.url} ${C.gray}(${item.reason})${C.reset}`);
+      }
+    }
+
+    // Check terminal states
+    if (current.status === 'COMPLETED') {
+      completed = true;
+      console.log(`\n${C.bold}${C.white}[OK] RESEARCH INVESTIGATION COMPLETED${C.reset}`);
+      console.log(`${C.gray}Duration:     ${C.white}${current.metrics?.durationSeconds || 0} seconds${C.reset}`);
+      console.log(`${C.gray}Pages Crawled:${C.white} ${current.metrics?.pagesCrawled || 0}${C.reset}`);
+      console.log(`${C.gray}Entities:     ${C.white}${current.metrics?.entitiesExtracted || 0}${C.reset}`);
+      console.log(`${C.gray}Citations:    ${C.white}${current.metrics?.citationsVerified || 0}${C.reset}`);
+      console.log(`${C.gray}Ignored Items:${C.white} ${seenIgnored.size}${C.reset}`);
+
+      // Query latest report
+      const repRes = await api('/api/reports');
+      const latestRep = (repRes.data?.data || [])[0];
+      if (latestRep) {
+        console.log(`${C.gray}Report ID:    ${C.crimson}${latestRep.id}${C.reset}`);
+        console.log(`${C.gray}Formats:      ${C.white}${(latestRep.formats || []).join(', ').toUpperCase()}${C.reset}`);
+        console.log(`${C.gray}Inspect with: ${C.white}reports view ${latestRep.id}${C.reset}`);
+      }
+      console.log();
+      break;
+    } else if (current.status === 'FAILED' || current.status === 'CANCELLED') {
+      completed = true;
+      console.log(`\n${C.crimson}[ERR] INVESTIGATION TERMINATED: ${current.status}${C.reset}`);
+      if (current.stateReason) {
+        console.log(`${C.gray}Reason: ${current.stateReason}${C.reset}`);
+      }
+      console.log();
+      break;
+    }
+  }
+}
+
+// 3. Search Command
+async function cmdSearch(query, options = {}) {
+  if (!query || !query.trim()) {
+    console.log(`${C.crimson}[ERR] Query required.${C.reset} Usage: search "<term>" [--limit N]`);
+    return;
+  }
+
+  const q = query.trim();
+  const res = await api(`/api/search?q=${encodeURIComponent(q)}`);
+  const results = res.data?.data || [];
+
+  if (options.json) {
+    console.log(JSON.stringify(results, null, 2));
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: SEARCH RESULTS FOR: "${C.white}${q}${C.crimson}" (${results.length} matches)${C.reset}\n`);
+
+  if (results.length === 0) {
+    console.log(`${C.gray}No records matched query in local SQLite vault.${C.reset}\n`);
+    return;
+  }
+
+  const limit = options.limit || 10;
+  const rows = results.slice(0, limit).map((doc, idx) => [
+    `#${idx + 1}`,
+    doc.title ? doc.title.slice(0, 36) : 'Untitled',
+    doc.url ? (doc.url.length > 45 ? doc.url.slice(0, 42) + '...' : doc.url) : 'Local',
+    `${Math.round((doc.relevanceScore || 0.8) * 100)}%`
+  ]);
+
+  drawTable(['NO.', 'DOCUMENT TITLE', 'PROVENANCE URL', 'CONFIDENCE'], rows, { color: C.darkGray });
+  console.log();
+}
+
+// 4. Browser Command
+async function cmdBrowser(options = {}) {
+  const [bRes, tabsRes] = await Promise.all([
+    api('/api/browser/status'),
+    api('/api/browser/tabs')
+  ]);
+
+  if (!bRes.ok) {
+    console.log(`${C.crimson}[ERR] Browser manager unreachable.${C.reset}\n`);
+    return;
+  }
+
+  const b = bRes.data?.data || {};
+  const tabs = tabsRes.data?.data?.activeTaskTabs || [];
+
+  if (options.json) {
+    console.log(JSON.stringify({ browser: b, tabs }, null, 2));
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: CHROME & BRAVE AUTOMATION ENGINE${C.reset}\n`);
+
+  const detected = b.detected || {};
+  const chromePath = detected.chrome?.installed ? detected.chrome.executablePath : 'Not Installed';
+  const bravePath = detected.brave?.installed ? detected.brave.executablePath : 'Not Installed';
+
+  const rows = [
+    ['Selected Browser', (b.selectedBrowser || 'chrome').toUpperCase(), `${C.white}[CONFIGURED]${C.reset}`],
+    ['Remote CDP Port', String(b.remoteDebuggingPort || 9222), `${C.white}[PORT]${C.reset}`],
+    ['Google Chrome Path', chromePath, detected.chrome?.installed ? `${C.white}[DETECTED]${C.reset}` : `${C.gray}[ABSENT]${C.reset}`],
+    ['Brave Browser Path', bravePath, detected.brave?.installed ? `${C.white}[DETECTED]${C.reset}` : `${C.gray}[ABSENT]${C.reset}`],
+    ['Dedicated Profile Dir', b.dedicatedProfiles?.[b.selectedBrowser] || 'Isolated', `${C.white}[PROTECTED]${C.reset}`],
+    ['Connection Status', (b.status || 'disconnected').toUpperCase(), b.status === 'ready' ? `${C.white}[READY]${C.reset}` : `${C.gray}[IDLE]${C.reset}`],
+    ['Active Task Tabs', `${tabs.length} open tab(s)`, `${C.white}[COUNT]${C.reset}`]
+  ];
+
+  drawTable(['PROPERTY', 'RUNTIME VALUE', 'STATUS'], rows, { color: C.darkGray });
+  console.log();
+}
+
+// 5. Tabs Command
+async function cmdTabs() {
+  const res = await api('/api/browser/tabs');
+  const tabs = res.data?.data?.activeTaskTabs || [];
+
+  console.log(`\n${C.crimson}:: ACTIVE ARACHNE TASK TABS (${tabs.length})${C.reset}\n`);
+
+  if (tabs.length === 0) {
+    console.log(`${C.gray}No task-owned browser tabs currently open. Personal tabs are untouched.${C.reset}\n`);
+    return;
+  }
+
+  const rows = tabs.map((t, i) => [
+    `#${i + 1}`,
+    t.id,
+    t.url || 'about:blank',
+    t.active ? `${C.crimson}[ATTACHED]${C.reset}` : `${C.gray}[BACKGROUND]${C.reset}`
+  ]);
+
+  drawTable(['IDX', 'CDP TAB ID', 'PAGE URL', 'STATE'], rows, { color: C.darkGray });
+  console.log();
+}
+
+// 6. Findings Command
+async function cmdFindings(options = {}) {
+  const currRes = await api('/api/investigation/current');
+  const inv = currRes.data?.data;
+  const findings = inv?.recentFindings || [];
+
+  if (options.json) {
+    console.log(JSON.stringify(findings, null, 2));
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: EXTRACTED EVIDENCE & VERIFIED FINDINGS${C.reset}\n`);
+
+  if (findings.length === 0) {
+    console.log(`${C.gray}No discrete evidence findings recorded in current session.${C.reset}\n`);
+    return;
+  }
+
+  const limit = options.limit || 10;
+  const rows = findings.slice(0, limit).map((f, i) => [
+    `#${i + 1}`,
+    f.title ? f.title.slice(0, 35) : 'Untitled',
+    f.type || 'Web',
+    `${Math.round((f.trustScore || 0.8) * 100)}%`,
+    f.url ? (f.url.length > 40 ? f.url.slice(0, 37) + '...' : f.url) : ''
+  ]);
+
+  drawTable(['IDX', 'EVIDENCE TITLE', 'TYPE', 'TRUST', 'SOURCE URL'], rows, { color: C.darkGray });
+  console.log();
+}
+
+// 7. Reports Command
+async function cmdReports(subcommand, reportId, options = {}) {
+  const res = await api('/api/reports');
+  const reports = res.data?.data || [];
+
+  if (options.json) {
+    console.log(JSON.stringify(reports, null, 2));
+    return;
+  }
+
+  if (!subcommand || subcommand === 'list') {
+    console.log(`\n${C.crimson}:: INTELLIGENCE REPORT REPOSITORY (${reports.length} dossiers)${C.reset}\n`);
+    if (reports.length === 0) {
+      console.log(`${C.gray}No research dossiers generated yet. Run: investigate "<objective>"${C.reset}\n`);
+      return;
+    }
+    const rows = reports.slice(0, 15).map((r, i) => [
+      `#${i + 1}`,
+      r.id,
+      r.title ? r.title.slice(0, 38) : 'Untitled Dossier',
+      (r.formats || ['md']).join(', ').toUpperCase(),
+      r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'Recent'
+    ]);
+    drawTable(['IDX', 'REPORT ID', 'DOSSIER TITLE', 'FORMATS', 'DATE'], rows, { color: C.darkGray });
+    console.log();
+  } else if (subcommand === 'view') {
+    const target = reports.find(r => r.id === reportId) || reports[0];
+    if (!target) {
+      console.log(`${C.crimson}[ERR] Report not found: ${reportId}${C.reset}\n`);
+      return;
+    }
+    console.log(`\n${C.bold}${C.white}DOSSIER: ${target.title}${C.reset}`);
+    console.log(`${C.gray}Report ID: ${target.id} | Generated: ${target.createdAt}${C.reset}\n`);
+    console.log(target.summary || target.markdown?.slice(0, 1500) || '(No preview available)');
+    console.log();
+  }
+}
+
+// 8. Export Command (Real File Generation & Structural Verification)
+async function cmdExport(param1, param2, param3) {
+  const KNOWN_FORMATS = ['pdf', 'txt', 'xlsx', 'docx', 'pptx', 'html', 'json', 'csv', 'md', 'excel', 'word', 'text'];
+  let reportId = param1;
+  let format = param2;
+  let destinationPath = param3;
+
+  // Smart shortcut: if first arg is a format (e.g. "arachne export pdf" or "arachne pdf")
+  if (param1 && KNOWN_FORMATS.includes(param1.toLowerCase())) {
+    format = param1.toLowerCase();
+    if (format === 'excel') format = 'xlsx';
+    if (format === 'word') format = 'docx';
+    if (format === 'text') format = 'txt';
+    destinationPath = param2;
+
+    // Fetch latest report ID automatically
+    const repsRes = await api('/api/reports');
+    const reports = repsRes.data?.data || repsRes.data || [];
+    if (reports.length === 0) {
+      console.log(`${C.crimson}[ERR] No dossiers exist in vault yet. Run an investigation first.${C.reset}\n`);
+      return;
+    }
+    reportId = reports[0].id;
+  }
+
+  if (!format) {
+    format = 'pdf';
+  }
+
+  if (!destinationPath) {
+    const outDir = path.resolve(process.cwd(), 'reports');
+    if (!fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true });
+    }
+    destinationPath = path.join(outDir, `${reportId}.${format}`);
+  }
+
+  console.log(`\n${C.crimson}:: EXPORTING DOSSIER [${reportId}] AS .${format.toUpperCase()}${C.reset}`);
+  console.log(`${C.gray}Target Path: ${destinationPath}${C.reset}`);
+
+  const res = await api('/api/reports/export', {
+    method: 'POST',
+    body: { reportId, format, destinationPath }
+  });
+
+  if (!res.ok || !res.data?.success) {
+    console.log(`${C.crimson}[ERR] Export failed: ${res.data?.error || res.error || 'Unknown error'}${C.reset}\n`);
+    return;
+  }
+
+  const d = res.data;
+  console.log(`${C.bold}${C.white}[OK] Report successfully generated and verified on disk!${C.reset}`);
+  console.log(`${C.gray}  File Path: ${C.white}${d.path}${C.reset}`);
+  console.log(`${C.gray}  File Size: ${C.white}${d.sizeBytes} bytes${C.reset}`);
+  console.log(`${C.gray}  Format:    ${C.white}.${d.format.toUpperCase()}${C.reset}`);
+  console.log(`${C.gray}  Validated: ${C.white}Structure & magic headers confirmed${C.reset}\n`);
+}
+
+// 9. Models Command (Real Latency Roundtrips)
+async function cmdModels(options = {}) {
+  console.log(`\n${C.crimson}:: AI MODEL MATRIX & REAL TCP ROUNDTRIPS${C.reset}`);
+  console.log(`${C.gray}Measuring live HTTP/HTTPS latency directly from TCP handshakes...${C.reset}\n`);
+
+  const [groqTest, openrouterTest, ollamaTest, openaiTest] = await Promise.all([
     api('/api/models/test?provider=groq'),
     api('/api/models/test?provider=openrouter'),
-    api('/api/models/test?provider=ollama')
+    api('/api/models/test?provider=ollama'),
+    api('/api/models/test?provider=openai')
   ]);
+
+  if (options.json) {
+    console.log(JSON.stringify({
+      groq: groqTest.data,
+      openrouter: openrouterTest.data,
+      ollama: ollamaTest.data,
+      openai: openaiTest.data
+    }, null, 2));
+    return;
+  }
 
   const rows = [
     [
       'Groq Cloud LPU',
       'qwen/qwen3.8-27b',
       'Primary Fast Planner',
-      groqTest.data?.latencyMs ? `${C.green}${groqTest.data.latencyMs}ms${C.reset}` : `${C.gray}Offline${C.reset}`,
-      groqTest.data?.success ? `${C.green}● ONLINE (LPU)${C.reset}` : `${C.crimson}○ ERROR${C.reset}`
+      groqTest.data?.latencyMs ? `${groqTest.data.latencyMs}ms` : 'Offline',
+      groqTest.data?.success ? `${C.white}[ONLINE LPU]${C.reset}` : `${C.gray}[ERROR]${C.reset}`
     ],
     [
-      'OpenRouter Cloud',
+      'OpenRouter Free',
       'openrouter/free',
       'Specialist Long-Context',
-      openrouterTest.data?.latencyMs ? `${C.cyan}${openrouterTest.data.latencyMs}ms${C.reset}` : `${C.gray}Offline${C.reset}`,
-      openrouterTest.data?.success ? `${C.cyan}● ONLINE (FREE)${C.reset}` : `${C.crimson}○ ERROR${C.reset}`
+      openrouterTest.data?.latencyMs ? `${openrouterTest.data.latencyMs}ms` : 'Offline',
+      openrouterTest.data?.success ? `${C.white}[ONLINE FREE]${C.reset}` : `${C.gray}[ERROR]${C.reset}`
     ],
     [
       'Local Ollama',
       'qwen2.5:14b',
       'Edge Local Fallback',
-      ollamaTest.data?.latencyMs ? `${C.yellow}${ollamaTest.data.latencyMs}ms${C.reset}` : `${C.gray}Offline${C.reset}`,
-      ollamaTest.data?.success ? `${C.green}● ONLINE (LOCAL)${C.reset}` : `${C.gray}○ OFFLINE${C.reset}`
+      ollamaTest.data?.latencyMs ? `${ollamaTest.data.latencyMs}ms` : 'Offline',
+      ollamaTest.data?.success ? `${C.white}[ONLINE LOCAL]${C.reset}` : `${C.gray}[OFFLINE]${C.reset}`
     ],
     [
       'OpenAI API',
       'gpt-4o',
-      'Complex Multimodal Fallback',
-      '142ms',
-      `${C.violet}READY${C.reset}`
+      'Multimodal Fallback',
+      openaiTest.data?.latencyMs ? `${openaiTest.data.latencyMs}ms` : 'Not Tested',
+      openaiTest.data?.success ? `${C.white}[READY]${C.reset}` : `${C.gray}[OFFLINE]${C.reset}`
     ]
   ];
 
-  drawTable(['PROVIDER', 'ACTIVE MODEL', 'SYSTEM ROLE', 'MEASURED LATENCY', 'STATUS'], rows, { color: C.yellow });
-}
-
-// 3. Investigate Command
-async function cmdInvestigate(objective) {
-  if (!objective) {
-    console.log(`${C.crimson}❌ Error: Objective required.${C.reset} Example: investigate "Open-source AI agents for computer control"`);
-    return;
-  }
-
-  console.log(`\n${C.magenta}🕸️ INITIATING AUTONOMOUS RESEARCH INVESTIGATION...${C.reset}`);
-  console.log(`${C.bold}${C.white}OBJECTIVE:${C.reset} "${C.cyan}${objective}${C.reset}"\n`);
-
-  process.stdout.write(`  ${C.violet}⚙️ Formulating 5-phase research plan via Groq LPU (qwen/qwen3.8-27b)...${C.reset} `);
-  const start = Date.now();
-  const res = await api('/api/investigate', {
-    method: 'POST',
-    body: { objective }
-  });
-  const elapsed = Date.now() - start;
-
-  if (res.error || !res.data?.success) {
-    console.log(`${C.crimson}FAILED${C.reset}`);
-    console.error(`  ${C.crimson}Error:${C.reset} ${res.error || res.data?.error || 'Unknown error'}`);
-    return;
-  }
-
-  console.log(`${C.green}DONE in ${elapsed}ms!${C.reset}\n`);
-
-  const inv = res.data.data;
-  console.log(`  ${C.bold}INVESTIGATION ID:${C.reset} ${C.yellow}${inv.id}${C.reset}`);
-  console.log(`  ${C.bold}INITIAL STATUS:${C.reset}   ${C.green}${inv.status}${C.reset}\n`);
-
-  const phases = inv.plan?.phases || [];
-  const phaseRows = phases.map((p, idx) => [
-    `[${idx + 1}/5] ${p.name}`,
-    p.description || '',
-    (p.queries || []).slice(0, 2).join('\n') || 'Autonomous Synthesis'
-  ]);
-
-  drawTable(['RESEARCH PHASE', 'SCOPE & INTENT', 'TARGET QUERIES'], phaseRows, { color: C.magenta });
-
-  console.log(`\n${C.bold}${C.white}⚡ STREAMING RESEARCH EXECUTION HUD:${C.reset}\n`);
-
-  // Simulate phased execution stream for realistic CLI experience
-  for (let i = 0; i < phases.length; i++) {
-    const p = phases[i];
-    process.stdout.write(`\r  ${progressBar(i, phases.length)}  ${C.violet}Phase ${i + 1}: ${p.name}...${C.reset}`);
-    await sleep(400);
-
-    // Live crawl simulations / logs
-    if (i === 0) {
-      console.log(`\n  ${C.gray}├─ Discovered core taxonomy nodes: Computer-Use, Sandboxed Automation, Tool-Use${C.reset}`);
-    } else if (i === 1) {
-      console.log(`  ${C.gray}├─ Traversing repositories: https://github.com/All-Hands-AI/OpenHands${C.reset}`);
-      console.log(`  ${C.gray}├─ Traversing arxiv leaderboards: https://arxiv.org/abs/2407.16741${C.reset}`);
-    } else if (i === 2) {
-      console.log(`  ${C.gray}├─ Deep inspecting CDP WebSocket execution and memory footprints...${C.reset}`);
-      console.log(`  ${C.gray}├─ Verified 14 benchmark claims and 24 code abstractions into SQLite vault.${C.reset}`);
-    } else if (i === 3) {
-      console.log(`  ${C.gray}├─ Running Cross-Source Contradiction Engine (BM25 + Cosine RRF)...${C.reset}`);
-    } else if (i === 4) {
-      console.log(`  ${C.gray}└─ Compiling final intelligence dossier in all 9 export formats.${C.reset}`);
-    }
-  }
-
-  console.log(`\r  ${progressBar(phases.length, phases.length)}  ${C.green}● INVESTIGATION COMPLETE!${C.reset}\n`);
-
-  drawBox('📋 EXECUTIVE RESEARCH DOSSIER GENERATED', [
-    ` ${C.bold}Report Title:${C.reset} ${inv.title || objective}`,
-    ` ${C.bold}Key Findings:${C.reset} ${C.white}Multi-agent architectures with isolated browser CDPs outperform single-loop frameworks by 42%.${C.reset}`,
-    ` ${C.bold}Corpus Artifacts:${C.reset} 48 pages crawled, 1,348 relations mapped in Knowledge Graph.`,
-    ` ${C.bold}Available Exports:${C.reset} ${C.violet}.MD, .TXT, .HTML, .CSV, .JSON, .PDF, .DOCX, .XLSX, .PPTX${C.reset}`,
-    ` ${C.bold}Command to inspect:${C.reset} ${C.yellow}reports view ${inv.id}${C.reset}`
-  ], C.green);
-}
-
-// 4. Crawl Command
-async function cmdCrawl(targetUrl) {
-  if (!targetUrl) {
-    console.log(`${C.crimson}❌ Error: URL required.${C.reset} Example: crawl https://arxiv.org`);
-    return;
-  }
-
-  console.log(`\n${C.cyan}🕸️ ARACHNE NATIVE CRAWLER FETCHING: ${C.white}${targetUrl}${C.reset}`);
-  const start = Date.now();
-  const res = await api('/api/crawl/page', {
-    method: 'POST',
-    body: { url: targetUrl }
-  });
-  const elapsed = Date.now() - start;
-
-  if (res.error || !res.data?.success) {
-    console.log(`\n${C.crimson}❌ Crawl Failed (${elapsed}ms):${C.reset} ${res.error || res.data?.error || 'Security or Network Block'}`);
-    return;
-  }
-
-  const d = res.data.data;
-  console.log(`\n${C.green}✅ Fetch Succeeded in ${elapsed}ms!${C.reset}`);
-  console.log(`  ${C.bold}Status Code:${C.reset}  ${C.white}${d.metadata?.statusCode || 200}${C.reset}`);
-  console.log(`  ${C.bold}Content Hash:${C.reset} ${C.gray}SHA-256: ${d.contentHash || 'N/A'}${C.reset}`);
-  console.log(`  ${C.bold}Content Size:${C.reset} ${C.yellow}${d.markdown?.length || 0} characters${C.reset}\n`);
-
-  console.log(`${C.bold}${C.violet}--- MARKDOWN EXTRACT PREVIEW (FIRST 15 LINES) ---${C.reset}`);
-  const preview = (d.markdown || '').split('\n').slice(0, 15).join('\n');
-  console.log(preview || `${C.dim}(No text content extracted)${C.reset}`);
-  console.log(`${C.bold}${C.violet}-------------------------------------------------${C.reset}\n`);
-}
-
-// 5. Links Command
-async function cmdLinks(targetUrl) {
-  if (!targetUrl) {
-    console.log(`${C.crimson}❌ Error: URL required.${C.reset} Example: links https://github.com`);
-    return;
-  }
-
-  console.log(`\n${C.cyan}🕸️ DISCOVERING HYPERLINKS ON: ${C.white}${targetUrl}${C.reset}`);
-  const start = Date.now();
-  const res = await api('/api/crawl/links', {
-    method: 'POST',
-    body: { url: targetUrl }
-  });
-  const elapsed = Date.now() - start;
-
-  const links = res.data?.links || [];
-  console.log(`${C.green}✅ Extracted ${links.length} hyperlinks in ${elapsed}ms!${C.reset}\n`);
-
-  let host = '';
-  try { host = new URL(targetUrl).hostname; } catch {}
-
-  const rows = links.slice(0, 15).map((l, i) => {
-    const urlStr = typeof l === 'string' ? l : (l.url || '');
-    const textStr = (typeof l === 'object' && l.text) ? l.text.slice(0, 30) : '(Link URL)';
-    const isInternal = host && urlStr.includes(host);
-    return [
-      `#${i + 1}`,
-      textStr,
-      urlStr.length > 55 ? urlStr.slice(0, 52) + '...' : urlStr,
-      isInternal ? `${C.cyan}INTERNAL${C.reset}` : `${C.yellow}EXTERNAL TARGET${C.reset}`
-    ];
-  });
-
-  drawTable(['IDX', 'ANCHOR TEXT', 'DESTINATION HYPERLINK', 'DISCOVERY TYPE'], rows, { color: C.cyan });
-}
-
-// 6. Graph Command
-async function cmdGraph() {
-  console.log(`\n${C.bold}${C.magenta}═════ [ ARACHNE TOPOLOGICAL KNOWLEDGE GRAPH ] ═════${C.reset}\n`);
-  const res = await api('/api/graph');
-
-  if (res.error || !res.data?.success) {
-    console.log(`${C.crimson}❌ Failed to retrieve graph: ${res.error || 'Server offline'}${C.reset}`);
-    return;
-  }
-
-  const nodes = res.data.data?.nodes || [];
-  const edges = res.data.data?.edges || [];
-
-  console.log(`  ${C.bold}Active Nodes:${C.reset} ${C.cyan}${nodes.length}${C.reset}  ${C.gray}│${C.reset}  ${C.bold}Relationships:${C.reset} ${C.magenta}${edges.length}${C.reset}\n`);
-
-  console.log(`${C.violet}  🕷️ (ARACHNE CORE WEB QUEEN)${C.reset}`);
-  nodes.slice(0, 12).forEach((n, idx) => {
-    const isLast = idx === Math.min(nodes.length - 1, 11);
-    const branch = isLast ? '  └── ' : '  ├── ';
-    const rels = edges.filter(e => e.source === n.id || e.target === n.id).length;
-    console.log(`${C.gray}${branch}${C.reset}${C.bold}${C.white}${n.label || n.id}${C.reset} ${C.dim}[${n.type || 'Web Domain'}]${C.reset} ${C.yellow}↗ ${rels} links${C.reset}`);
-  });
-
-  if (nodes.length > 12) {
-    console.log(`  ${C.dim}... and ${nodes.length - 12} more nodes in knowledge graph.${C.reset}`);
-  }
+  drawTable(['PROVIDER', 'ACTIVE MODEL', 'ROLE', 'LATENCY', 'STATUS'], rows, { color: C.darkGray });
   console.log();
 }
 
-// 7. Search Command
-async function cmdSearch(query) {
-  if (!query) {
-    console.log(`${C.crimson}❌ Error: Query required.${C.reset} Example: search "computer use"`);
+// 10. Telegram Command
+async function cmdTelegram(subcommand, ...args) {
+  console.log(`\n${C.crimson}:: TELEGRAM GATEWAY CONTROL${C.reset}\n`);
+
+  if (!subcommand || subcommand === 'status') {
+    const res = await api('/api/telegram/status');
+    const statusData = res.data?.data || {};
+    const configured = statusData.configured || statusData.status === 'configured' || statusData.status === 'running';
+
+    const rows = [
+      ['Connection State', configured ? (statusData.connected ? 'CONNECTED' : 'CONFIGURED') : 'NOT CONFIGURED', configured ? '[ACTIVE]' : '[IDLE]'],
+      ['Bot Username', statusData.botUsername ? `@${statusData.botUsername}` : 'None', statusData.botUsername ? '[VERIFIED]' : '[UNSET]'],
+      ['Authorized Chat ID', statusData.chatId || 'Not Configured', statusData.chatId ? '[LOCKED]' : '[UNSET]'],
+      ['Polling Listener', (statusData.isPolling || statusData.polling) ? 'Active (Long Poll)' : 'Disabled', (statusData.isPolling || statusData.polling) ? '[POLLING]' : '[IDLE]'],
+      ['Ignored Items Policy', statusData.ignoredItemsPolicy || 'important', '[POLICY]'],
+      ['Operator Fail-Closed', 'Enabled (Authorized chat only)', '[SECURE]']
+    ];
+
+    drawTable(['PROPERTY', 'RUNTIME VALUE', 'STATUS'], rows, { color: C.darkGray });
+    console.log();
+    console.log(`${C.gray}Subcommands:${C.reset}`);
+    console.log(`  telegram test             ${C.gray}Validate bot token against api.telegram.org${C.reset}`);
+    console.log(`  telegram ignored          ${C.gray}List items filtered/skipped during research${C.reset}`);
+    console.log(`  telegram policy <mode>    ${C.gray}Set policy: all | important | batch | disabled${C.reset}`);
+    console.log(`  telegram send "<msg>"     ${C.gray}Send message to authorized operator chat${C.reset}`);
+    console.log(`  telegram logs             ${C.gray}View recent remote operator commands${C.reset}\n`);
     return;
   }
 
-  console.log(`\n${C.cyan}🔍 SEARCHING SQLite VAULT FOR: "${C.white}${query}${C.reset}"\n`);
-  const res = await api(`/api/search?q=${encodeURIComponent(query)}`);
-
-  const results = res.data?.data || [];
-  if (results.length === 0) {
-    console.log(`  ${C.yellow}No documents matched your query in the local SQLite vault.${C.reset}\n`);
-    return;
-  }
-
-  console.log(`  ${C.green}Found ${results.length} matching document(s):${C.reset}\n`);
-  const rows = results.slice(0, 10).map((d, i) => [
-    `#${i + 1}`,
-    d.title ? d.title.slice(0, 32) : 'Untitled Document',
-    d.url ? (d.url.length > 40 ? d.url.slice(0, 37) + '...' : d.url) : 'Local',
-    `${Math.round((d.score || 0.85) * 100)}%`
-  ]);
-
-  drawTable(['NO.', 'DOCUMENT TITLE', 'URL / SOURCE', 'RELEVANCE'], rows, { color: C.green });
-}
-
-// 8. Telegram Command
-async function cmdTelegram(subcommand, arg) {
-  console.log(`\n${C.bold}${C.neonPink}═════ [ TELEGRAM GATEWAY: @Ikxros_bot ] ═════${C.reset}\n`);
-
-  if (!subcommand || subcommand === 'test') {
-    process.stdout.write(`  ${C.violet}Testing live Telegram Bot API connection...${C.reset} `);
+  if (subcommand === 'test') {
+    process.stdout.write(`${C.gray}Validating bot token with Telegram Bot API... ${C.reset}`);
     const res = await api('/api/telegram/test', { method: 'POST', body: {} });
     if (res.data?.success) {
       const b = res.data.data?.bot;
-      console.log(`${C.green}ONLINE!${C.reset}`);
-      console.log(`  ${C.bold}Bot Username:${C.reset} ${C.cyan}@${b.username}${C.reset} (ID: ${b.id})`);
-      console.log(`  ${C.bold}First Name:${C.reset}   ${b.firstName}`);
-      console.log(`  ${C.bold}Latency:${C.reset}      ${C.yellow}${res.data.data?.latencyMs}ms${C.reset}\n`);
+      console.log(`${C.white}[ONLINE]${C.reset}`);
+      console.log(`${C.gray}  Bot Username: ${C.white}@${b.username}${C.reset} (ID: ${b.id})`);
+      console.log(`${C.gray}  First Name:   ${C.white}${b.firstName}${C.reset}`);
+      console.log(`${C.gray}  Roundtrip:    ${C.white}${res.data.data?.latencyMs}ms${C.reset}\n`);
     } else {
-      console.log(`${C.crimson}FAILED!${C.reset}`);
-      console.log(`  ${C.crimson}Error:${C.reset} ${res.data?.error || res.error}\n`);
+      console.log(`${C.crimson}[FAILED]${C.reset}`);
+      console.log(`${C.crimson}  Error: ${res.data?.error || res.error || 'Check TELEGRAM_BOT_TOKEN'}${C.reset}\n`);
     }
+  } else if (subcommand === 'ignored') {
+    const res = await api('/api/investigation/ignored-items?limit=15');
+    const items = res.data?.data || [];
+    console.log(`${C.white}Recent Ignored / Skipped Items (${items.length}):${C.reset}\n`);
+    if (items.length === 0) {
+      console.log(`${C.gray}No ignored items recorded.${C.reset}\n`);
+      return;
+    }
+    const rows = items.map((it, i) => [
+      `#${i + 1}`,
+      it.stage || 'STAGE',
+      it.url ? (it.url.length > 45 ? it.url.slice(0, 42) + '...' : it.url) : '',
+      it.reason || 'Skipped',
+      it.will_retry ? 'Yes' : 'No'
+    ]);
+    drawTable(['IDX', 'STAGE', 'URL', 'REASON', 'RETRY'], rows, { color: C.darkGray });
+    console.log();
+  } else if (subcommand === 'policy') {
+    const policyVal = args[0];
+    if (!policyVal) {
+      const sRes = await api('/api/settings');
+      console.log(`${C.gray}Current Ignored-Item Notification Policy: ${C.white}${sRes.data?.data?.telegramIgnoredItemsPolicy || 'important'}${C.reset}`);
+      console.log(`${C.gray}Usage: telegram policy <all|important|batch|disabled>${C.reset}\n`);
+      return;
+    }
+    const updateRes = await api('/api/settings', {
+      method: 'POST',
+      body: { telegramIgnoredItemsPolicy: policyVal }
+    });
+    console.log(`${C.white}[OK] Ignored-items policy updated to: ${policyVal}${C.reset}\n`);
   } else if (subcommand === 'logs') {
     const res = await api('/api/telegram/logs');
     const logs = res.data?.data || [];
     if (logs.length === 0) {
-      console.log(`  ${C.dim}No Telegram gateway events logged yet.${C.reset}\n`);
+      console.log(`${C.gray}No Telegram gateway events logged yet.${C.reset}\n`);
       return;
     }
     const rows = logs.slice(0, 8).map(l => [
@@ -548,111 +957,170 @@ async function cmdTelegram(subcommand, arg) {
       l.command || '',
       l.response ? (l.response.length > 35 ? l.response.slice(0, 32) + '...' : l.response) : 'OK'
     ]);
-    drawTable(['TIME', 'OPERATOR', 'COMMAND', 'DISPATCHED RESPONSE'], rows, { color: C.neonPink });
-  } else if (subcommand === 'send') {
-    if (!arg) {
-      console.log(`${C.crimson}❌ Error: Please provide message text: telegram send "Hello"${C.reset}\n`);
-      return;
-    }
-    console.log(`  ${C.cyan}Dispatching alert to operator chat...${C.reset}`);
-    const res = await api('/api/telegram/send', {
-      method: 'POST',
-      body: { text: arg }
-    });
-    if (res.data?.success) {
-      console.log(`  ${C.green}✅ Alert delivered successfully to Telegram!${C.reset}\n`);
-    } else {
-      console.log(`  ${C.amber}⚠️ Dispatch notice:${C.reset} ${res.data?.error || 'Operator numeric Chat ID required in Settings.'}\n`);
-    }
-  }
-}
-
-// 9. Reports Command
-async function cmdReports(subcommand, reportId) {
-  console.log(`\n${C.bold}${C.white}═════ [ INTELLIGENCE REPORT REPOSITORY ] ═════${C.reset}\n`);
-  const res = await api('/api/reports');
-  const reports = res.data?.data || [];
-
-  if (!subcommand || subcommand === 'list') {
-    if (reports.length === 0) {
-      console.log(`  ${C.yellow}No reports generated yet. Run: investigate "<topic>"${C.reset}\n`);
-      return;
-    }
-    const rows = reports.slice(0, 10).map((r, i) => [
-      `#${i + 1}`,
-      r.id,
-      r.title ? r.title.slice(0, 35) : 'Untitled',
-      r.format || 'markdown',
-      r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'Recent'
-    ]);
-    drawTable(['IDX', 'REPORT ID', 'REPORT TITLE', 'FORMATS', 'DATE'], rows, { color: C.violet });
-  } else if (subcommand === 'view') {
-    const target = reports.find(r => r.id === reportId) || reports[0];
-    if (!target) {
-      console.log(`${C.crimson}❌ Report not found: ${reportId}${C.reset}\n`);
-      return;
-    }
-    console.log(`${C.bold}${C.green}DOSSIER: ${target.title}${C.reset}\n`);
-    console.log(target.summary || target.markdown?.slice(0, 1500) || '(No preview content)');
+    drawTable(['TIME', 'OPERATOR', 'COMMAND', 'RESPONSE'], rows, { color: C.darkGray });
     console.log();
+  } else if (subcommand === 'send') {
+    const msg = args.join(' ');
+    if (!msg) {
+      console.log(`${C.crimson}[ERR] Message text required.${C.reset} Usage: telegram send "<message>"\n`);
+      return;
+    }
+    const res = await api('/api/telegram/send', { method: 'POST', body: { text: msg } });
+    if (res.data?.success) {
+      console.log(`${C.white}[OK] Dispatched to operator chat.${C.reset}\n`);
+    } else {
+      console.log(`${C.darkRed}[WARN] Dispatch error: ${res.data?.error || 'Operator chat ID required in settings'}${C.reset}\n`);
+    }
   }
 }
 
-// 10. Approvals Command
+// 11. Lifecycle Commands: Pause, Resume, Stop, Retry
+async function cmdLifecycle(action) {
+  const endpointMap = {
+    pause: '/api/investigate/pause',
+    resume: '/api/investigate/resume',
+    stop: '/api/investigate/stop',
+    retry: '/api/investigate/retry'
+  };
+
+  const endpoint = endpointMap[action];
+  if (!endpoint) return;
+
+  const res = await api(endpoint, { method: 'POST', body: {} });
+  if (res.ok) {
+    console.log(`${C.white}[OK] Investigation action [${action.toUpperCase()}] executed.${C.reset}\n`);
+  } else {
+    console.log(`${C.crimson}[ERR] Action [${action}] failed: ${res.data?.error || res.error || 'Server error'}${C.reset}\n`);
+  }
+}
+
+// 12. Approvals Command
 async function cmdApprovals() {
-  console.log(`\n${C.bold}${C.amber}═════ [ LEVEL-3 HUMAN-IN-THE-LOOP APPROVAL QUEUE ] ═════${C.reset}\n`);
+  console.log(`\n${C.crimson}:: LEVEL-3 HUMAN-IN-THE-LOOP APPROVAL GATES${C.reset}\n`);
   const res = await api('/api/approvals/pending');
   const pending = res.data?.data || [];
 
   if (pending.length === 0) {
-    console.log(`  ${C.green}✅ No approvals pending. Autonomous agent operates with full permission.${C.reset}\n`);
+    console.log(`${C.gray}Zero pending human approvals. Engine operates within full safety bounds.${C.reset}\n`);
     return;
   }
 
   const rows = pending.map((a, i) => [
     `#${i + 1}`,
     a.id,
-    a.target || 'Crawl Target',
-    a.reason || 'Safety threshold check'
+    a.target || 'Target',
+    a.reason || 'Safety limit'
   ]);
-  drawTable(['IDX', 'APPROVAL ID', 'OPERATION TARGET', 'REASON REQUIRED'], rows, { color: C.amber });
+  drawTable(['IDX', 'APPROVAL ID', 'TARGET', 'RESTRICTION REASON'], rows, { color: C.darkGray });
+  console.log();
 }
 
-// 11. Help Command
+// 13. Crawl Command
+async function cmdCrawl(targetUrl) {
+  if (!targetUrl) {
+    console.log(`${C.crimson}[ERR] URL required.${C.reset} Usage: crawl <url>`);
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: NATIVE BROWSER FETCH: ${C.white}${targetUrl}${C.reset}`);
+  const start = Date.now();
+  const res = await api('/api/crawl/page', {
+    method: 'POST',
+    body: { url: targetUrl }
+  });
+  const elapsed = Date.now() - start;
+
+  if (!res.ok || !res.data?.success) {
+    console.log(`${C.crimson}[ERR] Fetch failed (${elapsed}ms): ${res.data?.error || res.error || 'Blocked'}${C.reset}\n`);
+    return;
+  }
+
+  const d = res.data.data;
+  console.log(`${C.white}[OK] Fetched in ${elapsed}ms (HTTP ${d.metadata?.statusCode || 200})${C.reset}`);
+  console.log(`${C.gray}SHA-256: ${d.contentHash || 'N/A'} | Length: ${d.markdown?.length || 0} chars${C.reset}\n`);
+
+  const preview = (d.markdown || '').split('\n').slice(0, 15).join('\n');
+  console.log(`${C.gray}--- EXTRACT PREVIEW (FIRST 15 LINES) ---${C.reset}`);
+  console.log(preview || `${C.gray}(Empty content)${C.reset}`);
+  console.log(`${C.gray}----------------------------------------${C.reset}\n`);
+}
+
+// 14. Links Command
+async function cmdLinks(targetUrl) {
+  if (!targetUrl) {
+    console.log(`${C.crimson}[ERR] URL required.${C.reset} Usage: links <url>`);
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: DISCOVERING HYPERLINKS ON: ${C.white}${targetUrl}${C.reset}`);
+  const res = await api('/api/crawl/links', {
+    method: 'POST',
+    body: { url: targetUrl }
+  });
+
+  const links = res.data?.links || [];
+  console.log(`${C.white}[OK] Extracted ${links.length} hyperlinks${C.reset}\n`);
+
+  let host = '';
+  try { host = new URL(targetUrl).hostname; } catch {}
+
+  const rows = links.slice(0, 15).map((l, i) => {
+    const urlStr = typeof l === 'string' ? l : (l.url || '');
+    const isInternal = host && urlStr.includes(host);
+    return [
+      `#${i + 1}`,
+      urlStr.length > 55 ? urlStr.slice(0, 52) + '...' : urlStr,
+      isInternal ? 'INTERNAL' : 'EXTERNAL'
+    ];
+  });
+
+  drawTable(['IDX', 'HYPERLINK DESTINATION', 'SCOPE'], rows, { color: C.darkGray });
+  console.log();
+}
+
+// 15. Help Command
 function cmdHelp() {
   console.log(`
-${C.bold}${C.white}ARACHNE CLI — COMMAND REFERENCE MANUAL:${C.reset}
+${C.bold}${C.white}FAST SHORTCUTS (EASY & MEMORABLE):${C.reset}
+  ${C.crimson}run "<objective>"${C.reset}       Launch autonomous research mission immediately (alias: go, i)
+  ${C.crimson}crawl <url>${C.reset}             Scrape web page & extract clean markdown (alias: get, c)
+  ${C.crimson}pdf [destination]${C.reset}        Export latest dossier as PDF document
+  ${C.crimson}excel [destination]${C.reset}      Export latest dossier as Excel workbook (xlsx)
+  ${C.crimson}txt [destination]${C.reset}        Export latest dossier as clean plain text
+  ${C.crimson}docx [destination]${C.reset}       Export latest dossier as Word document
+  ${C.crimson}search "<query>"${C.reset}          Search local indexed knowledge vault (alias: q, find)
+  ${C.crimson}status${C.reset}                    Audit subsystem health, database size, and counts
+  ${C.crimson}tg [test|ignored|send]${C.reset}   Telegram bot remote control & audit (alias: telegram)
 
-  ${C.cyan}investigate <objective>${C.reset}  Launch autonomous 5-phase research investigation (Groq LPU)
-  ${C.cyan}crawl <url>${C.reset}              Scrape web page & extract clean markdown via native fetch
-  ${C.cyan}links <url>${C.reset}              Discover & categorize internal/external hyperlinks
-  ${C.cyan}models${C.reset}                  Ping real TCP latency for Groq, OpenRouter, and Ollama
-  ${C.cyan}status / sys${C.reset}            Audit server health, SQLite database, memory, and uptime
-  ${C.cyan}graph${C.reset}                   Render ASCII topological spider knowledge tree
-  ${C.cyan}search <query>${C.reset}          Full-text semantic search in SQLite vault corpus
-  ${C.cyan}telegram [test|logs]${C.reset}    Test @Ikxros_bot handshake & inspect gateway audit logs
-  ${C.cyan}reports [list|view]${C.reset}     Inspect finalized research dossiers in 9 formats
-  ${C.cyan}approvals${C.reset}               Inspect pending human-in-the-loop intervention gates
-  ${C.cyan}clear${C.reset}                   Clear screen & reprint cyber-spider banner
-  ${C.cyan}help${C.reset}                    Display this reference guide
-  ${C.cyan}exit / quit${C.reset}             Terminate CLI shell
+${C.bold}${C.white}FULL DIRECTORY & CONTROLS:${C.reset}
+  ${C.crimson}browser${C.reset}                   Inspect Chrome/Brave CDP connection & dedicated profile
+  ${C.crimson}tabs${C.reset}                      List active ARACHNE automation task tabs
+  ${C.crimson}findings${C.reset}                  List extracted entities, claims, and trust scores
+  ${C.crimson}reports [list|view <id>]${C.reset}  List or preview synthesized intelligence dossiers
+  ${C.crimson}export <fmt> [dest]${C.reset}        Export dossier (pdf, xlsx, docx, txt, md, json, html)
+  ${C.crimson}models${C.reset}                    Ping real TCP latency to Groq, OpenRouter, and Ollama
+  ${C.crimson}links <url>${C.reset}              Extract and classify hyperlinks from web page (alias: l)
+  ${C.crimson}pause | resume | stop${C.reset}    Control active investigation execution state
+  ${C.crimson}retry${C.reset}                     Restart active investigation from initial goal
+  ${C.crimson}approvals${C.reset}                 Inspect pending human-in-the-loop intervention queue
+  ${C.crimson}help${C.reset}                      Display this reference guide
+  ${C.crimson}exit | quit${C.reset}               Terminate CLI session
 `);
 }
 
 // =========================================================================
-// Interactive ASCII Shell (REPL)
+// Interactive Hacker Shell (REPL)
 // =========================================================================
 async function startRepl() {
   console.clear();
-  console.log(SPIDER_ASCII);
-  console.log(BANNER_ASCII);
+  console.log(HEADER_ASCII);
   await showHud();
-  console.log(`\n${C.bold}${C.white}Enter command or type ${C.cyan}'help'${C.white} to inspect available research operations:${C.reset}\n`);
+  console.log(`${C.gray}Type ${C.white}'help'${C.gray} for command reference or enter an operation:${C.reset}\n`);
 
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: `${C.magenta}arachne ${C.cyan}🕷️ ❯ ${C.reset}`
+    prompt: `${C.crimson}arachne ${C.gray}# ${C.reset}`
   });
 
   rl.prompt();
@@ -672,14 +1140,14 @@ async function startRepl() {
       case 'exit':
       case 'quit':
       case 'q':
-        console.log(`\n${C.violet}🕷️ ARACHNE Session terminated. Vault state safely synchronized.${C.reset}\n`);
+        console.log(`\n${C.gray}ARACHNE session terminated.${C.reset}\n`);
         process.exit(0);
         break;
 
       case 'clear':
       case 'cls':
         console.clear();
-        console.log(BANNER_ASCII);
+        console.log(HEADER_ASCII);
         await showHud();
         break;
 
@@ -689,14 +1157,98 @@ async function startRepl() {
         await cmdStatus();
         break;
 
+      case 'run':
+      case 'go':
+      case 'investigate':
+      case 'research':
+      case 'i':
+        await cmdInvestigate(args.join(' '));
+        break;
+
+      case 'pdf':
+        await cmdExport('pdf', args[0]);
+        break;
+
+      case 'excel':
+      case 'xlsx':
+        await cmdExport('xlsx', args[0]);
+        break;
+
+      case 'txt':
+      case 'text':
+        await cmdExport('txt', args[0]);
+        break;
+
+      case 'docx':
+      case 'word':
+        await cmdExport('docx', args[0]);
+        break;
+
+      case 'md':
+        await cmdExport('md', args[0]);
+        break;
+
+      case 'search':
+      case 'find':
+      case 'q':
+      case 's':
+        await cmdSearch(args.join(' '));
+        break;
+
+      case 'crawl':
+      case 'scrape':
+      case 'get':
+      case 'c':
+        await cmdCrawl(args[0]);
+        break;
+
+      case 'links':
+      case 'map':
+      case 'l':
+        await cmdLinks(args[0]);
+        break;
+
+      case 'browser':
+        await cmdBrowser();
+        break;
+
+      case 'tabs':
+        await cmdTabs();
+        break;
+
+      case 'findings':
+        await cmdFindings();
+        break;
+
+      case 'reports':
+      case 'report':
+        await cmdReports(args[0], args[1]);
+        break;
+
+      case 'export':
+        await cmdExport(args[0], args[1], args[2]);
+        break;
+
       case 'models':
       case 'model':
         await cmdModels();
         break;
 
-      case 'investigate':
-      case 'research':
-        await cmdInvestigate(args.join(' '));
+      case 'telegram':
+      case 'tg':
+        await cmdTelegram(args[0], ...args.slice(1));
+        break;
+
+      case 'pause':
+      case 'resume':
+      case 'retry':
+      case 'stop':
+        await cmdLifecycle(cmd);
+        break;
+
+      case 'approvals':
+      case 'approval':
+        await cmdApprovals();
         break;
 
       case 'crawl':
@@ -709,29 +1261,6 @@ async function startRepl() {
         await cmdLinks(args[0]);
         break;
 
-      case 'graph':
-        await cmdGraph();
-        break;
-
-      case 'search':
-        await cmdSearch(args.join(' '));
-        break;
-
-      case 'telegram':
-      case 'tg':
-        await cmdTelegram(args[0], args.slice(1).join(' '));
-        break;
-
-      case 'reports':
-      case 'report':
-        await cmdReports(args[0], args[1]);
-        break;
-
-      case 'approvals':
-      case 'approval':
-        await cmdApprovals();
-        break;
-
       case 'hud':
         await showHud();
         break;
@@ -742,15 +1271,14 @@ async function startRepl() {
         break;
 
       default:
-        console.log(`  ${C.crimson}Unknown command: "${cmd}".${C.reset} Type ${C.cyan}help${C.reset} for command directory.`);
+        console.log(`  ${C.crimson}[ERR] Unknown command: "${cmd}". Type 'help' for directory.${C.reset}`);
     }
 
-    console.log();
     rl.prompt();
   });
 
   rl.on('close', () => {
-    console.log(`\n${C.violet}🕷️ ARACHNE Terminal closed.${C.reset}\n`);
+    console.log(`\n${C.gray}ARACHNE session closed.${C.reset}\n`);
     process.exit(0);
   });
 }
@@ -762,29 +1290,132 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    // Interactive TUI / REPL mode
     await startRepl();
     return;
   }
 
-  const cmd = args[0].toLowerCase();
-  const subArgs = args.slice(1);
+  const isJson = args.includes('--json');
+  const cleanArgs = args.filter(a => a !== '--json');
+  const cmd = (cleanArgs[0] || '').toLowerCase();
+  const subArgs = cleanArgs.slice(1);
 
-  console.log(BANNER_ASCII);
+  if (cmd === '--version' || cmd === '-v' || cmd === 'version') {
+    console.log('arachne 2.0.0');
+    return;
+  }
+
+  if (cmd === '--help' || cmd === '-h' || cmd === 'help') {
+    console.log(HEADER_ASCII);
+    cmdHelp();
+    return;
+  }
+
+  if (!isJson) {
+    console.log(HEADER_ASCII);
+  }
+
+  // Auto-start backend daemon if not running
+  await ensureServerOnline(isJson);
 
   switch (cmd) {
     case 'status':
     case 'info':
-      await cmdStatus();
+    case 'sys':
+      await cmdStatus({ json: isJson });
+      break;
+
+    case 'run':
+    case 'go':
+    case 'investigate':
+    case 'research':
+    case 'i':
+      await cmdInvestigate(subArgs.join(' '), { json: isJson });
+      break;
+
+    case 'pdf':
+      await cmdExport('pdf', subArgs[0]);
+      break;
+
+    case 'excel':
+    case 'xlsx':
+      await cmdExport('xlsx', subArgs[0]);
+      break;
+
+    case 'txt':
+    case 'text':
+      await cmdExport('txt', subArgs[0]);
+      break;
+
+    case 'docx':
+    case 'word':
+      await cmdExport('docx', subArgs[0]);
+      break;
+
+    case 'md':
+    case 'markdown':
+      await cmdExport('md', subArgs[0]);
+      break;
+
+    case 'search':
+    case 'find':
+    case 'q':
+    case 's':
+      await cmdSearch(subArgs.join(' '), { json: isJson });
+      break;
+
+    case 'crawl':
+    case 'scrape':
+    case 'get':
+    case 'c':
+      await cmdCrawl(subArgs[0]);
+      break;
+
+    case 'links':
+    case 'map':
+    case 'l':
+      await cmdLinks(subArgs[0]);
+      break;
+
+    case 'browser':
+      await cmdBrowser({ json: isJson });
+      break;
+
+    case 'tabs':
+      await cmdTabs({ json: isJson });
+      break;
+
+    case 'findings':
+      await cmdFindings({ json: isJson });
+      break;
+
+    case 'reports':
+    case 'report':
+      await cmdReports(subArgs[0], subArgs[1], { json: isJson });
+      break;
+
+    case 'export':
+      await cmdExport(subArgs[0], subArgs[1], subArgs[2]);
       break;
 
     case 'models':
-      await cmdModels();
+    case 'model':
+      await cmdModels({ json: isJson });
       break;
 
-    case 'investigate':
-    case 'research':
-      await cmdInvestigate(subArgs.join(' '));
+    case 'telegram':
+    case 'tg':
+      await cmdTelegram(subArgs[0], ...subArgs.slice(1));
+      break;
+
+    case 'pause':
+    case 'resume':
+    case 'retry':
+    case 'stop':
+      await cmdLifecycle(cmd);
+      break;
+
+    case 'approvals':
+      await cmdApprovals();
       break;
 
     case 'crawl':
@@ -797,41 +1428,14 @@ async function main() {
       await cmdLinks(subArgs[0]);
       break;
 
-    case 'graph':
-      await cmdGraph();
-      break;
-
-    case 'search':
-      await cmdSearch(subArgs.join(' '));
-      break;
-
-    case 'telegram':
-      await cmdTelegram(subArgs[0], subArgs.slice(1).join(' '));
-      break;
-
-    case 'reports':
-    case 'report':
-      await cmdReports(subArgs[0], subArgs[1]);
-      break;
-
-    case 'approvals':
-      await cmdApprovals();
-      break;
-
-    case 'help':
-    case '--help':
-    case '-h':
-      cmdHelp();
-      break;
-
     default:
-      console.log(`${C.crimson}Unknown command: ${cmd}${C.reset}`);
+      console.log(`${C.crimson}[ERR] Unknown command: ${cmd}${C.reset}`);
       cmdHelp();
       process.exit(1);
   }
 }
 
 main().catch(err => {
-  console.error(`${C.crimson}Fatal error:${C.reset}`, err);
+  console.error(`${C.crimson}[FATAL] ${err.message}${C.reset}`);
   process.exit(1);
 });

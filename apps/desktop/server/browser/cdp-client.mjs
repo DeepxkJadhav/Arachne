@@ -6,17 +6,26 @@ export class CdpClient {
     this.host = options.host || '127.0.0.1';
   }
 
-  static async httpGetJson(url) {
+  static async httpJson(method, host, port, path) {
     return new Promise((resolve, reject) => {
-      const req = http.get(url, { timeout: 4000 }, (res) => {
+      const req = http.request({
+        host,
+        port,
+        path,
+        method,
+        headers: {
+          'Host': `${host}:${port}`
+        },
+        timeout: 4000
+      }, (res) => {
         let raw = '';
         res.on('data', c => raw += c);
         res.on('end', () => {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             try {
               resolve(JSON.parse(raw));
-            } catch (err) {
-              reject(new Error(`Failed to parse CDP JSON: ${err.message}`));
+            } catch {
+              resolve(raw);
             }
           } else {
             reject(new Error(`CDP HTTP status ${res.statusCode}: ${raw}`));
@@ -25,13 +34,14 @@ export class CdpClient {
       });
       req.on('error', reject);
       req.on('timeout', () => req.destroy(new Error('CDP connection timeout')));
+      req.end();
     });
   }
 
   async testConnection() {
     const startTime = Date.now();
     try {
-      const version = await CdpClient.httpGetJson(`http://${this.host}:${this.port}/json/version`);
+      const version = await CdpClient.httpJson('GET', this.host, this.port, '/json/version');
       const latencyMs = Date.now() - startTime;
       return {
         connected: true,
@@ -52,7 +62,7 @@ export class CdpClient {
 
   async listTabs() {
     try {
-      const tabs = await CdpClient.httpGetJson(`http://${this.host}:${this.port}/json/list`);
+      const tabs = await CdpClient.httpJson('GET', this.host, this.port, '/json/list');
       return (tabs || []).filter(t => t.type === 'page');
     } catch {
       return [];
@@ -60,21 +70,14 @@ export class CdpClient {
   }
 
   async createTab(initialUrl = 'about:blank') {
-    const targetUrl = `http://${this.host}:${this.port}/json/new?${encodeURIComponent(initialUrl)}`;
-    const tabInfo = await CdpClient.httpGetJson(targetUrl);
+    const targetUrl = `/json/new?${encodeURIComponent(initialUrl)}`;
+    const tabInfo = await CdpClient.httpJson('PUT', this.host, this.port, targetUrl);
     return tabInfo;
   }
 
   async closeTab(targetId) {
     try {
-      const closeUrl = `http://${this.host}:${this.port}/json/close/${targetId}`;
-      await new Promise((resolve) => {
-        const req = http.get(closeUrl, { timeout: 3000 }, (res) => {
-          res.on('data', () => {});
-          res.on('end', resolve);
-        });
-        req.on('error', resolve);
-      });
+      await CdpClient.httpJson('PUT', this.host, this.port, `/json/close/${targetId}`);
       return true;
     } catch {
       return false;
@@ -82,7 +85,14 @@ export class CdpClient {
   }
 
   createSession(webSocketUrl) {
-    return new CdpSession(webSocketUrl);
+    let wsUrl = webSocketUrl;
+    if (wsUrl && !wsUrl.includes(`:${this.port}`)) {
+      wsUrl = wsUrl.replace(/^ws:\/\/([^/:]+)(\/.*)$/, `ws://$1:${this.port}$2`);
+    }
+    if (wsUrl) {
+      wsUrl = wsUrl.replace(/^ws:\/\/localhost:/, 'ws://127.0.0.1:');
+    }
+    return new CdpSession(wsUrl);
   }
 }
 

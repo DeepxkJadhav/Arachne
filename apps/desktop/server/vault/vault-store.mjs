@@ -439,6 +439,15 @@ export class VaultStore {
     return this.sqlite.getTelegramLogs(50);
   }
 
+  // --- Ignored Items ---
+  addIgnoredItem(item) {
+    return this.sqlite.addIgnoredItem(item);
+  }
+
+  getIgnoredItems(investigationId = null, limit = 50) {
+    return this.sqlite.getIgnoredItems(investigationId, limit);
+  }
+
   // --- Storage Metrics ---
   getStorageMetrics() {
     const sqliteMetrics = this.sqlite.getStorageMetrics();

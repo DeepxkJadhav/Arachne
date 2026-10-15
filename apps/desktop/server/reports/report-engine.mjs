@@ -626,4 +626,133 @@ export class ReportEngine {
       { name: 'ppt/slides/slide3.xml', content: slide3Xml }
     ]);
   }
+
+  validateArtifact(format, data) {
+    const fmt = (format || '').toLowerCase();
+    if (!data) return { valid: false, error: 'Empty artifact data' };
+
+    if (fmt === 'pdf') {
+      const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+      if (buf.length < 50) return { valid: false, error: 'PDF file too small' };
+      const header = buf.slice(0, 8).toString('utf8');
+      if (!header.startsWith('%PDF-')) return { valid: false, error: 'Missing %PDF magic header' };
+      const str = buf.toString('latin1');
+      if (!str.includes('%%EOF')) return { valid: false, error: 'Missing %%EOF trailer marker' };
+      if (!str.includes('/Catalog') && !str.includes('/Root')) return { valid: false, error: 'Missing PDF catalog root' };
+      return { valid: true };
+    }
+
+    if (['docx', 'xlsx', 'pptx'].includes(fmt)) {
+      const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+      if (buf.length < 100) return { valid: false, error: `${fmt.toUpperCase()} file too small` };
+      if (buf[0] !== 0x50 || buf[1] !== 0x4b || buf[2] !== 0x03 || buf[3] !== 0x04) {
+        return { valid: false, error: 'Invalid PKZIP header signature for OpenXML document' };
+      }
+      const str = buf.toString('latin1');
+      if (!str.includes('[Content_Types].xml')) {
+        return { valid: false, error: 'Missing [Content_Types].xml in OpenXML archive' };
+      }
+      if (fmt === 'docx' && !str.includes('word/document.xml')) {
+        return { valid: false, error: 'Missing word/document.xml in DOCX archive' };
+      }
+      if (fmt === 'xlsx' && !str.includes('xl/workbook.xml')) {
+        return { valid: false, error: 'Missing xl/workbook.xml in XLSX archive' };
+      }
+      if (fmt === 'pptx' && !str.includes('ppt/presentation.xml')) {
+        return { valid: false, error: 'Missing ppt/presentation.xml in PPTX archive' };
+      }
+      return { valid: true };
+    }
+
+    if (fmt === 'json') {
+      const str = Buffer.isBuffer(data) ? data.toString('utf8') : String(data);
+      try {
+        const parsed = JSON.parse(str);
+        if (!parsed || typeof parsed !== 'object') return { valid: false, error: 'JSON is not an object' };
+        return { valid: true };
+      } catch (err) {
+        return { valid: false, error: `Invalid JSON syntax: ${err.message}` };
+      }
+    }
+
+    if (fmt === 'html') {
+      const str = Buffer.isBuffer(data) ? data.toString('utf8') : String(data);
+      if (!str.includes('<html') || !str.includes('</html>')) {
+        return { valid: false, error: 'Missing HTML tags' };
+      }
+      return { valid: true };
+    }
+
+    if (fmt === 'csv') {
+      const str = Buffer.isBuffer(data) ? data.toString('utf8') : String(data);
+      if (!str.includes(',') && !str.includes('\n')) {
+        return { valid: false, error: 'Invalid CSV content' };
+      }
+      return { valid: true };
+    }
+
+    if (fmt === 'md' || fmt === 'txt') {
+      const str = Buffer.isBuffer(data) ? data.toString('utf8') : String(data);
+      if (str.trim().length < 10) return { valid: false, error: 'Text content too short' };
+      return { valid: true };
+    }
+
+    return { valid: false, error: `Unknown format: ${format}` };
+  }
+
+  exportToFile(reportId, format, destinationPath) {
+    const rep = this.vaultStore.getReports().find(r => r.id === reportId);
+    if (!rep) throw new Error(`Report not found: ${reportId}`);
+
+    const fmt = (format || 'md').toLowerCase();
+    const reportsDir = path.join(this.vaultStore.vaultDir, 'reports');
+    const sourceVaultFile = path.join(reportsDir, `${reportId}.${fmt}`);
+
+    let fileBufferOrStr = null;
+    if (fs.existsSync(sourceVaultFile)) {
+      fileBufferOrStr = fs.readFileSync(sourceVaultFile);
+    } else {
+      const data = {
+        investigation: { id: rep.investigationId, objective: rep.title, title: rep.title },
+        corpus: this.vaultStore.getCorpus().slice(0, 40),
+        graph: this.vaultStore.getGraph(),
+        keyEntities: (this.vaultStore.getGraph().nodes || []).slice(0, 20),
+        citations: (this.vaultStore.getGraph().nodes || []).filter(n => ['Citation', 'Document'].includes(n.type)).slice(0, 15),
+        title: rep.title,
+        dateFormatted: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      };
+      if (fmt === 'pdf') fileBufferOrStr = this.exportPdf(data);
+      else if (fmt === 'docx') fileBufferOrStr = this.exportDocx(data);
+      else if (fmt === 'xlsx') fileBufferOrStr = this.exportXlsx(data);
+      else if (fmt === 'pptx') fileBufferOrStr = this.exportPptx(data);
+      else if (fmt === 'json') fileBufferOrStr = rep.json ? JSON.stringify(rep.json, null, 2) : JSON.stringify({ title: rep.title, summary: rep.summary }, null, 2);
+      else if (fmt === 'csv') fileBufferOrStr = rep.csv || this.exportCsv(data);
+      else if (fmt === 'html') fileBufferOrStr = rep.html || this.exportHtml(data, rep.markdown || '');
+      else if (fmt === 'txt') fileBufferOrStr = rep.txt || this.exportPlainText(data);
+      else fileBufferOrStr = rep.markdown || this.exportMarkdown(data);
+    }
+
+    const validation = this.validateArtifact(fmt, fileBufferOrStr);
+    if (!validation.valid) {
+      throw new Error(`Report validation failed for .${fmt}: ${validation.error}`);
+    }
+
+    const resolvedDest = path.resolve(destinationPath);
+    fs.mkdirSync(path.dirname(resolvedDest), { recursive: true });
+    fs.writeFileSync(resolvedDest, fileBufferOrStr);
+
+    const stat = fs.statSync(resolvedDest);
+    if (stat.size === 0) {
+      throw new Error(`Exported file is empty (0 bytes): ${resolvedDest}`);
+    }
+
+    return {
+      success: true,
+      reportId,
+      format: fmt,
+      path: resolvedDest,
+      sizeBytes: stat.size,
+      validated: true
+    };
+  }
 }
