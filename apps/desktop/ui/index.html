@@ -720,11 +720,47 @@
           <div class="panel">
             <div class="panel-title" style="margin-bottom: 12px;">Connected Models</div>
             <div style="display: flex; flex-direction: column; gap: 10px;" id="connected-models-list">
+              <!-- Model Card 0: Groq LPU (Primary) -->
+              <div class="model-fleet-card active" id="model-card-groq" data-model="groq-qwen" style="background: var(--bg-surface-2); border: 1px solid var(--neon-magenta); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <strong style="color: #fff; font-size: 0.9rem;">Groq (Qwen 3.8 / LPU)</strong>
+                  <span class="tag-badge green">Primary</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Groq Cloud • High-Speed LPU • Online</div>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin: 6px 0;">
+                  <span class="tag-badge purple">Fast Inference</span>
+                  <span class="tag-badge purple">Planning</span>
+                  <span class="tag-badge purple">Decomposition</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">
+                  <span>Context: 32K</span>
+                  <span style="color: var(--neon-green);" id="fleet-groq-latency">Latency: 16ms</span>
+                </div>
+              </div>
+
+              <!-- Model Card 0b: OpenRouter Free Tier -->
+              <div class="model-fleet-card" id="model-card-openrouter" data-model="openrouter-free" style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <strong style="color: #fff; font-size: 0.9rem;">OpenRouter (Free Tier Meta)</strong>
+                  <span class="tag-badge cyan">Specialist</span>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">OpenRouter Cloud • Auto-Route Free • Online</div>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap; margin: 6px 0;">
+                  <span class="tag-badge purple">Long Context</span>
+                  <span class="tag-badge purple">Web Analysis</span>
+                  <span class="tag-badge purple">Synthesis</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); font-family: var(--font-mono);">
+                  <span>Context: 128K</span>
+                  <span style="color: var(--neon-cyan);" id="fleet-openrouter-latency">Latency: 110ms</span>
+                </div>
+              </div>
+
               <!-- Model Card 1: Qwen Local -->
-              <div class="model-fleet-card active" id="model-card-qwen" data-model="qwen-2.5-local" style="background: var(--bg-surface-2); border: 1px solid var(--neon-magenta); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s;">
+              <div class="model-fleet-card" id="model-card-qwen" data-model="qwen-2.5-local" style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                   <strong style="color: #fff; font-size: 0.9rem;">Qwen 2.5 (Local)</strong>
-                  <span class="tag-badge green">Primary</span>
+                  <span class="tag-badge purple">Local Offline</span>
                 </div>
                 <div style="font-size: 0.72rem; color: var(--text-dim); margin: 3px 0;">Local (Ollama) • Online</div>
                 <div style="display: flex; gap: 5px; flex-wrap: wrap; margin: 6px 0;">
@@ -1010,7 +1046,7 @@
               <div>
                 <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Bot Token</label>
                 <div class="token-mask-wrap">
-                  <input type="password" id="cfg-tg-token" class="global-search-input" style="width: 100%;" value="8732300173:AAGj-fOkujR5PktCNVt3E2OQkr3vyDy71Wo">
+                  <input type="password" id="cfg-tg-token" class="global-search-input" style="width: 100%;" placeholder="Enter Telegram Bot Token (e.g. 8970...:...)">
                   <button type="button" class="btn-toggle-reveal" id="btn-toggle-token-reveal" title="Show/Hide Token">👁️</button>
                 </div>
               </div>
@@ -1061,7 +1097,31 @@
         <div class="settings-tab-pane" id="pane-settings-models" style="display: none;">
           <div class="settings-layout-grid">
             <div class="settings-section-card">
-              <div class="panel-title">🧠 Local Qwen & LLM Endpoints</div>
+              <div class="panel-title">⚡ High-Speed Cloud & Free Tier Inference</div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Groq API Key (Primary Fast LPU)</label>
+                <div class="token-mask-wrap">
+                  <input type="password" id="cfg-groq-key" class="global-search-input" style="width: 100%;" placeholder="Enter Groq API Key (gsk_...)">
+                  <button type="button" class="btn-toggle-reveal" id="btn-reveal-groq" title="Show/Hide Key">👁️</button>
+                </div>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Groq Model</label>
+                <input type="text" id="cfg-groq-model" class="global-search-input" style="width: 100%;" value="qwen/qwen3.8-27b">
+              </div>
+              <div style="margin-top: 4px;">
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">OpenRouter API Key (Free Tier Meta)</label>
+                <div class="token-mask-wrap">
+                  <input type="password" id="cfg-openrouter-key" class="global-search-input" style="width: 100%;" placeholder="Enter OpenRouter API Key (sk-or-v1-...)">
+                  <button type="button" class="btn-toggle-reveal" id="btn-reveal-openrouter" title="Show/Hide Key">👁️</button>
+                </div>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">OpenRouter Model</label>
+                <input type="text" id="cfg-openrouter-model" class="global-search-input" style="width: 100%;" value="openrouter/free">
+              </div>
+              <hr style="border: 0; border-top: 1px solid var(--border-subtle); margin: 8px 0;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: #fff; margin-bottom: 4px;">🖥️ Local Server & Custom Endpoints</div>
               <div>
                 <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Local Ollama Endpoint</label>
                 <input type="text" id="cfg-ollama-endpoint" class="global-search-input" style="width: 100%;" value="http://localhost:11434">
@@ -1071,25 +1131,27 @@
                 <input type="text" id="cfg-ollama-model" class="global-search-input" style="width: 100%;" value="qwen2.5:latest">
               </div>
               <div>
-                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">OpenAI API Key (Optional Fallback)</label>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">OpenAI API Key (Optional)</label>
                 <input type="password" id="cfg-openai-key" class="global-search-input" style="width: 100%;" placeholder="sk-...">
               </div>
               <div>
-                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Anthropic API Key (Optional Fallback)</label>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Anthropic API Key (Optional)</label>
                 <input type="password" id="cfg-anthropic-key" class="global-search-input" style="width: 100%;" placeholder="sk-ant-...">
               </div>
             </div>
 
             <div class="settings-section-card">
-              <div class="panel-title">⏱️ Real Latency Testing</div>
+              <div class="panel-title">⏱️ Real Latency Testing (Zero Synthetic Math)</div>
               <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
-                Every test executes an actual HTTP request to the configured model endpoint. Latency is measured directly from the TCP roundtrip (zero simulated or random values).
+                Every test executes an actual HTTP request to the configured model endpoint. Latency is measured directly from the TCP roundtrip.
               </div>
-              <div style="display: flex; gap: 8px; margin-top: 10px;">
-                <button class="btn btn-primary" id="btn-test-ollama-real" style="flex: 1; padding: 7px;">Test Local Qwen Latency</button>
-                <button class="btn btn-secondary" id="btn-test-openai-real" style="flex: 1; padding: 7px;">Test OpenAI Latency</button>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
+                <button class="btn btn-primary" id="btn-test-groq-real" style="padding: 7px; font-size: 0.74rem;">⚡ Test Groq LPU</button>
+                <button class="btn btn-secondary" id="btn-test-openrouter-real" style="padding: 7px; font-size: 0.74rem;">🌐 Test OpenRouter</button>
+                <button class="btn btn-secondary" id="btn-test-ollama-real" style="padding: 7px; font-size: 0.74rem;">🖥️ Test Local Qwen</button>
+                <button class="btn btn-secondary" id="btn-test-openai-real" style="padding: 7px; font-size: 0.74rem;">☁️ Test OpenAI</button>
               </div>
-              <div id="model-real-test-feedback" style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--neon-cyan); background: var(--bg-surface-0); padding: 10px; border-radius: 6px; min-height: 60px;">
+              <div id="model-real-test-feedback" style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--neon-cyan); background: var(--bg-surface-0); padding: 10px; border-radius: 6px; min-height: 80px; margin-top: 10px; border: 1px solid var(--border-subtle);">
                 Click a test button above to execute a real latency ping.
               </div>
             </div>

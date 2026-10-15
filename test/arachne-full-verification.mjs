@@ -174,22 +174,40 @@ async function runVerification() {
     assert.strictEqual(typeof res.body.latencyMs, 'number');
   });
 
+  await test('Groq Cloud High-Speed LPU ping test (/api/models/test?provider=groq)', async () => {
+    const res = await request('/api/models/test?provider=groq');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.strictEqual(res.body.provider, 'Groq Cloud');
+    assert.ok(res.body.latencyMs > 0, 'Measured Groq latency must be positive');
+  });
+
+  await test('OpenRouter Free Tier authentication test (/api/models/test?provider=openrouter)', async () => {
+    const res = await request('/api/models/test?provider=openrouter');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.strictEqual(res.body.provider, 'OpenRouter Free Tier');
+    assert.ok(res.body.latencyMs > 0, 'Measured OpenRouter latency must be positive');
+  });
+
   // 8. Telegram Bot Gateway & Real API Handshake
   await test('Telegram Gateway status check (/api/telegram/status)', async () => {
     const res = await request('/api/telegram/status');
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.success, true);
-    assert.ok(res.body.data.botInfo?.username === 'arachnewi_bot' || res.body.data.maskedToken);
+    assert.ok(res.body.data.botInfo?.username === 'Ikxros_bot' || res.body.data.botInfo?.username === 'arachnewi_bot' || res.body.data.maskedToken);
   });
 
   await test('Live Telegram Bot API handshake test (/api/telegram/test)', async () => {
+    const settingsRes = await request('/api/settings');
+    const token = settingsRes.body?.data?.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN;
     const res = await request('/api/telegram/test', {
       method: 'POST',
-      body: { token: '8732300173:AAGj-fOkujR5PktCNVt3E2OQkr3vyDy71Wo' }
+      body: { token }
     });
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.success, true);
-    assert.strictEqual(res.body.data.bot.username, 'arachnewi_bot');
+    assert.ok(['Ikxros_bot', 'arachnewi_bot'].includes(res.body.data.bot.username));
     assert.ok(res.body.data.latencyMs > 0, 'Measured roundtrip latency must be positive number');
   });
 

@@ -15,6 +15,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const UI_DIR = path.resolve(__dirname, '../ui');
 
+// Load root .env environment variables if present
+try {
+  const envPath = path.resolve(process.cwd(), '.env');
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq > 0) {
+        const k = trimmed.slice(0, eq).trim();
+        const v = trimmed.slice(eq + 1).trim();
+        if (!process.env[k]) process.env[k] = v;
+      }
+    }
+  }
+} catch {}
+
 export function createArachneServer(port = 3003) {
   const vaultStore = new VaultStore();
   const graphEngine = new KnowledgeGraphEngine(vaultStore);
@@ -401,10 +419,16 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: modelRouter.getModels() });
       }
 
-      if (pathname === '/api/models/test' && req.method === 'GET') {
-        const provider = parsedUrl.searchParams.get('provider') || null;
-        const testRes = await modelRouter.testConnection(provider);
-        return sendJson(testRes);
+      if (pathname === '/api/models/test') {
+        let provider = parsedUrl.searchParams.get('provider') || null;
+        let customConfig = {};
+        if (req.method === 'POST') {
+          const body = await readBody();
+          provider = body.provider || provider;
+          customConfig = body;
+        }
+        const testRes = await modelRouter.testConnection(provider, customConfig);
+        return sendJson({ success: testRes.success, data: testRes, ...testRes });
       }
 
       if (pathname === '/api/models/test-all' && req.method === 'GET') {

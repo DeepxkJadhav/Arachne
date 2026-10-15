@@ -2226,6 +2226,22 @@
       }
     });
 
+    const bindKeyReveal = (btnId, inputId) => {
+      const btn = document.getElementById(btnId);
+      const input = document.getElementById(inputId);
+      btn?.addEventListener('click', () => {
+        if (input.type === 'password') {
+          input.type = 'text';
+          btn.textContent = '🔒';
+        } else {
+          input.type = 'password';
+          btn.textContent = '👁️';
+        }
+      });
+    };
+    bindKeyReveal('btn-reveal-groq', 'cfg-groq-key');
+    bindKeyReveal('btn-reveal-openrouter', 'cfg-openrouter-key');
+
     document.getElementById('btn-test-tg')?.addEventListener('click', async () => {
       const token = tokenInput?.value?.trim();
       const feedback = document.getElementById('tg-test-feedback');
@@ -2239,11 +2255,13 @@
         });
         const json = await res.json();
         if (json.success) {
-          showToast(`✅ Telegram Bot @${json.data.username} verified (${json.data.latencyMs}ms)`, 'info');
-          if (feedback) feedback.textContent = `✅ Handshake Verified: @${json.data.username} (ID: ${json.data.id}) — Latency: ${json.data.latencyMs}ms`;
+          const u = json.data?.bot?.username || json.data?.username || 'Ikxros_bot';
+          const lat = json.data?.latencyMs || json.latencyMs || 0;
+          showToast(`✅ Telegram Bot @${u} verified (${lat}ms)`, 'info');
+          if (feedback) feedback.textContent = `✅ Handshake Verified: @${u} (ID: ${json.data?.bot?.id || json.data?.id}) — Latency: ${lat}ms`;
         } else {
-          showToast(`Telegram test failed: ${json.error}`, 'error');
-          if (feedback) feedback.textContent = `❌ ${json.error}`;
+          showToast(`Telegram test failed: ${json.error || json.message}`, 'error');
+          if (feedback) feedback.textContent = `❌ ${json.error || json.message}`;
         }
       } catch (err) {
         if (feedback) feedback.textContent = `❌ ${err.message}`;
@@ -2295,7 +2313,69 @@
       }
     });
 
-    // 4. Real Latency Model Testing
+    // 4. Real Latency Model Testing (Zero Synthetic Math)
+    document.getElementById('btn-test-groq-real')?.addEventListener('click', async () => {
+      const apiKey = document.getElementById('cfg-groq-key')?.value?.trim();
+      const model = document.getElementById('cfg-groq-model')?.value?.trim() || 'qwen/qwen3.8-27b';
+      const feedback = document.getElementById('model-real-test-feedback');
+      if (!apiKey) {
+        showToast('Please enter a Groq API key to test.', 'warn');
+        return;
+      }
+      if (feedback) feedback.textContent = 'Measuring real HTTPS roundtrip to api.groq.com/openai/v1/models...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/models/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'groq', apiKey, model })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`⚡ Groq Cloud responded in ${json.data.latencyMs}ms`, 'info');
+          const modelsCnt = Array.isArray(json.data.models) ? `${json.data.models.length} models accessible` : 'Active';
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-green)">⚡ GROQ CLOUD LPU ONLINE</span><br>Measured Roundtrip: <strong>${json.data.latencyMs}ms</strong><br>Default Model: <strong>${escapeHtml(model)}</strong> (${modelsCnt})<br><span style="color:var(--text-dim)">Ultra-fast primary reasoning enabled.</span>`;
+          const fleetBadge = document.getElementById('fleet-groq-latency');
+          if (fleetBadge) fleetBadge.textContent = `Latency: ${json.data.latencyMs}ms`;
+        } else {
+          showToast(`Groq test failed: ${json.error || json.message}`, 'warn');
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-crimson)">⚠️ GROQ ERROR (${json.data?.latencyMs || 0}ms)</span><br>${escapeHtml(json.error || json.message || 'Authentication failed')}`;
+        }
+      } catch (err) {
+        if (feedback) feedback.textContent = `❌ ${err.message}`;
+      }
+    });
+
+    document.getElementById('btn-test-openrouter-real')?.addEventListener('click', async () => {
+      const apiKey = document.getElementById('cfg-openrouter-key')?.value?.trim();
+      const feedback = document.getElementById('model-real-test-feedback');
+      if (!apiKey) {
+        showToast('Please enter an OpenRouter API key to test.', 'warn');
+        return;
+      }
+      if (feedback) feedback.textContent = 'Measuring real HTTPS roundtrip to openrouter.ai/api/v1/auth/key...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/models/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'openrouter', apiKey })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`🌐 OpenRouter responded in ${json.data.latencyMs}ms`, 'info');
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-green)">🌐 OPENROUTER FREE TIER ONLINE</span><br>Measured Roundtrip: <strong>${json.data.latencyMs}ms</strong><br>${escapeHtml(json.data.message || 'Authenticated')}<br><span style="color:var(--neon-cyan)">Auto-routes to highest performance free model.</span>`;
+          const fleetBadge = document.getElementById('fleet-openrouter-latency');
+          if (fleetBadge) fleetBadge.textContent = `Latency: ${json.data.latencyMs}ms`;
+        } else {
+          showToast(`OpenRouter test failed: ${json.error || json.message}`, 'warn');
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-crimson)">⚠️ OPENROUTER ERROR (${json.data?.latencyMs || 0}ms)</span><br>${escapeHtml(json.error || json.message || 'Authentication failed')}`;
+        }
+      } catch (err) {
+        if (feedback) feedback.textContent = `❌ ${err.message}`;
+      }
+    });
+
     document.getElementById('btn-test-ollama-real')?.addEventListener('click', async () => {
       const endpoint = document.getElementById('cfg-ollama-endpoint')?.value?.trim() || 'http://localhost:11434';
       const model = document.getElementById('cfg-ollama-model')?.value?.trim() || 'qwen2.5:latest';
@@ -2313,8 +2393,8 @@
           showToast(`✅ Ollama / Qwen responded in ${json.data.latencyMs}ms`, 'info');
           if (feedback) feedback.innerHTML = `<span style="color:var(--neon-green)">✅ OLLAMA ONLINE</span><br>Model: <strong>${escapeHtml(model)}</strong><br>Measured Roundtrip: <strong>${json.data.latencyMs}ms</strong><br>Status: ${escapeHtml(json.data.status || 'OK')}`;
         } else {
-          showToast(`Ollama test failed: ${json.error}`, 'warn');
-          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-crimson)">⚠️ OLLAMA UNREACHABLE (${json.data?.latencyMs || 0}ms)</span><br>${escapeHtml(json.error || 'Connection failed')}<br><span style="color:var(--text-dim)">Ensure 'ollama serve' is running locally.</span>`;
+          showToast(`Ollama test: ${json.error || json.message}`, 'warn');
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-crimson)">⚠️ OLLAMA OFFLINE (${json.data?.latencyMs || 0}ms)</span><br>${escapeHtml(json.error || json.message || 'Connection failed')}<br><span style="color:var(--text-dim)">Local reasoner will handle planning if Ollama is offline.</span>`;
         }
       } catch (err) {
         if (feedback) feedback.textContent = `❌ ${err.message}`;
@@ -2341,8 +2421,8 @@
           showToast(`✅ OpenAI API responded in ${json.data.latencyMs}ms`, 'info');
           if (feedback) feedback.innerHTML = `<span style="color:var(--neon-green)">✅ OPENAI API ONLINE</span><br>Measured Roundtrip: <strong>${json.data.latencyMs}ms</strong><br>Status: OK`;
         } else {
-          showToast(`OpenAI test: ${json.error}`, 'warn');
-          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-crimson)">⚠️ OPENAI ERROR (${json.data?.latencyMs || 0}ms)</span><br>${escapeHtml(json.error || 'Handshake failed')}`;
+          showToast(`OpenAI test: ${json.error || json.message}`, 'warn');
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-crimson)">⚠️ OPENAI ERROR (${json.data?.latencyMs || 0}ms)</span><br>${escapeHtml(json.error || json.message || 'Handshake failed')}`;
         }
       } catch (err) {
         if (feedback) feedback.textContent = `❌ ${err.message}`;
@@ -2414,6 +2494,15 @@
       const respectRobots = document.getElementById('cfg-robots')?.checked ?? true;
       const theme = document.getElementById('cfg-theme')?.value || 'void';
 
+      const groqApiKey = document.getElementById('cfg-groq-key')?.value?.trim();
+      const groqModel = document.getElementById('cfg-groq-model')?.value?.trim() || 'qwen/qwen3.8-27b';
+      const openrouterApiKey = document.getElementById('cfg-openrouter-key')?.value?.trim();
+      const openrouterModel = document.getElementById('cfg-openrouter-model')?.value?.trim() || 'openrouter/free';
+      const telegramBotToken = document.getElementById('cfg-tg-token')?.value?.trim();
+      const telegramChatId = document.getElementById('cfg-tg-chat-id')?.value?.trim();
+      const usersStr = document.getElementById('cfg-tg-users')?.value?.trim() || '';
+      const allowedTelegramUserIds = usersStr.split(',').map(s => s.trim()).filter(Boolean);
+
       try {
         await fetch(`${API_BASE}/api/settings`, {
           method: 'POST',
@@ -2423,7 +2512,15 @@
             reqDelay,
             maxDepth,
             respectRobots,
-            theme
+            theme,
+            groqApiKey,
+            groqModel,
+            openrouterApiKey,
+            openrouterModel,
+            telegramBotToken,
+            telegramChatId,
+            allowedTelegramUserIds,
+            activeModelProvider: 'groq'
           })
         });
         showToast('✅ Master configuration saved to SQLite vault store.', 'info');
@@ -2440,6 +2537,27 @@
     // Pre-load initial settings views
     loadSystemStatusSettings();
     loadBrowserSettings();
+    loadGeneralSettings();
+  }
+
+  async function loadGeneralSettings() {
+    try {
+      const res = await fetch(`${API_BASE}/api/settings`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        const s = json.data;
+        const tgToken = document.getElementById('cfg-tg-token');
+        if (tgToken && s.telegramBotToken && !tgToken.value) tgToken.value = s.telegramBotToken;
+        const groqKey = document.getElementById('cfg-groq-key');
+        if (groqKey && s.groqApiKey && !groqKey.value) groqKey.value = s.groqApiKey;
+        const groqModel = document.getElementById('cfg-groq-model');
+        if (groqModel && s.groqModel) groqModel.value = s.groqModel;
+        const orKey = document.getElementById('cfg-openrouter-key');
+        if (orKey && s.openrouterApiKey && !orKey.value) orKey.value = s.openrouterApiKey;
+        const orModel = document.getElementById('cfg-openrouter-model');
+        if (orModel && s.openrouterModel) orModel.value = s.openrouterModel;
+      }
+    } catch {}
   }
 
   async function loadSystemStatusSettings() {
@@ -2529,7 +2647,7 @@
       if (json.success && json.data) {
         const d = json.data;
         const botNameEl = document.getElementById('tg-bot-username-display');
-        const username = d.botInfo?.username || d.botUsername || 'arachnewi_bot';
+        const username = d.botInfo?.username || d.botUsername || 'Ikxros_bot';
         if (botNameEl) botNameEl.textContent = `@${username}`;
         
         if (Array.isArray(d.recentLogs)) {

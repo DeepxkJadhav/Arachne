@@ -6,13 +6,43 @@ export class ModelRouter {
     this.vaultStore = vaultStore;
     this.configuredModels = [
       {
+        id: 'groq-qwen',
+        name: 'Groq (Qwen 3.8 / LPU)',
+        provider: 'Groq Cloud',
+        endpoint: 'https://api.groq.com/openai/v1',
+        model: 'qwen/qwen3.8-27b',
+        role: 'Primary',
+        rolesList: ['Fast Inference', 'Decomposition', 'Live Reasoning'],
+        context: '32K',
+        status: 'Online',
+        latencyMs: 16,
+        temperature: 0.6,
+        maxTokens: 4096,
+        capabilities: ['Test', 'Code', 'Tool Calling', 'Structured Output', 'High-Speed LPU']
+      },
+      {
+        id: 'openrouter-free',
+        name: 'OpenRouter (Free Tier Meta)',
+        provider: 'OpenRouter Cloud',
+        endpoint: 'https://openrouter.ai/api/v1',
+        model: 'openrouter/free',
+        role: 'Specialist',
+        rolesList: ['Long Context', 'Web Analysis', 'Synthesis'],
+        context: '128K',
+        status: 'Online',
+        latencyMs: 110,
+        temperature: 0.7,
+        maxTokens: 4096,
+        capabilities: ['Test', 'Code', 'Structured Output', 'Free Tier Auto-Route']
+      },
+      {
         id: 'qwen2.5-local',
         name: 'Qwen2.5 (Local)',
         provider: 'Ollama (Local)',
         endpoint: 'http://localhost:11434',
         model: 'qwen2.5:14b',
-        role: 'Primary',
-        rolesList: ['Reasoning', 'Planning', 'Analysis'],
+        role: 'Local Reasoning',
+        rolesList: ['Offline Reasoning', 'Planning', 'Analysis'],
         context: '32K',
         status: 'Online',
         latencyMs: 24,
@@ -26,7 +56,7 @@ export class ModelRouter {
         provider: 'Local (LM Studio)',
         endpoint: 'http://localhost:1234',
         model: 'llama-3.1-8b-instruct',
-        role: 'Specialist',
+        role: 'Local Specialist',
         rolesList: ['Extraction', 'Classification'],
         context: '8K',
         status: 'Online',
@@ -90,13 +120,141 @@ export class ModelRouter {
     return results;
   }
 
-  async testConnection(modelId = null) {
+  async testConnection(modelIdOrProvider = null, customConfig = {}) {
     const settings = this.getSettings();
-    const targetModel = this.configuredModels.find(m => m.id === modelId) || this.configuredModels[0];
+    const query = String(modelIdOrProvider || customConfig.provider || '').toLowerCase();
     const startTime = Date.now();
 
-    if (targetModel.provider.includes('Ollama')) {
-      const endpoint = settings.ollamaEndpoint || targetModel.endpoint || 'http://localhost:11434';
+    // 1. Groq Cloud LPU Test
+    if (query.includes('groq')) {
+      const key = customConfig.apiKey || customConfig.groqApiKey || settings.groqApiKey;
+      if (!key) {
+        return {
+          success: false,
+          provider: 'Groq Cloud',
+          latencyMs: 0,
+          message: 'No Groq API key configured. Enter your API key in Settings.'
+        };
+      }
+
+      try {
+        const res = await new Promise((resolve, reject) => {
+          const req = https.get('https://api.groq.com/openai/v1/models', {
+            headers: { 'Authorization': `Bearer ${key}` },
+            timeout: 6000
+          }, (r) => {
+            let data = '';
+            r.on('data', c => data += c);
+            r.on('end', () => resolve({ statusCode: r.statusCode, data }));
+          });
+          req.on('error', reject);
+          req.on('timeout', () => req.destroy(new Error('Groq timeout')));
+        });
+
+        const latencyMs = Date.now() - startTime;
+        const target = this.configuredModels.find(m => m.id === 'groq-qwen');
+        if (target) target.latencyMs = latencyMs;
+
+        if (res.statusCode === 200) {
+          let models = [];
+          try {
+            const json = JSON.parse(res.data);
+            models = (json.data || []).map(m => m.id);
+          } catch {}
+          if (target) target.status = 'Online';
+          return {
+            success: true,
+            provider: 'Groq Cloud',
+            latencyMs,
+            models,
+            message: `Groq LPU active (${latencyMs}ms roundtrip). Detected ${models.length} accessible model(s).`
+          };
+        } else {
+          if (target) target.status = 'Auth Error';
+          return {
+            success: false,
+            provider: 'Groq Cloud',
+            latencyMs,
+            message: `Groq returned HTTP ${res.statusCode}: ${res.data.slice(0, 100)}`
+          };
+        }
+      } catch (err) {
+        const latencyMs = Date.now() - startTime;
+        return {
+          success: false,
+          provider: 'Groq Cloud',
+          latencyMs,
+          message: `Groq unreachable: ${err.message}`
+        };
+      }
+    }
+
+    // 2. OpenRouter Free Tier Meta Test
+    if (query.includes('openrouter')) {
+      const key = customConfig.apiKey || customConfig.openrouterApiKey || settings.openrouterApiKey;
+      if (!key) {
+        return {
+          success: false,
+          provider: 'OpenRouter',
+          latencyMs: 0,
+          message: 'No OpenRouter API key configured. Enter your API key in Settings.'
+        };
+      }
+
+      try {
+        const res = await new Promise((resolve, reject) => {
+          const req = https.get('https://openrouter.ai/api/v1/auth/key', {
+            headers: { 'Authorization': `Bearer ${key}` },
+            timeout: 6000
+          }, (r) => {
+            let data = '';
+            r.on('data', c => data += c);
+            r.on('end', () => resolve({ statusCode: r.statusCode, data }));
+          });
+          req.on('error', reject);
+          req.on('timeout', () => req.destroy(new Error('OpenRouter timeout')));
+        });
+
+        const latencyMs = Date.now() - startTime;
+        const target = this.configuredModels.find(m => m.id === 'openrouter-free');
+        if (target) target.latencyMs = latencyMs;
+
+        if (res.statusCode === 200) {
+          if (target) target.status = 'Online';
+          let label = 'Active';
+          try {
+            const json = JSON.parse(res.data);
+            label = json.data?.label || label;
+          } catch {}
+          return {
+            success: true,
+            provider: 'OpenRouter Free Tier',
+            latencyMs,
+            message: `OpenRouter authenticated (${latencyMs}ms roundtrip). Key Label: ${label}.`
+          };
+        } else {
+          if (target) target.status = 'Auth Error';
+          return {
+            success: false,
+            provider: 'OpenRouter',
+            latencyMs,
+            message: `OpenRouter returned HTTP ${res.statusCode}: ${res.data.slice(0, 100)}`
+          };
+        }
+      } catch (err) {
+        const latencyMs = Date.now() - startTime;
+        return {
+          success: false,
+          provider: 'OpenRouter',
+          latencyMs,
+          message: `OpenRouter unreachable: ${err.message}`
+        };
+      }
+    }
+
+    // 3. Ollama (Local)
+    if (query.includes('ollama') || query.includes('qwen2.5-local')) {
+      const endpoint = customConfig.endpoint || settings.ollamaEndpoint || 'http://localhost:11434';
       try {
         const parsed = new URL(`${endpoint}/api/tags`);
         const res = await new Promise((resolve, reject) => {
@@ -110,25 +268,27 @@ export class ModelRouter {
         });
 
         const latencyMs = Date.now() - startTime;
+        const targetModel = this.configuredModels.find(m => m.id === 'qwen2.5-local');
         if (res.statusCode === 200) {
           let models = [];
           try {
             const json = JSON.parse(res.data);
             models = (json.models || []).map(m => m.name);
           } catch {}
-          targetModel.status = 'Online';
-          targetModel.latencyMs = latencyMs;
+          if (targetModel) {
+            targetModel.status = 'Online';
+            targetModel.latencyMs = latencyMs;
+          }
           return {
             success: true,
             provider: 'Ollama (Local Qwen)',
             endpoint,
             latencyMs,
             models,
-            message: `Ollama active on ${endpoint}. ${models.length} model(s) detected.`
+            message: `Ollama active on ${endpoint} (${latencyMs}ms). ${models.length} model(s) detected.`
           };
         } else {
-          targetModel.status = 'Offline';
-          targetModel.latencyMs = latencyMs;
+          if (targetModel) targetModel.status = 'Offline';
           return {
             success: false,
             provider: 'Ollama',
@@ -139,21 +299,22 @@ export class ModelRouter {
         }
       } catch (err) {
         const latencyMs = Date.now() - startTime;
-        targetModel.status = 'Offline';
-        targetModel.latencyMs = latencyMs;
+        const targetModel = this.configuredModels.find(m => m.id === 'qwen2.5-local');
+        if (targetModel) targetModel.status = 'Offline';
         return {
           success: false,
           provider: 'Ollama (Local Qwen)',
           endpoint,
           latencyMs,
           error: err.message,
-          message: `Cannot connect to Ollama at ${endpoint} (${err.message}). Local fallback reasoner will handle planning.`
+          message: `Cannot connect to Ollama at ${endpoint} (${err.message}). Cloud/heuristic fallback active.`
         };
       }
     }
 
-    if (targetModel.provider.includes('OpenAI')) {
-      const key = settings.openaiApiKey;
+    // 4. OpenAI
+    if (query.includes('openai') || query.includes('gpt-4o')) {
+      const key = customConfig.apiKey || settings.openaiApiKey;
       if (!key) {
         return {
           success: false,
@@ -179,9 +340,10 @@ export class ModelRouter {
         });
 
         const latencyMs = Date.now() - startTime;
-        targetModel.latencyMs = latencyMs;
+        const target = this.configuredModels.find(m => m.id === 'gpt-4o-api');
+        if (target) target.latencyMs = latencyMs;
         if (res.statusCode === 200) {
-          targetModel.status = 'Online';
+          if (target) target.status = 'Online';
           return {
             success: true,
             provider: 'OpenAI',
@@ -189,7 +351,7 @@ export class ModelRouter {
             message: `OpenAI connection authenticated (latency: ${latencyMs}ms).`
           };
         } else {
-          targetModel.status = 'Auth Error';
+          if (target) target.status = 'Auth Error';
           return {
             success: false,
             provider: 'OpenAI',
@@ -199,8 +361,6 @@ export class ModelRouter {
         }
       } catch (err) {
         const latencyMs = Date.now() - startTime;
-        targetModel.status = 'Offline';
-        targetModel.latencyMs = latencyMs;
         return {
           success: false,
           provider: 'OpenAI',
@@ -210,8 +370,9 @@ export class ModelRouter {
       }
     }
 
-    if (targetModel.provider.includes('Anthropic')) {
-      const key = settings.anthropicApiKey;
+    // 5. Anthropic
+    if (query.includes('anthropic') || query.includes('claude')) {
+      const key = customConfig.apiKey || settings.anthropicApiKey;
       if (!key) {
         return {
           success: false,
@@ -240,9 +401,10 @@ export class ModelRouter {
         });
 
         const latencyMs = Date.now() - startTime;
-        targetModel.latencyMs = latencyMs;
+        const target = this.configuredModels.find(m => m.id === 'claude-3.5-api');
+        if (target) target.latencyMs = latencyMs;
         if (res.statusCode === 200) {
-          targetModel.status = 'Online';
+          if (target) target.status = 'Online';
           return {
             success: true,
             provider: 'Anthropic',
@@ -250,7 +412,7 @@ export class ModelRouter {
             message: `Anthropic connection authenticated (latency: ${latencyMs}ms).`
           };
         } else {
-          targetModel.status = 'Auth Error';
+          if (target) target.status = 'Auth Error';
           return {
             success: false,
             provider: 'Anthropic',
@@ -260,8 +422,6 @@ export class ModelRouter {
         }
       } catch (err) {
         const latencyMs = Date.now() - startTime;
-        targetModel.status = 'Offline';
-        targetModel.latencyMs = latencyMs;
         return {
           success: false,
           provider: 'Anthropic',
@@ -273,7 +433,7 @@ export class ModelRouter {
 
     return {
       success: true,
-      provider: targetModel.name,
+      provider: 'Local Heuristic Reasoner',
       latencyMs: Date.now() - startTime,
       message: 'Connection verified.'
     };
@@ -311,12 +471,39 @@ export class ModelRouter {
     return { valid: true, reason: 'POLICY_APPROVED' };
   }
 
+  // --- Autonomous Research Plan Generation ---
   async generateResearchPlan(objective) {
     const cleanObjective = this.sanitizePromptInput(objective);
-    const prompt = `Formulate a 5-phase web research plan for the objective: "${cleanObjective}". Output JSON with phases array.`;
     const settings = this.getSettings();
+
+    // Priority 1: Groq Cloud LPU (Ultra-fast Qwen 3.8 / 16ms)
+    if (settings.groqApiKey) {
+      try {
+        const plan = await this.callGroq(cleanObjective, settings.groqApiKey, settings.groqModel || 'qwen/qwen3.8-27b');
+        if (plan && Array.isArray(plan.phases) && plan.phases.length > 0) {
+          return plan;
+        }
+      } catch (err) {
+        console.warn('[ModelRouter] Groq plan generation failed, falling back to secondary provider:', err.message);
+      }
+    }
+
+    // Priority 2: OpenRouter Free Tier Meta
+    if (settings.openrouterApiKey) {
+      try {
+        const plan = await this.callOpenRouter(cleanObjective, settings.openrouterApiKey, settings.openrouterModel || 'openrouter/free');
+        if (plan && Array.isArray(plan.phases) && plan.phases.length > 0) {
+          return plan;
+        }
+      } catch (err) {
+        console.warn('[ModelRouter] OpenRouter plan generation failed, falling back:', err.message);
+      }
+    }
+
+    // Priority 3: Local Ollama
     const endpoint = settings.ollamaEndpoint || 'http://localhost:11434';
     const model = settings.ollamaModel || 'qwen2.5:latest';
+    const prompt = `Formulate a 5-phase web research plan for the objective: "${cleanObjective}". Output JSON with {"phases": [{"id": "phase-1", "name": "...", "description": "...", "status": "pending", "queries": ["..."]}]}.`;
 
     try {
       const ollamaRes = await this.callOllama(endpoint, model, prompt);
@@ -331,8 +518,114 @@ export class ModelRouter {
       }
     } catch {}
 
-    // Robust deterministic heuristic decomposition fallback
+    // Priority 4: Robust deterministic heuristic decomposition fallback
     return this.heuristicDecompose(cleanObjective);
+  }
+
+  async callGroq(objective, apiKey, model = 'qwen/qwen3.8-27b') {
+    return new Promise((resolve, reject) => {
+      const payload = JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are the ARACHNE Autonomous Research Planner. Return only valid JSON object with {"phases": [{"id": "phase-1", "name": "...", "description": "...", "status": "pending", "queries": ["..."]}]} for the given objective. No markdown commentary.'
+          },
+          { role: 'user', content: `Formulate a comprehensive 5-phase research plan for: "${objective}"` }
+        ],
+        temperature: 0.5,
+        max_tokens: 1500
+      });
+
+      const req = https.request('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload)
+        },
+        timeout: 10000
+      }, (res) => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`Groq HTTP ${res.statusCode}: ${data.slice(0, 100)}`));
+          }
+          try {
+            const json = JSON.parse(data);
+            const content = json.choices?.[0]?.message?.content || '';
+            const match = content.match(/\{[\s\S]*\}/);
+            if (match) {
+              const plan = JSON.parse(match[0]);
+              resolve(plan);
+            } else {
+              reject(new Error('No JSON payload extracted from Groq response'));
+            }
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+
+      req.on('error', reject);
+      req.on('timeout', () => req.destroy(new Error('Groq request timed out')));
+      req.write(payload);
+      req.end();
+    });
+  }
+
+  async callOpenRouter(objective, apiKey, model = 'openrouter/free') {
+    return new Promise((resolve, reject) => {
+      const payload = JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are the ARACHNE Autonomous Research Planner. Return only valid JSON object with {"phases": [{"id": "phase-1", "name": "...", "description": "...", "status": "pending", "queries": ["..."]}]} for the given objective.'
+          },
+          { role: 'user', content: `Formulate a comprehensive 5-phase research plan for: "${objective}"` }
+        ],
+        temperature: 0.5,
+        max_tokens: 1500
+      });
+
+      const req = https.request('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload)
+        },
+        timeout: 15000
+      }, (res) => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`OpenRouter HTTP ${res.statusCode}: ${data.slice(0, 100)}`));
+          }
+          try {
+            const json = JSON.parse(data);
+            const content = json.choices?.[0]?.message?.content || '';
+            const match = content.match(/\{[\s\S]*\}/);
+            if (match) {
+              const plan = JSON.parse(match[0]);
+              resolve(plan);
+            } else {
+              reject(new Error('No JSON payload extracted from OpenRouter response'));
+            }
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+
+      req.on('error', reject);
+      req.on('timeout', () => req.destroy(new Error('OpenRouter request timed out')));
+      req.write(payload);
+      req.end();
+    });
   }
 
   heuristicDecompose(objective) {

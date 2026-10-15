@@ -24,7 +24,7 @@ export class TelegramBotGateway {
 
   getBotToken() {
     const settings = this.getSettings();
-    return settings.telegramBotToken || '8732300173:AAGj-fOkujR5PktCNVt3E2OQkr3vyDy71Wo';
+    return settings.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN || '';
   }
 
   isSenderAuthorized(senderId) {
