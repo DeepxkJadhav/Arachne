@@ -3,12 +3,16 @@
   "version": "2.0.0",
   "description": "ARACHNE — Autonomous Web Intelligence & Research System",
   "private": true,
+  "bin": {
+    "arachne": "./bin/arachne.mjs"
+  },
   "scripts": {
+    "cli": "node bin/arachne.mjs",
+    "arachne": "node bin/arachne.mjs",
     "desktop": "node apps/desktop/start.mjs",
     "desktop:web": "node apps/desktop/start.mjs --web",
     "test:desktop": "node examples/arachne-desktop-test.mjs",
     "demo": "node examples/arachne-demo.mjs",
-    "cli": "node examples/arachne-cli.mjs",
     "harness": "node apps/api/src/harness.ts"
   },
   "author": "Deepak Jadhav <https://github.com/DeepxkJadhav>",
