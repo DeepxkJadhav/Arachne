@@ -4,9 +4,9 @@
 
 **ARACHNE** is an independent, permission-aware web intelligence and autonomous research platform. It unifies three core operational systems:
 
-1. **Independent Search & Crawling Engine:** Discover, crawl, index, rank, and preserve permitted web content without sole dependence on any single proprietary search provider.
+1. **Independent Search & Crawling Engine:** Discover, crawl, index, rank, and preserve permitted web content through native Chrome DevTools Protocol (CDP) automation and hardened SSRF-defended HTTP fetchers without reliance on third-party scraping APIs.
 2. **Web Intelligence & Knowledge Graph Engine:** Interconnect domains, documents, entities, citations, and repositories into a queryable relational and topological graph with BFS path tracing.
-3. **Autonomous Research Agent:** Translate natural-language directives into structured 5-phase investigation plans, dispatch permission-aware crawl/search actions, analyze evidence iteratively, recover from failures using a 3-level recovery controller, and compile multi-format research deliverables.
+3. **Autonomous Research Agent:** Translate natural-language directives into structured investigation plans, execute an explicit 8-step live research loop, analyze evidence iteratively via an Evidence Sufficiency Evaluator, recover from failures using a 3-level recovery controller, and compile multi-format research deliverables.
 
 ---
 
@@ -15,33 +15,34 @@
 ```mermaid
 flowchart TD
     subgraph UI ["ARACHNE Desktop Command Center (Port 3003)"]
-        CC["Screen 1: Command Center & Chat (Live Spider Anatomy Canvas)"]
+        CC["Screen 1: Command Center & Live Crawl Workspace\n- Live Viewport Screencast (CDP)\n- Research Loop Status Ribbon\n- Evidence Sufficiency Evaluator\n- DOM Semantics & Link Decision Matrix"]
         WG["Screen 2: Interactive Web Graph (BFS Path Tracing)"]
         RS["Screen 3: Results & Search (Relevance Ranking & Autopsy)"]
         RStudio["Screen 4: Report Studio (9 Modular Exporters)"]
-        TC["Screen 5: Telegram Remote Control (State Sync)"]
-        MS["Screen 6: Model Studio (Qwen / Llama / GPT-4o / Claude)"]
-        ST["Screen 7: Settings & Permissions (5-Column Layout)"]
-        KV["Screen 8: Knowledge Vault (Revisions, Collections, Citations)"]
+        MS["Screen 5: Model Studio (Qwen / Llama / GPT-4o / Claude)"]
+        ST["Screen 6: Centralized System Settings (6 Sub-Tabs)\n- System Status\n- Browser & Automation (Chrome/Brave CDP)\n- Telegram Integration (@arachnewi_bot)\n- AI Models (Real Latency Measurement)\n- Storage & Retention (SQLite WAL)\n- Crawler & Safety (SSRF & Robots)"]
+        KV["Screen 7: Knowledge Vault (Revisions, Collections, Citations)"]
     end
 
     subgraph Core ["ARACHNE Intelligence Core (Node.js Standalone Engine)"]
-        Server["ARACHNE HTTP / SSE / REST Gateway (`apps/desktop/server/arachne-server.mjs`)"]
-        Agent["Research Agent & 8-State Lifecycle Controller (`apps/desktop/server/agent/research-agent.mjs`)"]
-        ModelRouter["Model Router & Security Sanitizer (`apps/desktop/server/models/model-router.mjs`)"]
-        Recovery["3-Level Recovery Controller (L1 Retry, L2 Proposal, L3 Approval)"]
+        Server["ARACHNE HTTP / SSE Gateway (`apps/desktop/server/arachne-server.mjs`)"]
+        Agent["Research Agent & 8-Step Research Loop (`apps/desktop/server/agent/research-agent.mjs`)"]
+        BrowserMgr["Browser Manager (`apps/desktop/server/browser/browser-manager.mjs`)\n- Cross-Platform Chrome & Brave Discovery\n- Isolated Dedicated Profiles\n- Native WebSocket CDP Client\n- Task-Isolated Tab Cleanup"]
+        ModelRouter["Model Router (`apps/desktop/server/models/model-router.mjs`)\n- Real Network Latency Measurements\n- Zero Synthetic/Random Latencies"]
+        Recovery["3-Level Recovery Controller (L1 Retry, L2 Proposal, L3 Human Approval)"]
         ReportEngine["Report Engine (Zero-Dependency OpenXML/PKZIP & PDF Serializer)"]
-        Telegram["Telegram Bot Gateway (`apps/desktop/server/telegram/telegram-bot.mjs`)"]
+        Telegram["Telegram Bot Gateway (`apps/desktop/server/telegram/telegram-bot.mjs`)\n- Real Long-Polling (`getUpdates`)\n- Strict Numeric Fail-Closed Auth\n- Natural-Language Task Intake"]
     end
 
     subgraph CrawlerEngine ["Crawling & Ingestion Pipeline"]
         Frontier["URL Frontier (`apps/desktop/server/crawler/frontier.mjs`)\n- Canonicalization\n- Robots.txt Cache & Rules\n- Per-Domain Rate Limiter & Jitter\n- Exponential Backoff Queue\n- Scope & Allowlist Validator"]
-        Fetcher["HTTP Fetcher (`apps/desktop/server/crawler/fetcher.mjs`)\n- SHA-256 Hashing\n- Anti-Bot / CAPTCHA Detection\n- Markdown Tables & Code Extractor"]
+        Fetcher["Hardened HTTP Fetcher (`apps/desktop/server/crawler/fetcher.mjs`)\n- Strict SSRF Defense (Private Subnets, Loopback, Cloud Metadata)\n- Hop-by-Hop Redirect Revalidation\n- 10MB Response Cap\n- SHA-256 Tamper-Proof Deduplication"]
         Extractor["Content Extractor (`apps/desktop/server/crawler/extractor.mjs`)\n- Content Classifier (Paper, Repo, Dataset, Web)\n- Entity Extraction (Models, Technologies, Authors)\n- arXiv / DOI Citations & Deduplication"]
     end
 
     subgraph StorageTier ["Persistence & Vault Tier (`.arachne-vault/`)"]
-        VaultDB["Atomic JSON Vault (`.arachne-vault/vault-db.json`)\n- Corpus Documents\n- Knowledge Graph Nodes & Edges\n- Level 3 Approvals Queue\n- Document Revisions & Collections"]
+        SQLiteDB["Transactional SQLite Database (`.arachne-vault/arachne.sqlite`)\n- Native `node:sqlite` (DatabaseSync)\n- High-Performance WAL Mode\n- 11 Relational Tables\n- ACID Transactions & Auto Crash Recovery"]
+        ContentStore["Deduplicated Content Store (`.arachne-vault/content/`)\n- Raw Scraped Text Stored by SHA-256 Hash"]
         ReportsDir["Artifact Storage (`.arachne-vault/reports/`)\n- .pdf, .docx, .xlsx, .pptx, .md, .html, .csv, .json, .txt"]
     end
 
@@ -52,191 +53,108 @@ flowchart TD
     MS --> Server
     ST --> Server
     KV --> Server
-    TC <--> Telegram
 
     Server --> Agent
+    Server --> BrowserMgr
     Server --> ModelRouter
     Server --> ReportEngine
     Server --> Telegram
     
+    Agent --> BrowserMgr
     Agent --> Recovery
     Agent --> Frontier
     Frontier --> Fetcher
     Fetcher --> Extractor
-    Extractor --> VaultDB
+    Extractor --> SQLiteDB
+    Extractor --> ContentStore
     Extractor --> Agent
     
     Agent --> ReportEngine
     ReportEngine --> ReportsDir
-    VaultDB --> Server
+    SQLiteDB --> Server
 ```
 
 ---
 
-## 3. Subsystem Breakdown
+## 3. Core Architectural Subsystems
 
-### 3.1 Desktop Command Center UI (8 Integrated Screens)
+### 3.1 Browser Automation Management (Chrome & Brave)
 
-The UI adheres strictly to the cybernetic spider aesthetic blueprint:
-- **Surfaces:** Void-black (`#06040a`) and deep-purple (`#0f091c`) frosted glass (`backdrop-filter: blur(16px)`).
-- **Accents:** Neon violet (`#9d4edd`), neon magenta (`#f72585`), crimson (`#ff0054`), and restrained cyan (`#4cc9f0`).
-- **Canvases:** Ambient animated cybernetic spiderweb canvas (`#ambient-spiderweb-bg`) and 60FPS pointer-reactive Living Mechanical Spider canvas (`#hero-spider-canvas`).
-
-#### Screen 1: Command Center & Chat
-- Natural language task intake supporting deep research directives.
-- Level 3 Human Approval Alert Banner (`#approval-alert-banner`) with instant Approve/Reject actions.
-- Autonomous pipeline controller with `Pause`, `Resume`, `Retry`, and `Stop` controls.
-- Real-time execution logs and live overview telemetry cards.
-
-#### Screen 2: Web Graph
-- Interactive topology visualizer with glowing node clusters and particle-animated data edges.
-- Color classification: Seed Source (Blue), Discovered Page (Purple), Relevant Source (Green), File/PDF (Orange), External Link (Pink), Error/Blocked (Red).
-- Graph controls: Zoom In/Out, Fit to View, Expand Node, Clusters toggle, and Animation switch.
-- BFS Shortest Path query: calculates and highlights shortest paths between nodes.
-
-#### Screen 3: Results & Search
-- Live full-text search with relevance threshold slider (0–100%).
-- Multi-faceted filtering by content type (`Web Page`, `Research Paper`, `GitHub Repository`, `Documentation`, `Dataset`).
-- Hunter's Vision Autopsy modal (`#modal-hunters-vision`): displays SHA-256 provenance, AI reasoning, discovered links, and raw extracted intelligence.
-
-#### Screen 4: Report Studio
-- Task-aware multi-format document generator.
-- Generates and downloads **all 9 supported formats**:
-  - `PDF`: Binary PDF-1.4 format with title headers, metadata table, and page streams.
-  - `DOCX`: OpenXML Word Document with `word/document.xml`, styles, and relationships packaged as a valid PKZIP.
-  - `XLSX`: OpenXML Spreadsheet Workbook with `xl/worksheets/sheet1.xml` and shared strings.
-  - `PPTX`: OpenXML PowerPoint Presentation with slide decks and shapes.
-  - `Markdown`: Full research dossier with headers, blockquotes, and tables.
-  - `HTML`: Self-contained interactive report with void-black theme and print styles.
-  - `CSV`: Tabular corpus export with relevance scores and domains.
-  - `JSON`: Structured schema export with metadata, metrics, and entity lists.
-  - `TXT`: Plain text research summary.
-
-#### Screen 5: Telegram Remote Control
-- Two-way interactive terminal mirroring backend state.
-- Supports commands: `/status`, `/top5`, `/findings`, `/approvals`, `/approve <id>`, `/reject <id>`, `/report`, `/pause`, `/resume`, `/retry`, `/stop`.
-
-#### Screen 6: Model Studio
-- Top status banner showing active primary model, context length, and latency.
-- Connected models fleet cards:
-  - `Qwen 2.5 (Local)`: Primary reasoning & planning model (Ollama).
-  - `Llama 3.1 (Local)`: Specialist extraction & classification model (LM Studio).
-  - `GPT-4o (API)`: Fallback cloud verification model (OpenAI).
-  - `Claude 3.5 Sonnet (API)`: Advanced deep analysis & code extraction model (Anthropic).
-- Add Model panel: supports Ollama, LM Studio, vLLM, OpenAI Compatible, and Anthropic API.
-- Model Configuration: temperature and max output token sliders, latency tester, and Make Primary switch.
-
-#### Screen 7: Settings & Permissions (5-Column Layout)
-- **🕷️ Crawling Settings:** Max concurrent requests (1–50), request delay (0–5s), max depth (1–10), robots.txt toggle, sitemaps toggle, subdomain crawl toggle, JS parsing toggle.
-- **🛡️ Permissions & Scope:** Crawl scope selector (All public / Specific domains / Allowlist), allowlist chip manager, per-domain rate limit slider.
-- **💾 Storage & Vault:** Storage location path, disk limit slider (50–1000 GB), compression & deduplication toggles, live vault meter.
-- **📱 Telegram Bridge:** Enable toggle, bot token input, allowed user IDs list, approval alert toggles.
-- **🎨 Theme & System:** Visual theme selector (Dark Void, Cyberpunk Neon, Obsidian Crimson), accent glow color swatches (`#9d4edd`, `#f72585`, `#ff0054`, `#4cc9f0`, `#10b981`), system telemetry toggle.
-
-#### Screen 8: Knowledge Vault
-- Real-time dynamic count indicators across content types.
-- Time horizon dropdown filter (`All Time`, `Past 24 Hours`, `Past 7 Days`, `Past 30 Days`).
-- Interactive Collections list.
-- Preview Drawer with 4 inspector tabs: `Content`, `Metadata`, `Links`, `Entities`.
+ARACHNE directly interacts with modern web interfaces using Google Chrome and Brave Browser without relying on third-party scraping APIs:
+1. **Cross-Platform Browser Discovery:** Detects Chrome and Brave executable paths across Windows (`Program Files`, `LocalAppData`), macOS (`/Applications`), and Linux (`/usr/bin/`).
+2. **Profile Discovery & Isolation:** Parses browser `Local State` in a read-only, non-locking manner to discover configured profiles without touching personal user data.
+3. **Dedicated Profile Protection:** Spawns automation sessions inside dedicated directory trees:
+   - Chrome: `.arachne-vault/browser-profiles/chrome/`
+   - Brave: `.arachne-vault/browser-profiles/brave/`
+   This isolates task cookies, cache, and history from personal user profiles.
+4. **WebSocket CDP Client:** Native DevTools protocol client communicating with Chrome's remote debugging port (9222) via WebSocket:
+   - Page screencasting (`Page.captureScreenshot` Base64 stream)
+   - Real-time DOM and accessibility tree inspection
+   - Viewport resizing and navigation lifecycle
+5. **Task-Isolated Tab Lifecycle:** Tracks tabs opened specifically for ARACHNE research tasks in `BrowserManager.activeTaskTabs`. When navigating to candidate pages, previous task preview tabs are systematically closed via `/json/close/{targetId}`, ensuring user tabs remain untouched.
 
 ---
 
-## 4. Crawling & Ingestion Pipeline
+### 3.2 Live Research Loop & Evidence Sufficiency Evaluator
 
-### URL Frontier (`apps/desktop/server/crawler/frontier.mjs`)
-- **Canonicalization:** Strips URL tracking parameters (`utm_*`, `fbclid`, `ref`), lowercases hostnames, removes trailing slashes, drops hash fragments.
-- **Robots.txt Parser & Cache:** Automatically fetches `/robots.txt`, parses `User-agent` directives, respects `Disallow` paths and `Crawl-delay` parameters, caching policies per origin.
-- **Per-Domain Rate Limiting:** Enforces minimum intervals per domain with pseudo-random jitter (100–300ms) to avoid request bursts.
-- **Exponential Backoff Queue:** Automatically retries failed URLs with exponential backoff (`delay = base * 2^retries + jitter`).
-- **Scope Enforcement:** Validates target URLs against `all`, `domain`, or `allowlist` scope configurations.
+The research agent executes an 8-step iterative crawl loop:
 
-### Fetcher (`apps/desktop/server/crawler/fetcher.mjs`)
-- **SHA-256 Content Hashing:** Computes cryptographic hashes of all fetched content for tamper proofing and content deduplication.
-- **Anti-Bot & CAPTCHA Detection:** Recognizes Cloudflare challenge pages, PerimeterX, and CAPTCHA walls; classifies errors as `BLOCKED_CHALLENGE`.
-- **Markdown Conversion:** Cleans HTML, extracts readability bodies, and formats HTML tables and code fences into clean Markdown.
+$$\text{OBSERVE} \longrightarrow \text{INSPECT} \longrightarrow \text{EXTRACT} \longrightarrow \text{EVALUATE} \longrightarrow \text{SELECT NEXT} \longrightarrow \text{NAVIGATE} \longrightarrow \text{VERIFY} \longrightarrow \text{REPEAT}$$
 
-### Extractor (`apps/desktop/server/crawler/extractor.mjs`)
-- **Automated Classification:** Identifies documents as `Research Paper`, `GitHub Repository`, `Documentation`, `Dataset`, or `Web Page`.
-- **Entity Extraction:** Extracts AI Models, Repositories, Technologies, Authors, Datasets, and Organizations.
-- **Citation Extraction:** Detects arXiv identifiers (`arXiv:\d{4}\.\d{4,5}`), DOIs (`10\.\d{4,9}/[-._;()/:A-Z0-9]+`), and citation headers.
-- **Deduplication:** Discards duplicate pages by matching SHA-256 hashes against the existing Knowledge Vault corpus.
-
----
-
-## 5. Knowledge Graph Engine (`apps/desktop/server/graph/knowledge-graph.mjs`)
-
-- Directed multigraph tracking `Domain`, `Page`, `Document`, `Repository`, `Author`, and `Entity` nodes.
-- Relations include: `LINKS_TO`, `CITES`, `AUTHORED_BY`, `MENTIONS`, `HOSTED_ON`, and `SIMILAR_TO`.
-- **Graph Algorithms:**
-  - `findPath(startId, endId)`: Breadth-First Search (BFS) finding the shortest relationship path between any two nodes.
-  - `getDegree(nodeId)`: In-degree and out-degree centrality computation.
-  - `filter(criteria)`: Faceted filtering by node type, domain, relevance score, and crawl status.
+1. **Observe:** Inspect current page viewport and status.
+2. **Inspect:** Examine DOM structure, semantic headings (`h1`-`h4`), and hyperlink elements.
+3. **Extract:** Parse body text, citations (arXiv, DOI), code snippets, and entities.
+4. **Evaluate (Evidence-Sufficiency Evaluator):**
+   - Assesses question coverage: how many objective questions are answered by accumulated corpus.
+   - Computes domain diversity: prevents over-indexing on a single domain.
+   - Evaluates corroboration score: checks whether facts are supported by multiple independent sources.
+   - If confidence exceeds threshold (default 75%), crawl concludes with high confidence.
+5. **Select Next Page:** Scores discovered candidate URLs against current objective, ranking by information gain and avoiding low-relevance links.
+6. **Navigate:** Instructs browser or fetcher to transition to highest-scoring candidate URL.
+7. **Verify:** Validates page load, status code, anti-bot challenges, and content integrity.
+8. **Repeat:** Updates knowledge graph and iterates until sufficient evidence is collected.
 
 ---
 
-## 6. Research Agent & 3-Level Recovery Controller
+### 3.3 Transactional SQLite Persistence Tier
 
-### 8-State Persistent Lifecycle:
-`QUEUED` → `PLANNING` → `DISCOVERING` → `CRAWLING` → `EXTRACTING` → `ANALYZING` → `VERIFYING` → `REPORTING` → `COMPLETED`
-(with interrupt states: `PAUSED`, `WAITING_FOR_USER`, `FAILED`, `CANCELLED`).
-
-### 3-Level Recovery Controller:
-- **Level 1 (Autonomous Auto-Retry):** Transient network errors, socket timeouts, and 5xx status codes trigger exponential backoff retry up to 3 times without user interruption.
-- **Level 2 (Model Alternative Proposal):** When a seed domain is blocked by anti-bot measures or 403 Forbidden, the model router queries Qwen to propose alternative research sources or search queries.
-- **Level 3 (Human-in-the-Loop Approval Gate):** For external domains outside initial allowlists, high rate limits, or destructive operations:
-  - Agent transitions to `WAITING_FOR_USER`.
-  - Creates a pending approval in Vault Store.
-  - Emits notification to Desktop UI `#approval-alert-banner` and Telegram bot `/approvals`.
-  - Resumes execution upon receiving `approve` or `reject` decision.
+ARACHNE uses Node.js built-in native `node:sqlite` (`DatabaseSync`):
+- **WAL Mode (Write-Ahead Logging):** Enables concurrent reads while writing transactions, eliminating database lock contention.
+- **ACID Transactions:** All state updates (checkpoints, corpus documents, nodes, edges) are committed atomically.
+- **SHA-256 Deduplication:** Raw document contents are stored by hash in `.arachne-vault/content/`, preventing duplicate storage.
+- **Crash Recovery:** On startup, the engine queries unfinalized checkpoints and investigations in state `'running'` or `'paused'`, seamlessly recovering state.
+- **Relational Schema (11 Tables):** `investigations`, `checkpoints`, `corpus_documents`, `evidence_records`, `approvals`, `settings`, `telegram_logs`, `graph_nodes`, `graph_edges`, `collections`, `reports`.
 
 ---
 
-## 7. Zero-Dependency OpenXML & PDF Exporters (`apps/desktop/server/reports/report-engine.mjs`)
+### 3.4 Hardened Security & SSRF Defense
 
-ARACHNE generates native OpenXML and PDF binaries using standard Node.js libraries (`node:zlib`, `node:buffer`, `node:fs`):
-- **PKZIP Builder:** Implements a pure-JavaScript ZIP archive builder using native `zlib.deflateRawSync` and `zlib.crc32`. Creates valid Local File Headers, Central Directory Records, and End of Central Directory (EOCD) records.
-- **DOCX Exporter:** Packages `[Content_Types].xml`, `_rels/.rels`, `word/_rels/document.xml.rels`, `word/styles.xml`, and `word/document.xml`.
-- **XLSX Exporter:** Packages `xl/workbook.xml`, `xl/styles.xml`, `xl/sharedStrings.xml`, and `xl/worksheets/sheet1.xml` containing research comparison matrices.
-- **PPTX Exporter:** Packages `ppt/presentation.xml` and slide XML definitions with formatted text boxes and bullet lists.
-- **PDF-1.4 Serializer:** Generates cross-reference tables (`xref`), trailer dictionaries, Font descriptors (`/Type /Font /Subtype /Type1 /BaseFont /Helvetica`), and content stream operators (`BT`, `Tf`, `ET`).
-
----
-
-## 8. Multi-Agent Swarm Orchestrator (`apps/desktop/server/agent/swarm-orchestrator.mjs`)
-
-ARACHNE employs a **Hierarchical Evaluator-Optimizer** multi-agent topology:
-- **Lead Orchestrator:** Oversees the 8-stage investigation loop, resource budgeting, and human-in-the-loop gates.
-- **Scout Specialist (`agent-scout`):** Executes search query expansion, traversal of sitemaps, RSS feeds, and scientific indexing engines.
-- **Technical Analyst (`agent-analyst`):** Conducts in-depth AST parsing, entity classification, citation mapping, and source code inspection.
-- **Fact Verifier & Gatekeeper (`agent-verifier`):** Computes source trustworthiness scores, identifies domain authority bonuses, and audits conflicting claims.
-- **Dossier Synthesizer (`agent-synthesizer`):** Structures empirical findings, synthesizes comparison matrices, and packages final deliverables across all 9 formats.
+All HTTP requests dispatched by the crawler pipeline pass through strict security validation:
+1. **Private Subnet & Loopback Blocking:**
+   - Loopback: `127.0.0.0/8`, `::1`
+   - Private Networks: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
+   - Link-Local & Cloud Metadata: `169.254.169.254`, `fe80::/10`
+2. **DNS Pre-Resolution:** Resolves hostnames via `dns.lookup` before establishing connections, preventing DNS rebinding attacks.
+3. **Hop-by-Hop Redirect Revalidation:** Each HTTP redirect (up to 5 hops) is independently re-validated against IP blocklists.
+4. **Response Caps:** Strict 10MB payload size limit prevents resource exhaustion attacks.
+5. **Path Traversal Protection:** Report download endpoints use `path.basename` to prevent directory traversal.
 
 ---
 
-## 9. Production RAG Pipeline & Hybrid Search (`apps/desktop/server/vault/rag-pipeline.mjs`)
+### 3.5 Natural-Language Telegram Gateway
 
-- **Hybrid Lexical & Semantic Retrieval:** Combines BM25 Inverted Index keyword matching with character 3-gram TF-IDF vector cosine similarity.
-- **Reciprocal Rank Fusion (RRF):** Merges disparate rank lists into a singular relevance distribution without requiring external vector database containers.
-- **Semantic Overlapping Chunking:** Partitions long documents into 180-word windows with 40-word overlap to ensure cross-boundary semantic continuity.
-
----
-
-## 10. Automated Contradiction & Claim Auditing
-
-- Continuously analyzes corpus documents for conflicting performance benchmarks, opposing licensing claims, or mutually exclusive platform compatibility assertions.
-- Categorizes conflicts by topic and severity, linking conflicting source URLs and verdicts directly to the UI Contradiction Matrix drawer.
+The Telegram subsystem operates as a secure remote control node:
+- **Real `getUpdates` Long-Polling:** Directly polls Telegram Bot API with exponential backoff on network errors.
+- **Strict Numeric ID Fail-Closed Authorization:** Operator must supply numeric Telegram user IDs (`message.from.id`). String usernames (`@username`) are rejected to prevent impersonation attacks. If no authorized IDs are listed, the gateway fails closed.
+- **Token Masking:** Token `8732300173:AAGj-fOkujR5PktCNVt3E2OQkr3vyDy71Wo` is masked as `8732••••••••••••••••••••••••71Wo` in UI, logs, and API payloads.
+- **Natural-Language Task Dispatch:** Natural language messages from authorized operators automatically trigger research investigations.
 
 ---
 
-## 11. Cinematic UI & Native Electron Desktop (`cinematic-ui` & `desktop-electron`)
+### 3.6 Multi-Format Zero-Dependency Report Studio
 
-- **Global Command Palette (`Ctrl+K` / `Cmd+K`):** Instant keyboard-navigable action modal for rapid screen switching, RAG retrieval, and hunt initiation.
-- **Web Audio Soundscape Synthesizer:** Real-time procedural audio synthesis using HTML5 `AudioContext` for radar sweeps, discovery chimes, and warning sirens.
-- **Native Electron Shell:** Includes native System Tray support, customized application menu accelerators, system notifications for Level 3 approvals, and native file save dialogs.
-
----
-
-## 12. Dynamic Architecture Self-Introspection (`/api/system/architecture`)
-
-Exposes a real-time introspection endpoint inspired by the `understand` skill. Client applications and external autonomous agents can query the exact running topology, component health, and control channels at runtime.
-
+Compiles finalized intelligence dossiers into 9 standard formats without external heavy libraries:
+- `.pdf`: Binary PDF-1.4 serializer with font, page catalog, and content streams.
+- `.docx`, `.xlsx`, `.pptx`: Native OpenXML packages assembled with `node:zlib` PKZIP compression.
+- `.md`, `.txt`, `.html`: Styled documents with markdown tables and cybernetic styling.
+- `.csv`, `.json`: Structured tabular and machine-readable exports.

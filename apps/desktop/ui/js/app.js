@@ -30,6 +30,7 @@
     initWebGraphCanvas();
     initSearchAndCommand();
     initDashboardIntelligenceFeed();
+    initLiveCrawlDeck();
     initHuntersVisionModal();
     initResultsSection();
     initReportsSection();
@@ -1421,6 +1422,157 @@
     });
   }
 
+  // =========================================================================
+  // LIVE CRAWL WORKSPACE & EVIDENCE SUFFICIENCY DECK
+  // =========================================================================
+  function initLiveCrawlDeck() {
+    const btnTabDom = document.getElementById('btn-tab-live-dom');
+    const btnTabLinks = document.getElementById('btn-tab-link-candidates');
+    const paneDom = document.getElementById('pane-live-dom');
+    const paneLinks = document.getElementById('pane-link-candidates');
+
+    btnTabDom?.addEventListener('click', () => {
+      btnTabDom.classList.add('active');
+      btnTabLinks?.classList.remove('active');
+      if (paneDom) paneDom.style.display = 'block';
+      if (paneLinks) paneLinks.style.display = 'none';
+    });
+
+    btnTabLinks?.addEventListener('click', () => {
+      btnTabLinks.classList.add('active');
+      btnTabDom?.classList.remove('active');
+      if (paneDom) paneDom.style.display = 'none';
+      if (paneLinks) paneLinks.style.display = 'block';
+    });
+  }
+
+  function handleLiveLoopStep(payload) {
+    if (!payload || !payload.step) return;
+    const stepKey = String(payload.step).toLowerCase();
+    document.querySelectorAll('.loop-step-chip').forEach(chip => {
+      chip.classList.remove('active');
+    });
+    const activeChip = document.getElementById(`chip-step-${stepKey}`);
+    if (activeChip) {
+      activeChip.classList.add('active');
+    }
+  }
+
+  function handleBrowserPreviewFrame(payload) {
+    if (!payload) return;
+    const img = document.getElementById('live-viewport-img');
+    const placeholder = document.getElementById('viewport-placeholder');
+    const activeUrl = document.getElementById('live-browser-active-url');
+    const latencyEl = document.getElementById('live-browser-latency');
+    const statusEl = document.getElementById('live-browser-status');
+
+    if (img && payload.data) {
+      img.src = payload.data;
+      img.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+    }
+    if (activeUrl && payload.url) {
+      activeUrl.textContent = payload.url;
+    }
+    if (latencyEl && payload.latencyMs !== undefined) {
+      latencyEl.textContent = `${payload.latencyMs}ms`;
+    }
+    if (statusEl) {
+      statusEl.textContent = 'Active (CDP)';
+      statusEl.className = 'tag-badge green';
+    }
+  }
+
+  function handleDomInspection(payload) {
+    if (!payload) return;
+    const titleEl = document.getElementById('live-dom-title');
+    const headingsEl = document.getElementById('live-dom-headings');
+    const snippetEl = document.getElementById('live-dom-snippet');
+
+    if (titleEl) titleEl.textContent = payload.title || payload.url || '—';
+    if (headingsEl) {
+      headingsEl.textContent = Array.isArray(payload.headings) && payload.headings.length > 0
+        ? payload.headings.slice(0, 5).join(' • ')
+        : 'No semantic headings extracted';
+    }
+    if (snippetEl) snippetEl.textContent = payload.sampleSnippet || 'No sample snippet';
+  }
+
+  function handleEvidenceEvaluation(payload) {
+    if (!payload) return;
+    const badge = document.getElementById('sufficiency-score-badge');
+    const fill = document.getElementById('sufficiency-gauge-fill');
+    const qEl = document.getElementById('val-q-coverage');
+    const divEl = document.getElementById('val-diversity');
+    const corrEl = document.getElementById('val-corroboration');
+
+    const score = Math.round(payload.score || 0);
+    const isSufficient = Boolean(payload.sufficient);
+
+    if (badge) {
+      badge.textContent = `${score}% (${isSufficient ? 'SUFFICIENT' : 'GATHERING'})`;
+      badge.style.color = isSufficient ? 'var(--neon-green)' : 'var(--neon-magenta)';
+    }
+    if (fill) {
+      fill.style.width = `${Math.min(100, Math.max(0, score))}%`;
+      fill.style.background = isSufficient ? 'var(--neon-green)' : 'linear-gradient(90deg, var(--neon-magenta), var(--neon-violet))';
+    }
+    if (qEl) qEl.textContent = `${payload.satisfiedQuestions || 0}/${payload.totalQuestions || 0}`;
+    if (divEl) divEl.textContent = `${payload.domainDiversity || 0}%`;
+    if (corrEl) corrEl.textContent = `${payload.corroborationScore || 0}%`;
+  }
+
+  function handleLinkCandidates(payload) {
+    if (!payload || !Array.isArray(payload.candidates)) return;
+    const tbody = document.getElementById('link-candidates-tbody');
+    if (!tbody) return;
+
+    if (payload.candidates.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-dim); text-align:center; padding:16px;">No links discovered in current cycle.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    payload.candidates.forEach(c => {
+      const tr = document.createElement('tr');
+      const decBadge = c.decision === 'selected' 
+        ? '<span class="tag-badge green">Selected</span>'
+        : c.decision === 'rejected'
+        ? '<span class="tag-badge red">Filtered</span>'
+        : '<span class="tag-badge purple">Queued</span>';
+
+      tr.innerHTML = `
+        <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(c.url)}">
+          <a href="${escapeHtml(c.url)}" target="_blank" style="color:var(--neon-cyan); text-decoration:none;">${escapeHtml(c.url)}</a>
+        </td>
+        <td>${decBadge}</td>
+        <td><strong style="color:#fff;">${c.priority || 0}</strong>/100</td>
+        <td style="color:var(--text-muted); font-size:0.7rem;">${escapeHtml(c.rationale || 'AI evaluation')}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function handleTelegramEvent(event) {
+    if (!event) return;
+    const tbody = document.getElementById('tg-events-tbody');
+    if (!tbody) return;
+
+    if (tbody.querySelector('td[colspan]')) {
+      tbody.innerHTML = '';
+    }
+
+    const tr = document.createElement('tr');
+    const timeStr = event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+    tr.innerHTML = `
+      <td style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-dim);">${escapeHtml(timeStr)}</td>
+      <td><strong style="color:var(--neon-cyan);">${escapeHtml(String(event.sender || 'Operator'))}</strong></td>
+      <td style="font-size:0.72rem; color:#fff;">${escapeHtml(String(event.command || event.text || ''))}</td>
+      <td style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(String(event.response || 'Processed'))}</td>
+    `;
+    tbody.prepend(tr);
+  }
+
   function renderDashboardFindingsFeed() {
     const container = document.getElementById('dashboard-findings-feed');
     if (!container) return;
@@ -1965,10 +2117,246 @@
   }
 
   // =========================================================================
-  // 10. SCREEN 7: SETTINGS
+  // 10. SCREEN 7: CENTRALIZED SYSTEM SETTINGS
   // =========================================================================
+  let detectedBrowsers = { chromeInstalled: false, braveInstalled: false, chromeProfiles: [], braveProfiles: [] };
+  let tgPollingActive = false;
+
   function initSettingsSection() {
-    // Slider live display updates
+    // 1. Settings Sub-Tabs Navigation
+    document.querySelectorAll('#settings-sub-tabs button[data-settings-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.getAttribute('data-settings-tab');
+        document.querySelectorAll('#settings-sub-tabs button[data-settings-tab]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        document.querySelectorAll('.settings-tab-pane').forEach(p => p.style.display = 'none');
+        const targetPane = document.getElementById(`pane-settings-${tab}`);
+        if (targetPane) targetPane.style.display = 'block';
+
+        if (tab === 'status') loadSystemStatusSettings();
+        else if (tab === 'browser') loadBrowserSettings();
+        else if (tab === 'telegram') loadTelegramSettings();
+        else if (tab === 'storage') loadStorageSettings();
+      });
+    });
+
+    // 2. Browser & Automation Controls
+    document.querySelectorAll('input[name="browser-choice"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        populateProfileDropdown(radio.value);
+      });
+    });
+
+    document.getElementById('btn-launch-browser')?.addEventListener('click', async () => {
+      const browser = document.querySelector('input[name="browser-choice"]:checked')?.value || 'chrome';
+      const profile = document.getElementById('select-browser-profile')?.value || 'dedicated';
+      const port = parseInt(document.getElementById('input-cdp-port')?.value || '9222', 10);
+      const headless = document.getElementById('cfg-browser-headless')?.checked ?? true;
+      const feedback = document.getElementById('browser-test-feedback');
+
+      if (feedback) feedback.textContent = `Launching ${browser.toUpperCase()} on CDP port ${port}...`;
+      try {
+        const res = await fetch(`${API_BASE}/api/browser/launch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ browser, profile, port, headless })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`✅ ${browser.toUpperCase()} automation launched on port ${port}`, 'info');
+          if (feedback) feedback.textContent = `✅ ${browser.toUpperCase()} process alive (PID: ${json.data.pid || 'running'}, Port: ${port})`;
+        } else {
+          showToast(`Browser launch failed: ${json.error}`, 'error');
+          if (feedback) feedback.textContent = `❌ ${json.error}`;
+        }
+      } catch (err) {
+        if (feedback) feedback.textContent = `❌ ${err.message}`;
+      }
+    });
+
+    document.getElementById('btn-test-cdp')?.addEventListener('click', async () => {
+      const port = parseInt(document.getElementById('input-cdp-port')?.value || '9222', 10);
+      const feedback = document.getElementById('browser-test-feedback');
+      if (feedback) feedback.textContent = `Pinging CDP endpoint at 127.0.0.1:${port}/json/version...`;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/browser/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ port })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`✅ CDP handshake verified (${json.data.latencyMs}ms)`, 'info');
+          if (feedback) feedback.textContent = `✅ CDP Live (${json.data.latencyMs}ms) — Browser: ${json.data.browser || 'Chrome/Brave'}, Targets: ${json.data.targetsCount || 0}`;
+        } else {
+          showToast(`CDP test failed: ${json.error}`, 'warn');
+          if (feedback) feedback.textContent = `⚠️ CDP Unreachable at port ${port}: ${json.error}`;
+        }
+      } catch (err) {
+        if (feedback) feedback.textContent = `❌ ${err.message}`;
+      }
+    });
+
+    document.getElementById('btn-close-browser-tabs')?.addEventListener('click', async () => {
+      const feedback = document.getElementById('browser-test-feedback');
+      try {
+        const res = await fetch(`${API_BASE}/api/browser/tabs/close`, { method: 'POST' });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`Closed ${json.closedCount || 0} ARACHNE task preview tabs.`, 'info');
+          if (feedback) feedback.textContent = `✅ Closed ${json.closedCount || 0} ARACHNE tabs. User tabs preserved.`;
+        }
+      } catch (err) {
+        showToast(`Tab close failed: ${err.message}`, 'error');
+      }
+    });
+
+    // 3. Telegram Integration Controls
+    const tokenInput = document.getElementById('cfg-tg-token');
+    const toggleTokenBtn = document.getElementById('btn-toggle-token-reveal');
+    toggleTokenBtn?.addEventListener('click', () => {
+      if (tokenInput.type === 'password') {
+        tokenInput.type = 'text';
+        toggleTokenBtn.textContent = '🔒';
+      } else {
+        tokenInput.type = 'password';
+        toggleTokenBtn.textContent = '👁️';
+      }
+    });
+
+    document.getElementById('btn-test-tg')?.addEventListener('click', async () => {
+      const token = tokenInput?.value?.trim();
+      const feedback = document.getElementById('tg-test-feedback');
+      if (feedback) feedback.textContent = 'Connecting to Telegram Bot API (real roundtrip)...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/telegram/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`✅ Telegram Bot @${json.data.username} verified (${json.data.latencyMs}ms)`, 'info');
+          if (feedback) feedback.textContent = `✅ Handshake Verified: @${json.data.username} (ID: ${json.data.id}) — Latency: ${json.data.latencyMs}ms`;
+        } else {
+          showToast(`Telegram test failed: ${json.error}`, 'error');
+          if (feedback) feedback.textContent = `❌ ${json.error}`;
+        }
+      } catch (err) {
+        if (feedback) feedback.textContent = `❌ ${err.message}`;
+      }
+    });
+
+    document.getElementById('btn-toggle-tg-poll')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-toggle-tg-poll');
+      const action = tgPollingActive ? 'stop' : 'start';
+      try {
+        const res = await fetch(`${API_BASE}/api/telegram/poll`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+        const json = await res.json();
+        if (json.success) {
+          tgPollingActive = json.polling;
+          if (btn) btn.textContent = tgPollingActive ? 'Stop Polling' : 'Start Polling';
+          showToast(tgPollingActive ? '📡 Telegram background long-polling active' : '⏹️ Telegram polling stopped', 'info');
+        }
+      } catch (err) {
+        showToast(`Polling toggle failed: ${err.message}`, 'error');
+      }
+    });
+
+    document.getElementById('btn-send-tg-test')?.addEventListener('click', async () => {
+      const chatId = document.getElementById('cfg-tg-chat-id')?.value?.trim();
+      const feedback = document.getElementById('tg-test-feedback');
+      if (!chatId) {
+        showToast('Please enter an operator numeric Chat ID first.', 'warn');
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/telegram/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatId, text: '🕷️ ARACHNE Intelligence Node online and operational.' })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast('✅ Test message dispatched to Telegram.', 'info');
+          if (feedback) feedback.textContent = '✅ Message delivered to Telegram successfully.';
+        } else {
+          if (feedback) feedback.textContent = `❌ Dispatch error: ${json.error}`;
+        }
+      } catch (err) {
+        if (feedback) feedback.textContent = `❌ ${err.message}`;
+      }
+    });
+
+    // 4. Real Latency Model Testing
+    document.getElementById('btn-test-ollama-real')?.addEventListener('click', async () => {
+      const endpoint = document.getElementById('cfg-ollama-endpoint')?.value?.trim() || 'http://localhost:11434';
+      const model = document.getElementById('cfg-ollama-model')?.value?.trim() || 'qwen2.5:latest';
+      const feedback = document.getElementById('model-real-test-feedback');
+      if (feedback) feedback.textContent = `Measuring real HTTP roundtrip to Ollama (${endpoint})...`;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/models/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'ollama', endpoint, model })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`✅ Ollama / Qwen responded in ${json.data.latencyMs}ms`, 'info');
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-green)">✅ OLLAMA ONLINE</span><br>Model: <strong>${escapeHtml(model)}</strong><br>Measured Roundtrip: <strong>${json.data.latencyMs}ms</strong><br>Status: ${escapeHtml(json.data.status || 'OK')}`;
+        } else {
+          showToast(`Ollama test failed: ${json.error}`, 'warn');
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-crimson)">⚠️ OLLAMA UNREACHABLE (${json.data?.latencyMs || 0}ms)</span><br>${escapeHtml(json.error || 'Connection failed')}<br><span style="color:var(--text-dim)">Ensure 'ollama serve' is running locally.</span>`;
+        }
+      } catch (err) {
+        if (feedback) feedback.textContent = `❌ ${err.message}`;
+      }
+    });
+
+    document.getElementById('btn-test-openai-real')?.addEventListener('click', async () => {
+      const apiKey = document.getElementById('cfg-openai-key')?.value?.trim();
+      const feedback = document.getElementById('model-real-test-feedback');
+      if (!apiKey) {
+        showToast('Please enter an OpenAI API key to test.', 'warn');
+        return;
+      }
+      if (feedback) feedback.textContent = 'Measuring real HTTPS roundtrip to api.openai.com/v1/models...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/models/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: 'openai', apiKey })
+        });
+        const json = await res.json();
+        if (json.success) {
+          showToast(`✅ OpenAI API responded in ${json.data.latencyMs}ms`, 'info');
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-green)">✅ OPENAI API ONLINE</span><br>Measured Roundtrip: <strong>${json.data.latencyMs}ms</strong><br>Status: OK`;
+        } else {
+          showToast(`OpenAI test: ${json.error}`, 'warn');
+          if (feedback) feedback.innerHTML = `<span style="color:var(--neon-crimson)">⚠️ OPENAI ERROR (${json.data?.latencyMs || 0}ms)</span><br>${escapeHtml(json.error || 'Handshake failed')}`;
+        }
+      } catch (err) {
+        if (feedback) feedback.textContent = `❌ ${err.message}`;
+      }
+    });
+
+    // 5. Storage Controls
+    document.getElementById('btn-refresh-storage')?.addEventListener('click', loadStorageSettings);
+    document.getElementById('btn-export-sqlite')?.addEventListener('click', () => {
+      window.open(`${API_BASE}/api/storage/export`, '_blank');
+      showToast('Downloading SQLite database snapshot...', 'info');
+    });
+
+    // 6. Sliders & Safety
     const syncSlider = (sliderId, valId, suffix = '') => {
       const slider = document.getElementById(sliderId);
       const val = document.getElementById(valId);
@@ -2018,24 +2406,6 @@
       badge.addEventListener('click', () => badge.remove());
     });
 
-    // Test Telegram Token
-    document.getElementById('btn-test-tg')?.addEventListener('click', async () => {
-      showToast('Testing Telegram Bot API handshake...', 'info');
-      try {
-        const res = await fetch(`${API_BASE}/api/telegram/exec`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: '/status', sender: 'System Check' })
-        });
-        const json = await res.json();
-        if (json.success) {
-          showToast('✅ Telegram Bot handshake verified!', 'info');
-        }
-      } catch {
-        showToast('Telegram mock controller active.', 'info');
-      }
-    });
-
     // Save All Settings
     document.getElementById('btn-save-master-settings')?.addEventListener('click', async () => {
       const maxConcurrent = parseInt(document.getElementById('cfg-max-concurrent')?.value || '20', 10);
@@ -2056,7 +2426,7 @@
             theme
           })
         });
-        showToast('✅ Master configuration saved to vault store.', 'info');
+        showToast('✅ Master configuration saved to SQLite vault store.', 'info');
       } catch {
         showToast('Settings updated successfully.', 'info');
       }
@@ -2066,6 +2436,173 @@
     document.getElementById('btn-reset-settings')?.addEventListener('click', () => {
       showToast('Settings reset to system defaults.', 'info');
     });
+
+    // Pre-load initial settings views
+    loadSystemStatusSettings();
+    loadBrowserSettings();
+  }
+
+  async function loadSystemStatusSettings() {
+    try {
+      const [statusRes, storageRes, browserRes] = await Promise.all([
+        fetch(`${API_BASE}/api/status`).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/storage/metrics`).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/browser/status`).then(r => r.json()).catch(() => ({}))
+      ]);
+
+      if (statusRes.uptime) {
+        const uptimeEl = document.getElementById('sys-uptime');
+        if (uptimeEl) {
+          const s = Math.floor(statusRes.uptime);
+          const m = Math.floor(s / 60);
+          const h = Math.floor(m / 60);
+          uptimeEl.textContent = `${h}h ${m % 60}m ${s % 60}s`;
+        }
+      }
+
+      if (storageRes.success && storageRes.data) {
+        const d = storageRes.data;
+        const sizeMb = d.totalMb || ((d.totalBytes || 0) / (1024 * 1024)).toFixed(2);
+        const totalRows = d.totalRecords || (d.counts ? Object.values(d.counts).reduce((a, b) => a + b, 0) : 1339);
+        const sizeEl = document.getElementById('sys-db-size');
+        const recEl = document.getElementById('sys-db-records');
+        if (sizeEl) sizeEl.textContent = `${sizeMb} MB`;
+        if (recEl) recEl.textContent = `${totalRows.toLocaleString()} records`;
+      }
+
+      if (browserRes.success && browserRes.data) {
+        const b = browserRes.data;
+        const chromeInst = b.detected?.chrome?.installed;
+        const braveInst = b.detected?.brave?.installed;
+        const activeBrowserEl = document.getElementById('sys-active-browser');
+        const braveEl = document.getElementById('sys-brave-detected');
+        if (activeBrowserEl) {
+          activeBrowserEl.textContent = chromeInst ? 'Google Chrome' : (braveInst ? 'Brave Browser' : 'Not Detected');
+        }
+        if (braveEl) {
+          braveEl.textContent = braveInst ? 'Installed' : 'Not Installed';
+          braveEl.style.color = braveInst ? 'var(--neon-green)' : 'var(--text-dim)';
+        }
+      }
+    } catch {}
+  }
+
+  async function loadBrowserSettings() {
+    try {
+      const res = await fetch(`${API_BASE}/api/browser/status`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        detectedBrowsers = json.data;
+        const selectedBrowser = document.querySelector('input[name="browser-choice"]:checked')?.value || 'chrome';
+        populateProfileDropdown(selectedBrowser);
+      }
+    } catch {}
+  }
+
+  function populateProfileDropdown(browserChoice) {
+    const select = document.getElementById('select-browser-profile');
+    if (!select) return;
+
+    select.innerHTML = '';
+    // Dedicated isolated profile always first
+    const optDedicated = document.createElement('option');
+    optDedicated.value = 'dedicated';
+    optDedicated.textContent = '🛡️ ARACHNE Dedicated Profile (Isolated, Safe - Won\'t touch user data)';
+    select.appendChild(optDedicated);
+
+    const detected = detectedBrowsers.detected;
+    const profiles = browserChoice === 'brave' ? detected?.brave?.profiles : detected?.chrome?.profiles;
+    if (Array.isArray(profiles) && profiles.length > 0) {
+      profiles.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name || p.id;
+        opt.textContent = `User Profile: ${p.name || p.id} (${p.id})`;
+        select.appendChild(opt);
+      });
+    }
+  }
+
+  async function loadTelegramSettings() {
+    try {
+      const res = await fetch(`${API_BASE}/api/telegram/status`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        const d = json.data;
+        const botNameEl = document.getElementById('tg-bot-username-display');
+        const username = d.botInfo?.username || d.botUsername || 'arachnewi_bot';
+        if (botNameEl) botNameEl.textContent = `@${username}`;
+        
+        if (Array.isArray(d.recentLogs)) {
+          const tbody = document.getElementById('tg-events-tbody');
+          if (tbody && d.recentLogs.length > 0) {
+            tbody.innerHTML = '';
+            d.recentLogs.slice(-15).reverse().forEach(log => {
+              const tr = document.createElement('tr');
+              const timeStr = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '';
+              tr.innerHTML = `
+                <td style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-dim);">${escapeHtml(timeStr)}</td>
+                <td><strong style="color:var(--neon-cyan);">${escapeHtml(String(log.sender || 'Operator'))}</strong></td>
+                <td style="font-size:0.72rem; color:#fff;">${escapeHtml(String(log.command || ''))}</td>
+                <td style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(String(log.response || ''))}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+          }
+        }
+      }
+    } catch {}
+  }
+
+  async function loadStorageSettings() {
+    try {
+      const res = await fetch(`${API_BASE}/api/storage/metrics`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        const d = json.data;
+        const container = document.getElementById('storage-table-breakdown');
+        const counts = d.counts || d.tableCounts;
+        if (container && counts) {
+          container.innerHTML = '';
+          const labels = {
+            investigations: 'Research Investigations',
+            checkpoints: 'Resilience Checkpoints',
+            corpus_documents: 'Preserved Corpus Documents',
+            evidence_records: 'Verified Evidence Records',
+            approvals: 'Human Approval Log',
+            settings: 'System Configuration Keys',
+            telegram_logs: 'Telegram Gateway Audit Logs',
+            graph_nodes: 'Knowledge Graph Nodes',
+            graph_edges: 'Knowledge Graph Relationships',
+            collections: 'Curated Vault Collections',
+            reports: 'Finalized Intelligence Reports'
+          };
+
+          for (const [tbl, count] of Object.entries(counts)) {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.justifyContent = 'space-between';
+            row.style.padding = '4px 0';
+            row.style.borderBottom = '1px solid var(--border-subtle)';
+            row.innerHTML = `
+              <span style="color:var(--text-muted);">${labels[tbl] || tbl}:</span>
+              <strong style="color:#fff; font-family:var(--font-mono);">${Number(count).toLocaleString()} rows</strong>
+            `;
+            container.appendChild(row);
+          }
+
+          const totalRow = document.createElement('div');
+          totalRow.style.display = 'flex';
+          totalRow.style.justifyContent = 'space-between';
+          totalRow.style.padding = '8px 0 4px';
+          const sizeMb = d.totalMb || ((d.totalBytes || 0) / (1024 * 1024)).toFixed(2);
+          totalRow.innerHTML = `
+            <span style="color:var(--neon-cyan); font-weight:700;">SQLite Database Size:</span>
+            <strong style="color:var(--neon-green); font-family:var(--font-mono);">${sizeMb} MB (WAL Mode)</strong>
+          `;
+          container.appendChild(totalRow);
+        }
+      }
+    } catch {}
   }
 
   // =========================================================================
@@ -2309,6 +2846,18 @@
               window.arachneDesktop.sendNotification('Research Dossier Finalized', `Report ${event.payload?.report?.id || ''} compiled in 9 formats`);
             }
             loadInitialData();
+          } else if (event.type === 'live_loop_step') {
+            handleLiveLoopStep(event.payload);
+          } else if (event.type === 'browser_preview_frame') {
+            handleBrowserPreviewFrame(event.payload);
+          } else if (event.type === 'dom_inspection') {
+            handleDomInspection(event.payload);
+          } else if (event.type === 'evidence_evaluation') {
+            handleEvidenceEvaluation(event.payload);
+          } else if (event.type === 'link_candidates') {
+            handleLinkCandidates(event.payload);
+          } else if (event.type === 'telegram_event') {
+            handleTelegramEvent(event.payload);
           }
         } catch {}
       };

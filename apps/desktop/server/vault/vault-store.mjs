@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { SqliteStore } from './sqlite-store.mjs';
 
 export class VaultStore {
   constructor(baseDir = null) {
@@ -10,7 +11,10 @@ export class VaultStore {
     this.ensureDirectory(path.join(this.vaultDir, 'corpus'));
     this.ensureDirectory(path.join(this.vaultDir, 'collections'));
     this.ensureDirectory(path.join(this.vaultDir, 'checkpoints'));
+    this.ensureDirectory(path.join(this.vaultDir, 'content'));
 
+    this.sqlite = new SqliteStore(this.vaultDir);
+    this.sqliteStore = this.sqlite;
     this.dbFile = path.join(this.vaultDir, 'vault-db.json');
     this.state = this.loadState();
   }
@@ -39,54 +43,62 @@ export class VaultStore {
         { id: 'sq-1', query: 'computer use agents', timestamp: new Date().toISOString() },
         { id: 'sq-2', query: 'openhands arxiv benchmark', timestamp: new Date().toISOString() }
       ],
-      settings: {
-        maxDepth: 3,
-        maxUrlsPerInvestigation: 30,
-        requestTimeoutMs: 10000,
-        perDomainRateLimitMs: 800,
-        respectRobotsTxt: true,
-        safeMode: true,
-        crawlScope: 'all', // 'all' | 'specified_only' | 'allow_block'
-        allowlist: ['arxiv.org', 'github.com', 'huggingface.co', 'paperswithcode.com'],
-        blocklist: ['login.*', 'accounts.*', 'ad.*'],
-        activeModelProvider: 'qwen-local',
-        ollamaEndpoint: 'http://localhost:11434',
-        ollamaModel: 'qwen2.5:latest',
-        openaiApiKey: '',
-        anthropicApiKey: '',
-        telegramBotToken: '',
-        telegramChatId: '',
-        allowedTelegramUserIds: ['123456789', 'Deepak'],
-        theme: 'dark-spider',
-        accentColor: 'neon-violet'
-      },
+      settings: this.sqlite.getSettings(),
       telegramLogs: []
     };
   }
 
   loadState() {
     try {
+      // Rehydrate state from SQLite
+      const settings = this.sqlite.getSettings();
+      const investigations = this.sqlite.getInvestigations();
+      const graph = this.sqlite.getGraph();
+      const corpus = this.sqlite.getCorpus();
+      const reports = this.sqlite.getReports();
+      const collections = this.sqlite.getCollections();
+      const approvals = this.sqlite.getApprovals();
+      const telegramLogs = this.sqlite.getTelegramLogs(50);
+
+      const state = {
+        ...this.getDefaultState(),
+        settings,
+        investigations,
+        nodes: graph.nodes,
+        edges: graph.edges,
+        corpus,
+        reports,
+        collections: collections.length > 0 ? collections : this.getDefaultState().collections,
+        approvals,
+        telegramLogs
+      };
+
+      // Also read savedQueries and bookmarks from JSON if present
       if (fs.existsSync(this.dbFile)) {
-        const raw = fs.readFileSync(this.dbFile, 'utf8');
-        const parsed = JSON.parse(raw);
-        return { ...this.getDefaultState(), ...parsed };
+        try {
+          const raw = fs.readFileSync(this.dbFile, 'utf8');
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.bookmarks)) state.bookmarks = parsed.bookmarks;
+          if (Array.isArray(parsed.savedQueries)) state.savedQueries = parsed.savedQueries;
+        } catch {}
       }
+
+      return state;
     } catch (err) {
-      console.error('[VaultStore] Failed to load state, initializing fresh store:', err.message);
+      console.error('[VaultStore] Error initializing state from SQLite:', err.message);
+      return this.getDefaultState();
     }
-    const fresh = this.getDefaultState();
-    this.saveState(fresh);
-    return fresh;
   }
 
   saveState(state = null) {
     if (state) this.state = state;
     try {
+      // Keep JSON export synced atomically for external tools/backups
       const tempPath = `${this.dbFile}.tmp.${Date.now()}`;
       fs.writeFileSync(tempPath, JSON.stringify(this.state, null, 2), 'utf8');
       fs.renameSync(tempPath, this.dbFile);
     } catch (err) {
-      console.error('[VaultStore] Error saving state:', err.message);
+      console.error('[VaultStore] Error saving JSON backup:', err.message);
     }
   }
 
@@ -102,18 +114,35 @@ export class VaultStore {
   saveInvestigation(inv) {
     if (!this.state.investigations) this.state.investigations = [];
     const idx = this.state.investigations.findIndex(i => i.id === inv.id);
+    const now = new Date().toISOString();
+
+    let fullInv;
     if (idx >= 0) {
-      this.state.investigations[idx] = { ...this.state.investigations[idx], ...inv, updatedAt: new Date().toISOString() };
+      this.state.investigations[idx] = { ...this.state.investigations[idx], ...inv, updatedAt: now };
+      fullInv = this.state.investigations[idx];
     } else {
-      this.state.investigations.unshift({
+      fullInv = {
         id: inv.id || `inv-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
         ...inv
-      });
+      };
+      this.state.investigations.unshift(fullInv);
     }
+
+    // Persist to SQLite
+    this.sqlite.saveInvestigation(fullInv);
     this.saveState();
-    return this.getInvestigation(inv.id);
+    return fullInv;
+  }
+
+  // --- Checkpoints ---
+  saveCheckpoint(invId, step, stateSnapshot) {
+    return this.sqlite.saveCheckpoint(invId, step, stateSnapshot);
+  }
+
+  getLatestCheckpoint(invId) {
+    return this.sqlite.getLatestCheckpoint(invId);
   }
 
   // --- Approvals (Level 3 Human Intervention) ---
@@ -126,18 +155,20 @@ export class VaultStore {
     if (!this.state.approvals) this.state.approvals = [];
     const approval = {
       id: `appr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      investigationId: taskId,
       taskId,
-      type, // 'SCOPE_EXPANSION' | 'CAPTCHA_BLOCKED' | 'AUTHENTICATION_REQUIRED' | 'RATE_LIMIT_OVERRIDE'
+      type,
       title,
       reason,
       options,
       payload,
-      status: 'pending', // 'pending' | 'approved' | 'rejected' | 'skipped'
+      status: 'pending',
       createdAt: new Date().toISOString(),
       resolvedAt: null,
-      resolutionNote: null
+      note: null
     };
     this.state.approvals.unshift(approval);
+    this.sqlite.saveApproval(approval);
     this.saveState();
     return approval;
   }
@@ -146,9 +177,11 @@ export class VaultStore {
     if (!this.state.approvals) return null;
     const item = this.state.approvals.find(a => a.id === id);
     if (item) {
-      item.status = action; // 'approved' | 'rejected' | 'skipped'
+      item.status = action;
       item.resolvedAt = new Date().toISOString();
+      item.note = note;
       item.resolutionNote = note;
+      this.sqlite.resolveApproval(id, action, note);
       this.saveState();
       return item;
     }
@@ -169,16 +202,19 @@ export class VaultStore {
     const existing = this.state.nodes.find(n => n.id === node.id || (node.url && n.url === node.url));
     if (existing) {
       Object.assign(existing, node);
+      this.sqlite.saveGraphNode(existing);
       return existing;
     }
-    this.state.nodes.push({
+    const newNode = {
       status: 'discovered',
       relevance: 0.5,
       createdAt: new Date().toISOString(),
       ...node
-    });
+    };
+    this.state.nodes.push(newNode);
+    this.sqlite.saveGraphNode(newNode);
     this.saveState();
-    return node;
+    return newNode;
   }
 
   addEdge(edge) {
@@ -186,12 +222,14 @@ export class VaultStore {
     if (!this.state.edges) this.state.edges = [];
     const existing = this.state.edges.find(e => e.id === edge.id);
     if (existing) return existing;
-    this.state.edges.push({
+    const newEdge = {
       createdAt: new Date().toISOString(),
       ...edge
-    });
+    };
+    this.state.edges.push(newEdge);
+    this.sqlite.saveGraphEdge(newEdge);
     this.saveState();
-    return edge;
+    return newEdge;
   }
 
   clearGraph() {
@@ -212,9 +250,9 @@ export class VaultStore {
 
     const contentHash = doc.contentHash || crypto.createHash('sha256').update(doc.content || '').digest('hex');
 
+    let finalDoc;
     if (idx >= 0) {
       const existing = this.state.corpus[idx];
-      // Check for substantive change (revision history)
       if (existing.contentHash && existing.contentHash !== contentHash) {
         if (!existing.revisions) existing.revisions = [];
         existing.revisions.unshift({
@@ -230,19 +268,20 @@ export class VaultStore {
         contentHash,
         updatedAt: new Date().toISOString()
       };
-      this.saveState();
-      return this.state.corpus[idx];
+      finalDoc = this.state.corpus[idx];
     } else {
-      const newDoc = {
+      finalDoc = {
         crawledAt: new Date().toISOString(),
         revisions: [],
         contentHash,
         ...doc
       };
-      this.state.corpus.unshift(newDoc);
-      this.saveState();
-      return newDoc;
+      this.state.corpus.unshift(finalDoc);
     }
+
+    this.sqlite.saveCorpusDocument(finalDoc);
+    this.saveState();
+    return finalDoc;
   }
 
   searchCorpus(query, filters = {}) {
@@ -289,23 +328,27 @@ export class VaultStore {
     if (!report.id) report.id = `rep-${Date.now()}`;
     if (!this.state.reports) this.state.reports = [];
     const idx = this.state.reports.findIndex(r => r.id === report.id);
+    let fullReport;
     if (idx >= 0) {
       this.state.reports[idx] = { ...this.state.reports[idx], ...report };
+      fullReport = this.state.reports[idx];
     } else {
-      this.state.reports.unshift({
+      fullReport = {
         createdAt: new Date().toISOString(),
         ...report
-      });
+      };
+      this.state.reports.unshift(fullReport);
     }
 
-    // Save individual markdown copy to reports dir
     if (report.markdown) {
       const filePath = path.join(this.vaultDir, 'reports', `${report.id}.md`);
       try { fs.writeFileSync(filePath, report.markdown, 'utf8'); } catch {}
+      fullReport.filePath = filePath;
     }
 
+    this.sqlite.saveReport(fullReport);
     this.saveState();
-    return report;
+    return fullReport;
   }
 
   // --- Bookmarks & Collections ---
@@ -339,6 +382,7 @@ export class VaultStore {
       if (!col.items.some(i => i.url === item.url || i.id === item.id)) {
         col.items.push(item);
         col.count = col.items.length;
+        this.sqlite.saveCollection(col);
         this.saveState();
       }
       return col;
@@ -367,17 +411,19 @@ export class VaultStore {
 
   // --- Settings ---
   getSettings() {
-    return this.state.settings || this.getDefaultState().settings;
+    return this.sqlite.getSettings();
   }
 
   updateSettings(newSettings) {
-    this.state.settings = { ...this.getSettings(), ...newSettings };
+    this.sqlite.saveSettings(newSettings);
+    this.state.settings = this.sqlite.getSettings();
     this.saveState();
     return this.state.settings;
   }
 
   // --- Telegram ---
   logTelegram(entry) {
+    this.sqlite.logTelegram(entry);
     if (!this.state.telegramLogs) this.state.telegramLogs = [];
     this.state.telegramLogs.unshift({
       timestamp: new Date().toISOString(),
@@ -390,33 +436,24 @@ export class VaultStore {
   }
 
   getTelegramLogs() {
-    return this.state.telegramLogs || [];
+    return this.sqlite.getTelegramLogs(50);
   }
 
   // --- Storage Metrics ---
   getStorageMetrics() {
-    let totalBytes = 0;
-    try {
-      if (fs.existsSync(this.dbFile)) {
-        totalBytes += fs.statSync(this.dbFile).size;
-      }
-      const reportsDir = path.join(this.vaultDir, 'reports');
-      if (fs.existsSync(reportsDir)) {
-        for (const file of fs.readdirSync(reportsDir)) {
-          totalBytes += fs.statSync(path.join(reportsDir, file)).size;
-        }
-      }
-    } catch {}
-
+    const sqliteMetrics = this.sqlite.getStorageMetrics();
     return {
       vaultPath: this.vaultDir,
-      totalBytes,
-      totalMb: (totalBytes / (1024 * 1024)).toFixed(2),
+      sqlitePath: sqliteMetrics.dbPath,
+      totalBytes: sqliteMetrics.dbSizeBytes,
+      totalMb: sqliteMetrics.dbSizeMb,
       totalDocuments: (this.state.corpus || []).length,
       totalReports: (this.state.reports || []).length,
       totalNodes: (this.state.nodes || []).length,
       totalEdges: (this.state.edges || []).length,
-      totalBookmarks: (this.state.bookmarks || []).length
+      totalBookmarks: (this.state.bookmarks || []).length,
+      counts: sqliteMetrics.counts,
+      totalRecords: sqliteMetrics.totalRecords
     };
   }
 }

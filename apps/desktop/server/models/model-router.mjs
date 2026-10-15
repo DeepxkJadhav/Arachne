@@ -111,8 +111,11 @@ export class ModelRouter {
 
         const latencyMs = Date.now() - startTime;
         if (res.statusCode === 200) {
-          const json = JSON.parse(res.data);
-          const models = (json.models || []).map(m => m.name);
+          let models = [];
+          try {
+            const json = JSON.parse(res.data);
+            models = (json.models || []).map(m => m.name);
+          } catch {}
           targetModel.status = 'Online';
           targetModel.latencyMs = latencyMs;
           return {
@@ -121,50 +124,157 @@ export class ModelRouter {
             endpoint,
             latencyMs,
             models,
-            message: `Ollama is active with ${models.length} local model(s) available.`
+            message: `Ollama active on ${endpoint}. ${models.length} model(s) detected.`
+          };
+        } else {
+          targetModel.status = 'Offline';
+          targetModel.latencyMs = latencyMs;
+          return {
+            success: false,
+            provider: 'Ollama',
+            endpoint,
+            latencyMs,
+            message: `HTTP ${res.statusCode} from Ollama endpoint`
           };
         }
       } catch (err) {
-        // Fallback to built-in heuristic reasoner
-        targetModel.status = 'Online (Fallback Heuristic)';
+        const latencyMs = Date.now() - startTime;
+        targetModel.status = 'Offline';
+        targetModel.latencyMs = latencyMs;
         return {
-          success: true,
-          provider: 'Ollama (Local Qwen / ARACHNE Core)',
+          success: false,
+          provider: 'Ollama (Local Qwen)',
           endpoint,
-          latencyMs: 18,
-          models: ['qwen2.5:14b', 'qwen2.5:latest'],
-          message: `Local endpoint checked. ARACHNE Reasoning Engine operational.`
+          latencyMs,
+          error: err.message,
+          message: `Cannot connect to Ollama at ${endpoint} (${err.message}). Local fallback reasoner will handle planning.`
         };
       }
     }
 
     if (targetModel.provider.includes('OpenAI')) {
       const key = settings.openaiApiKey;
-      const latencyMs = 120 + Math.floor(Math.random() * 40);
-      return {
-        success: true,
-        provider: 'OpenAI',
-        latencyMs,
-        models: ['gpt-4o', 'gpt-4o-mini', 'o1-preview'],
-        message: key ? 'OpenAI authenticated connection verified.' : 'OpenAI endpoint reachable (simulation/cached).'
-      };
+      if (!key) {
+        return {
+          success: false,
+          provider: 'OpenAI',
+          latencyMs: 0,
+          models: ['gpt-4o', 'gpt-4o-mini', 'o1-preview'],
+          message: 'No OpenAI API key configured. Enter your API key in Settings.'
+        };
+      }
+
+      try {
+        const res = await new Promise((resolve, reject) => {
+          const req = https.get('https://api.openai.com/v1/models', {
+            headers: { 'Authorization': `Bearer ${key}` },
+            timeout: 5000
+          }, (r) => {
+            let data = '';
+            r.on('data', c => data += c);
+            r.on('end', () => resolve({ statusCode: r.statusCode, data }));
+          });
+          req.on('error', reject);
+          req.on('timeout', () => req.destroy(new Error('OpenAI timeout')));
+        });
+
+        const latencyMs = Date.now() - startTime;
+        targetModel.latencyMs = latencyMs;
+        if (res.statusCode === 200) {
+          targetModel.status = 'Online';
+          return {
+            success: true,
+            provider: 'OpenAI',
+            latencyMs,
+            message: `OpenAI connection authenticated (latency: ${latencyMs}ms).`
+          };
+        } else {
+          targetModel.status = 'Auth Error';
+          return {
+            success: false,
+            provider: 'OpenAI',
+            latencyMs,
+            message: `OpenAI returned HTTP ${res.statusCode}: ${res.data.slice(0, 120)}`
+          };
+        }
+      } catch (err) {
+        const latencyMs = Date.now() - startTime;
+        targetModel.status = 'Offline';
+        targetModel.latencyMs = latencyMs;
+        return {
+          success: false,
+          provider: 'OpenAI',
+          latencyMs,
+          message: `OpenAI unreachable: ${err.message}`
+        };
+      }
     }
 
     if (targetModel.provider.includes('Anthropic')) {
-      const latencyMs = 140 + Math.floor(Math.random() * 50);
-      return {
-        success: true,
-        provider: 'Anthropic',
-        latencyMs,
-        models: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
-        message: 'Anthropic Claude endpoint reachable.'
-      };
+      const key = settings.anthropicApiKey;
+      if (!key) {
+        return {
+          success: false,
+          provider: 'Anthropic',
+          latencyMs: 0,
+          models: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
+          message: 'No Anthropic API key configured. Enter your API key in Settings.'
+        };
+      }
+
+      try {
+        const res = await new Promise((resolve, reject) => {
+          const req = https.get('https://api.anthropic.com/v1/models', {
+            headers: {
+              'x-api-key': key,
+              'anthropic-version': '2023-06-01'
+            },
+            timeout: 5000
+          }, (r) => {
+            let data = '';
+            r.on('data', c => data += c);
+            r.on('end', () => resolve({ statusCode: r.statusCode, data }));
+          });
+          req.on('error', reject);
+          req.on('timeout', () => req.destroy(new Error('Anthropic timeout')));
+        });
+
+        const latencyMs = Date.now() - startTime;
+        targetModel.latencyMs = latencyMs;
+        if (res.statusCode === 200) {
+          targetModel.status = 'Online';
+          return {
+            success: true,
+            provider: 'Anthropic',
+            latencyMs,
+            message: `Anthropic connection authenticated (latency: ${latencyMs}ms).`
+          };
+        } else {
+          targetModel.status = 'Auth Error';
+          return {
+            success: false,
+            provider: 'Anthropic',
+            latencyMs,
+            message: `Anthropic returned HTTP ${res.statusCode}`
+          };
+        }
+      } catch (err) {
+        const latencyMs = Date.now() - startTime;
+        targetModel.status = 'Offline';
+        targetModel.latencyMs = latencyMs;
+        return {
+          success: false,
+          provider: 'Anthropic',
+          latencyMs,
+          message: `Anthropic unreachable: ${err.message}`
+        };
+      }
     }
 
     return {
       success: true,
       provider: targetModel.name,
-      latencyMs: 15,
+      latencyMs: Date.now() - startTime,
       message: 'Connection verified.'
     };
   }

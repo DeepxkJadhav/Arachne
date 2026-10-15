@@ -23,6 +23,9 @@ setTimeout(() => {
 }, 600);
 
 function launchClient() {
+  if (process.argv.includes('--server-only')) {
+    return;
+  }
   const wantsElectron = process.argv.includes('--electron');
 
   if (wantsElectron) {

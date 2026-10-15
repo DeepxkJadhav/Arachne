@@ -76,35 +76,81 @@ async function runVerification() {
     assert.ok(res.body.metrics.totalNodes >= 0);
   });
 
-  // 2. Firecrawl Compatibility API
-  await test('Firecrawl base protocol root check (GET / with JSON Accept)', async () => {
+  // 2. Native ARACHNE Protocol Root
+  await test('ARACHNE Core protocol root check (GET / with JSON Accept)', async () => {
     const res = await request('/', { headers: { Accept: 'application/json' } });
     assert.strictEqual(res.status, 200);
-    assert.ok(res.body.name.includes('ARACHNE') || res.body.name.includes('Firecrawl'));
+    assert.ok(res.body.name.includes('ARACHNE'));
     assert.strictEqual(res.body.status, 'online');
+    assert.strictEqual(res.body.mode, 'standalone-intelligence-core');
   });
 
-  await test('Firecrawl scrape endpoint (/v1/scrape)', async () => {
-    const res = await request('/v1/scrape', {
+  // 3. Strict SSRF Defense & Private Network Blocking
+  await test('SSRF Defense: Block loopback IP (127.0.0.1)', async () => {
+    const res = await request('/api/crawl/page', {
       method: 'POST',
-      body: { url: 'https://arxiv.org/abs/2410.03840' }
+      body: { url: 'http://127.0.0.1:8080/secret' }
     });
+    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.body.data.metadata.statusCode, 403);
+  });
+
+  await test('SSRF Defense: Block AWS/GCP cloud metadata (169.254.169.254)', async () => {
+    const res = await request('/api/crawl/page', {
+      method: 'POST',
+      body: { url: 'http://169.254.169.254/latest/meta-data/' }
+    });
+    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.body.data.metadata.statusCode, 403);
+  });
+
+  await test('SSRF Defense: Block private Class A subnet (10.0.0.1)', async () => {
+    const res = await request('/api/crawl/page', {
+      method: 'POST',
+      body: { url: 'http://10.0.0.1/admin' }
+    });
+    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.body.data.metadata.statusCode, 403);
+  });
+
+  // 4. Native Browser Detection & Management
+  await test('Browser detection & profile discovery (/api/browser/status)', async () => {
+    const res = await request('/api/browser/status');
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.success, true);
-    assert.ok(res.body.data.markdown || res.body.data.content);
+    assert.ok(res.body.data.detected);
+    assert.ok(res.body.data.detected.chrome.installed !== undefined);
+    assert.ok(Array.isArray(res.body.data.detected.chrome.profiles));
+    assert.ok(Array.isArray(res.body.data.detected.brave.profiles));
   });
 
-  await test('Firecrawl map endpoint (/v1/map)', async () => {
-    const res = await request('/v1/map', {
-      method: 'POST',
-      body: { url: 'https://arxiv.org' }
-    });
+  await test('Task tab cleanup without touching user tabs (/api/browser/tabs/close)', async () => {
+    const res = await request('/api/browser/tabs/close', { method: 'POST' });
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.success, true);
-    assert.ok(Array.isArray(res.body.links));
   });
 
-  // 3. Knowledge Graph & BFS Path Finding
+  // 5. Transactional SQLite Persistence & Storage Metrics
+  await test('Transactional SQLite metrics in WAL mode (/api/storage/metrics)', async () => {
+    const res = await request('/api/storage/metrics');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.ok(res.body.data.totalBytes > 0);
+    assert.ok(res.body.data.counts);
+    assert.ok(res.body.data.counts.corpus_documents >= 0);
+  });
+
+  await test('SQLite backup snapshot download (/api/storage/export)', async () => {
+    const res = await request('/api/storage/export');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers['content-type'], 'application/vnd.sqlite3');
+    assert.ok(res.raw.length > 1000);
+    // SQLite header magic check "SQLite format 3\0"
+    const magic = res.raw.slice(0, 16).toString('utf8');
+    assert.ok(magic.startsWith('SQLite format 3'), `Expected SQLite header, got ${magic}`);
+  });
+
+  // 6. Knowledge Graph & BFS Path Finding
   await test('Web Graph retrieval (/api/graph)', async () => {
     const res = await request('/api/graph');
     assert.strictEqual(res.status, 200);
@@ -120,7 +166,7 @@ async function runVerification() {
     assert.ok(Array.isArray(res.body.data.path));
   });
 
-  // 4. Model Router & Security Gate
+  // 7. Model Router & Security Gate
   await test('Model Studio connection test (/api/models/test)', async () => {
     const res = await request('/api/models/test');
     assert.strictEqual(res.status, 200);
@@ -128,7 +174,25 @@ async function runVerification() {
     assert.strictEqual(typeof res.body.latencyMs, 'number');
   });
 
-  // 5. Telegram Remote Control
+  // 8. Telegram Bot Gateway & Real API Handshake
+  await test('Telegram Gateway status check (/api/telegram/status)', async () => {
+    const res = await request('/api/telegram/status');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.ok(res.body.data.botInfo?.username === 'arachnewi_bot' || res.body.data.maskedToken);
+  });
+
+  await test('Live Telegram Bot API handshake test (/api/telegram/test)', async () => {
+    const res = await request('/api/telegram/test', {
+      method: 'POST',
+      body: { token: '8732300173:AAGj-fOkujR5PktCNVt3E2OQkr3vyDy71Wo' }
+    });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.strictEqual(res.body.data.bot.username, 'arachnewi_bot');
+    assert.ok(res.body.data.latencyMs > 0, 'Measured roundtrip latency must be positive number');
+  });
+
   await test('Telegram Bot remote status command (/api/telegram/exec)', async () => {
     const res = await request('/api/telegram/exec', {
       method: 'POST',

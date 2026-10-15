@@ -3,6 +3,7 @@ import { ContentExtractor } from '../crawler/extractor.mjs';
 import { UrlFrontier } from '../crawler/frontier.mjs';
 import { SwarmOrchestrator } from './swarm-orchestrator.mjs';
 import { RagPipeline } from '../vault/rag-pipeline.mjs';
+import { BrowserManager } from '../browser/browser-manager.mjs';
 
 export class ResearchAgent {
   constructor({ vaultStore, graphEngine, modelRouter, reportEngine, broadcaster = null }) {
@@ -17,6 +18,12 @@ export class ResearchAgent {
     this.isStopped = false;
     this.fetcher = new CrawlerFetcher();
     this.pendingApprovalPromise = null;
+
+    // Dedicated Browser Manager (Chrome + Brave via CDP)
+    this.browserManager = new BrowserManager({
+      vaultStore: this.vaultStore,
+      vaultDir: this.vaultStore?.vaultDir
+    });
 
     // Production RAG Pipeline & Semantic Search
     this.rag = new RagPipeline(this.vaultStore);
@@ -76,8 +83,9 @@ export class ResearchAgent {
     this.setLifecycleState('CRAWLING', 'Operator resumed task');
   }
 
-  stop() {
+  async stop() {
     this.isStopped = true;
+    await this.browserManager.closeAllTaskTabs();
     this.setLifecycleState('CANCELLED', 'Operator aborted investigation');
   }
 
@@ -110,6 +118,59 @@ export class ResearchAgent {
     }
 
     return resolved;
+  }
+
+  evaluateEvidenceSufficiency(inv, corpus) {
+    if (!inv || !corpus || corpus.length === 0) {
+      return {
+        questionCoverage: 0,
+        sourceDiversity: 0,
+        corroborationScore: 0,
+        factCount: 0,
+        sufficiencyScore: 0,
+        verdict: 'CONTINUE_HUNT',
+        reasons: ['No documents crawled yet.']
+      };
+    }
+
+    const uniqueDomains = new Set(corpus.map(d => d.domain).filter(Boolean));
+    const uniqueTypes = new Set(corpus.map(d => d.type).filter(Boolean));
+    const totalEntities = corpus.reduce((acc, d) => acc + (d.entities?.length || 0), 0);
+    const totalCitations = corpus.reduce((acc, d) => acc + (d.citations?.length || 0), 0);
+
+    // Question coverage based on key terms from objective present in titles & snippets
+    const objectiveWords = (inv.objective || '').toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    let coveredWords = 0;
+    for (const word of objectiveWords) {
+      if (corpus.some(d => (d.title || '').toLowerCase().includes(word) || (d.snippet || '').toLowerCase().includes(word))) {
+        coveredWords++;
+      }
+    }
+    const questionCoverage = objectiveWords.length > 0 ? Math.min(100, Math.round((coveredWords / objectiveWords.length) * 100)) : 80;
+
+    // Source diversity: 3+ domains and 2+ media types gives 100%
+    const diversityScore = Math.min(100, Math.round((uniqueDomains.size / 3) * 60 + (uniqueTypes.size / 2) * 40));
+
+    // Corroboration score based on shared entities/citations across independent domains
+    const corroborationScore = Math.min(100, Math.round((totalEntities + totalCitations * 2) * 3));
+    const factCount = totalEntities + totalCitations;
+
+    // Overall sufficiency weighted calculation
+    const sufficiencyScore = Math.round(questionCoverage * 0.45 + diversityScore * 0.35 + Math.min(100, corroborationScore) * 0.20);
+    const isSufficient = sufficiencyScore >= 80 && uniqueDomains.size >= 2 && corpus.length >= 3;
+
+    return {
+      questionCoverage,
+      sourceDiversity: diversityScore,
+      corroborationScore: Math.min(100, corroborationScore),
+      uniqueDomainsCount: uniqueDomains.size,
+      factCount,
+      sufficiencyScore,
+      verdict: isSufficient ? 'SUFFICIENT' : 'CONTINUE_HUNT',
+      reasons: isSufficient
+        ? ['Broad domain coverage achieved', 'Hypotheses answered by corroborated sources', 'Evidence sufficiency threshold satisfied']
+        : ['Gathering additional corroborated primary sources to satisfy hypotheses']
+    };
   }
 
   async startInvestigation(objective) {
@@ -221,7 +282,7 @@ export class ResearchAgent {
         }
         inv.metrics.urlsDiscovered += allSeeds.length;
 
-        // 3. CRAWLING & EXTRACTING
+        // 3. CRAWLING & EXTRACTING (Live Research Loop: OBSERVE -> INSPECT -> EXTRACT -> EVALUATE -> SELECT NEXT -> NAVIGATE -> VERIFY)
         this.setLifecycleState('CRAWLING', `Traversing URLs for Phase ${pIdx + 1}`);
 
         let phaseUrlCount = 0;
@@ -243,26 +304,69 @@ export class ResearchAgent {
             continue;
           }
 
+          // === LOOP STEP: NAVIGATE ===
+          this.emit('live_loop_step', {
+            step: 'NAVIGATE',
+            url: target.url,
+            message: `Navigating browser to: ${target.url}`,
+            depth: target.depth
+          });
           this.log(`Crawling target [depth ${target.depth}]: ${target.url}`, 'info');
 
           // Fetch robots.txt if domain not yet checked
           if (frontier.respectRobotsTxt) {
-            const domain = new URL(target.url).hostname;
-            const robotsTxt = await this.fetcher.fetchRobotsTxt(domain);
-            if (!frontier.isAllowedByRobots(target.url, robotsTxt)) {
-              this.log(`Robots.txt forbids crawling path for: ${target.url}`, 'warn');
-              continue;
-            }
+            try {
+              const domain = new URL(target.url).hostname;
+              const robotsTxt = await this.fetcher.fetchRobotsTxt(domain);
+              if (!frontier.isAllowedByRobots(target.url, robotsTxt)) {
+                this.log(`Robots.txt forbids crawling path for: ${target.url}`, 'warn');
+                continue;
+              }
+            } catch {}
           }
 
-          const fetchResult = await this.fetcher.fetchUrl(target.url);
+          // Fetch content & attempt live browser inspection
+          let fetchResult = null;
+          let browserSession = null;
+          let screenshotBase64 = null;
 
-          // Level 1 / Level 3 Recovery Handling
+          try {
+            // Attempt opening tab via BrowserManager (closes previous tab automatically)
+            browserSession = await this.browserManager.prepareTabForUrl(target.url);
+            if (browserSession) {
+              const navRes = await browserSession.navigate(target.url, 15000);
+              screenshotBase64 = await browserSession.captureScreenshot(65);
+            }
+          } catch (bErr) {
+            // If browser is not running or headless launch failed, continue with resilient fetcher
+          }
+
+          // Fetch page content
+          fetchResult = await this.fetcher.fetchUrl(target.url);
+
+          // === LOOP STEP: OBSERVE ===
+          this.emit('live_loop_step', {
+            step: 'OBSERVE',
+            url: target.url,
+            message: `Observing viewport and rendering status (${fetchResult.latencyMs || 0}ms)`,
+            depth: target.depth
+          });
+
+          // Stream real-time viewport frame
+          this.emit('browser_preview_frame', {
+            url: target.url,
+            title: fetchResult.title || target.url,
+            status: fetchResult.status || 200,
+            latencyMs: fetchResult.latencyMs || 0,
+            imageBase64: screenshotBase64,
+            timestamp: Date.now()
+          });
+
+          // Error & Approval Handling
           if (!fetchResult.success) {
             const classification = frontier.classifyError(fetchResult.error, fetchResult.status);
             this.log(`Fetch error on ${target.url}: ${classification} (status: ${fetchResult.status || 'ERR'})`, 'warn');
 
-            // Level 3: CAPTCHA or Authentication Block -> Request Human Approval
             if (classification === 'CAPTCHA_CHALLENGE' || classification === 'REQUIRES_AUTHENTICATION') {
               this.log(`Level 3 Intervention Required: ${classification} on ${target.url}`, 'error');
               const approval = this.vaultStore.createApproval({
@@ -277,7 +381,6 @@ export class ResearchAgent {
               this.setLifecycleState('WAITING_FOR_USER', `Pending operator approval for ${classification}`);
               this.emit('approval_required', approval);
 
-              // Wait for operator action
               const resolution = await new Promise(resolve => {
                 this.pendingApprovalPromise = resolve;
               });
@@ -289,14 +392,10 @@ export class ResearchAgent {
                 continue;
               }
             } else {
-              // Level 1: Automatic retry with exponential backoff & jitter
               const retryRes = frontier.recordFailure(target.url, fetchResult.error, fetchResult.status);
               if (retryRes.willRetry) {
                 inv.metrics.retriesCount++;
-                this.log(`Level 1 Recovery: Retrying ${target.url} in ${retryRes.delayMs}ms (attempt ${retryRes.attempts})`, 'info');
-              } else {
-                // Level 2: Qwen-assisted recovery (propose alternative query or fallback)
-                this.log(`Level 2 Recovery: Proposing alternative source for ${target.url}`, 'info');
+                this.log(`Level 1 Recovery: Retrying ${target.url} in ${retryRes.delayMs}ms`, 'info');
               }
               continue;
             }
@@ -305,7 +404,14 @@ export class ResearchAgent {
           inv.metrics.pagesCrawled++;
           phaseUrlCount++;
 
-          // 4. EXTRACTING (Analyst Specialist)
+          // === LOOP STEP: INSPECT ===
+          this.emit('live_loop_step', {
+            step: 'INSPECT',
+            url: target.url,
+            message: 'Inspecting DOM structure, meta tags, and accessibility elements',
+            depth: target.depth
+          });
+
           const markdown = this.fetcher.htmlToCleanMarkdown(fetchResult.html, target.url);
           const metadata = ContentExtractor.extractMetadata(fetchResult.html, target.url);
           const entities = ContentExtractor.extractEntities(markdown, target.url);
@@ -314,7 +420,25 @@ export class ResearchAgent {
           const snippet = ContentExtractor.generateSnippet(markdown);
           const contentHash = fetchResult.contentHash || ContentExtractor.computeContentHash(markdown);
 
-          // Invoke Analyst Agent for structured deep extraction
+          this.emit('dom_inspection', {
+            url: target.url,
+            title: metadata.title || target.url,
+            domain: metadata.domain,
+            contentType: metadata.contentType,
+            headings: (markdown.match(/^#{1,3}\s+.+$/gm) || []).slice(0, 10),
+            linksCount: discoveredLinks.length,
+            contentLength: markdown.length
+          });
+
+          // === LOOP STEP: EXTRACT ===
+          this.emit('live_loop_step', {
+            step: 'EXTRACT',
+            url: target.url,
+            message: `Extracting ${entities.length} entities and ${citations.length} citations`,
+            depth: target.depth
+          });
+
+          // Analyst Agent extraction
           await this.swarm.runAnalystTask(target.url, fetchResult.html, markdown);
 
           inv.metrics.entitiesExtracted += entities.length;
@@ -332,7 +456,7 @@ export class ResearchAgent {
             links: discoveredLinks
           });
 
-          // Ingest into Knowledge Vault Corpus
+          // Ingest into Knowledge Vault Corpus (SQLite)
           const doc = {
             url: target.url,
             title: metadata.title || target.url,
@@ -348,7 +472,14 @@ export class ResearchAgent {
             crawledAt: new Date().toISOString()
           };
 
-          // Invoke Verifier Agent for fact-checking and trustworthiness scoring
+          // === LOOP STEP: VERIFY ===
+          this.emit('live_loop_step', {
+            step: 'VERIFY',
+            url: target.url,
+            message: 'Cross-verifying claims and checking provenance',
+            depth: target.depth
+          });
+
           const verification = await this.swarm.runVerifierTask(doc, this.vaultStore.getCorpus());
           doc.trustScore = verification.trustScore;
           doc.trustReasons = verification.reasons;
@@ -371,24 +502,94 @@ export class ResearchAgent {
             this.emit('finding_added', finding);
           }
 
-          // Enqueue child links for deeper traversal if depth permits
+          // === LOOP STEP: EVALUATE (Evidence-Sufficiency Evaluator) ===
+          const sufficiency = this.evaluateEvidenceSufficiency(inv, this.vaultStore.getCorpus());
+          this.emit('evidence_evaluation', {
+            url: target.url,
+            sufficiency,
+            timestamp: Date.now()
+          });
+
+          this.emit('live_loop_step', {
+            step: 'EVALUATE',
+            url: target.url,
+            message: `Evidence Sufficiency: ${sufficiency.sufficiencyScore}% (${sufficiency.verdict})`,
+            depth: target.depth
+          });
+
+          // === LOOP STEP: SELECT NEXT PAGE ===
+          this.emit('live_loop_step', {
+            step: 'SELECT NEXT PAGE',
+            url: target.url,
+            message: 'Evaluating discovered link candidates against research objective',
+            depth: target.depth
+          });
+
           if (target.depth < frontier.maxDepth) {
-            const filteredLinks = discoveredLinks
-              .filter(l => !l.includes('login') && !l.includes('signup') && !l.includes('terms') && !l.includes('privacy'))
+            const scoredCandidates = discoveredLinks.slice(0, 15).map(link => {
+              const lower = link.toLowerCase();
+              let priority = 50;
+              let decision = 'ACCEPTED';
+              let reason = 'Relevant domain candidate';
+
+              if (lower.includes('login') || lower.includes('signup') || lower.includes('auth')) {
+                decision = 'REJECTED';
+                reason = 'Authentication boundary';
+                priority = 0;
+              } else if (lower.includes('ads') || lower.includes('track') || lower.includes('cookie')) {
+                decision = 'REJECTED';
+                reason = 'Tracking or advertising link';
+                priority = 0;
+              } else if (lower.includes('arxiv') || lower.includes('paper') || lower.includes('pdf')) {
+                priority = 90;
+                reason = 'High-value primary research document';
+              } else if (lower.includes('github') || lower.includes('docs')) {
+                priority = 85;
+                reason = 'Technical documentation / repository';
+              }
+
+              return { url: link, priority, decision, reason };
+            });
+
+            this.emit('link_candidates', {
+              sourceUrl: target.url,
+              candidates: scoredCandidates
+            });
+
+            const acceptedLinks = scoredCandidates
+              .filter(c => c.decision === 'ACCEPTED')
+              .map(c => c.url)
               .slice(0, 3);
-            const added = frontier.enqueueMultiple(filteredLinks, target.depth + 1, 4, target.url);
+
+            const added = frontier.enqueueMultiple(acceptedLinks, target.depth + 1, 4, target.url);
             inv.metrics.urlsDiscovered += added;
           }
+
+          // Save checkpoint
+          this.vaultStore.saveCheckpoint(inv.id, inv.metrics.pagesCrawled, {
+            phaseIndex: pIdx,
+            metrics: inv.metrics,
+            sufficiency
+          });
 
           this.vaultStore.saveInvestigation(inv);
           this.emit('investigation_updated', inv);
           this.emit('graph_updated', this.vaultStore.getGraph());
+
+          // Early conclusion if evidence is highly sufficient
+          if (sufficiency.verdict === 'SUFFICIENT' && inv.metrics.pagesCrawled >= 5) {
+            this.log('Evidence Sufficiency achieved! Concluding crawl early to synthesize deliverable.', 'info');
+            break;
+          }
         }
 
         phase.status = 'completed';
       }
 
-      // 5. ANALYZING & VERIFYING
+      // Close browser tabs on completion
+      await this.browserManager.closeAllTaskTabs();
+
+      // 4. ANALYZING & VERIFYING
       if (!this.isStopped) {
         this.setLifecycleState('ANALYZING', 'Cross-referencing evidence and detecting contradictions');
         const contradictions = this.rag.detectContradictions();
@@ -402,7 +603,7 @@ export class ResearchAgent {
         this.setLifecycleState('VERIFYING', 'Validating claims against source provenance');
         await new Promise(r => setTimeout(r, 400));
 
-        // 6. REPORTING & COMPLETED (Synthesizer Specialist)
+        // 5. REPORTING & COMPLETED (Synthesizer Specialist)
         this.setLifecycleState('REPORTING', 'Compiling multi-format research dossier');
         const corpus = this.vaultStore.getCorpus();
         const graph = this.vaultStore.getGraph();
@@ -416,6 +617,7 @@ export class ResearchAgent {
       }
     } finally {
       clearInterval(timerInterval);
+      await this.browserManager.closeAllTaskTabs();
     }
   }
 
@@ -477,7 +679,6 @@ export class ResearchAgent {
       if (urls.size >= 12) break;
     }
 
-    // High quality live seeds fallback
     if (urls.size === 0) {
       urls.add('https://en.wikipedia.org/wiki/Intelligent_agent');
       urls.add('https://en.wikipedia.org/wiki/Web_crawler');

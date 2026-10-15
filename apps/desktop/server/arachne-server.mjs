@@ -340,7 +340,7 @@ export function createArachneServer(port = 3003) {
 
       if (pathname.startsWith('/api/reports/') && pathname.includes('/download')) {
         const parts = pathname.split('/');
-        const reportId = parts[3];
+        const reportId = path.basename(parts[3] || '');
         const format = (parsedUrl.searchParams.get('format') || 'md').toLowerCase();
         const rep = vaultStore.getReports().find(r => r.id === reportId);
         if (!rep) return sendJson({ success: false, error: 'Report not found' }, 404);
@@ -412,7 +412,60 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: results });
       }
 
-      // Telegram Remote Control
+      // Browser Automation Management (Chrome & Brave)
+      if (pathname === '/api/browser/status' && req.method === 'GET') {
+        return sendJson({ success: true, data: researchAgent.browserManager.getEnvironmentInfo() });
+      }
+
+      if (pathname === '/api/browser/configure' && req.method === 'POST') {
+        const body = await readBody();
+        researchAgent.browserManager.configure(body);
+        return sendJson({ success: true, data: researchAgent.browserManager.getEnvironmentInfo() });
+      }
+
+      if (pathname === '/api/browser/launch' && req.method === 'POST') {
+        const body = await readBody();
+        try {
+          const launchRes = await researchAgent.browserManager.launchDedicatedBrowser({ headless: body.headless !== false });
+          return sendJson({ success: true, data: launchRes });
+        } catch (err) {
+          return sendJson({ success: false, error: err.message }, 500);
+        }
+      }
+
+      if (pathname === '/api/browser/test' && req.method === 'POST') {
+        const testRes = await researchAgent.browserManager.testCdpConnection();
+        return sendJson({ success: testRes.connected, data: testRes });
+      }
+
+      if (pathname === '/api/browser/tabs/close' && req.method === 'POST') {
+        await researchAgent.browserManager.closeAllTaskTabs();
+        return sendJson({ success: true, message: 'All ARACHNE task tabs closed.' });
+      }
+
+      // Telegram Remote Control & Gateway
+      if (pathname === '/api/telegram/status' && req.method === 'GET') {
+        return sendJson({ success: true, data: telegramGateway.getStatus() });
+      }
+
+      if (pathname === '/api/telegram/test' && req.method === 'POST') {
+        const body = await readBody();
+        const testRes = await telegramGateway.testConnection(body.token);
+        return sendJson({ success: testRes.success, data: testRes });
+      }
+
+      if (pathname === '/api/telegram/poll' && req.method === 'POST') {
+        const body = await readBody();
+        const pollRes = body.enabled !== false ? telegramGateway.startPolling() : telegramGateway.stopPolling();
+        return sendJson({ success: true, data: pollRes });
+      }
+
+      if (pathname === '/api/telegram/send' && req.method === 'POST') {
+        const body = await readBody();
+        const sendRes = await telegramGateway.sendMessage(body.chatId, body.text);
+        return sendJson(sendRes);
+      }
+
       if (pathname === '/api/telegram/exec' && req.method === 'POST') {
         const body = await readBody();
         const log = await telegramGateway.processCommand(body.command || '/status', body.sender || 'Web Console');
@@ -444,8 +497,23 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: col });
       }
 
-      if (pathname === '/api/vault/stats' && req.method === 'GET') {
+      if ((pathname === '/api/vault/stats' || pathname === '/api/storage/metrics') && req.method === 'GET') {
         return sendJson({ success: true, data: vaultStore.getStorageMetrics() });
+      }
+
+      if (pathname === '/api/storage/export' && req.method === 'GET') {
+        const dbPath = vaultStore.sqlite?.dbPath || vaultStore.sqliteStore?.dbPath || path.join(vaultStore.vaultDir, 'arachne.sqlite');
+        if (dbPath && fs.existsSync(dbPath)) {
+          const dbData = fs.readFileSync(dbPath);
+          res.writeHead(200, {
+            'Content-Type': 'application/vnd.sqlite3',
+            'Content-Disposition': 'attachment; filename="arachne-vault-backup.sqlite"',
+            'Content-Length': dbData.length
+          });
+          return res.end(dbData);
+        } else {
+          return sendJson({ success: false, error: 'SQLite database file not found' }, 404);
+        }
       }
 
       if (pathname === '/api/vault/saved-queries' && req.method === 'GET') {
@@ -463,8 +531,8 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: updated });
       }
 
-      // Compatibility: /v1/scrape API endpoint
-      if (pathname === '/v1/scrape' && req.method === 'POST') {
+      // ARACHNE Native Page Inspection & Extraction
+      if (pathname === '/api/crawl/page' && req.method === 'POST') {
         const body = await readBody();
         const url = body.url;
         if (!url) return sendJson({ success: false, error: 'URL required' }, 400);
@@ -473,6 +541,7 @@ export function createArachneServer(port = 3003) {
         const md = researchAgent.fetcher.htmlToCleanMarkdown(fetchRes.html, url);
         return sendJson({
           success: fetchRes.success,
+          error: fetchRes.error || null,
           data: {
             markdown: md,
             html: fetchRes.html,
@@ -482,8 +551,8 @@ export function createArachneServer(port = 3003) {
         });
       }
 
-      // Compatibility: /v1/map API endpoint
-      if (pathname === '/v1/map' && req.method === 'POST') {
+      // ARACHNE Native Hyperlink Discovery
+      if (pathname === '/api/crawl/links' && req.method === 'POST') {
         const body = await readBody();
         const url = body.url;
         if (!url) return sendJson({ success: false, error: 'URL required' }, 400);
@@ -492,6 +561,7 @@ export function createArachneServer(port = 3003) {
         const links = ContentExtractor.extractLinks(fetchRes.html, url);
         return sendJson({
           success: fetchRes.success,
+          error: fetchRes.error || null,
           links
         });
       }

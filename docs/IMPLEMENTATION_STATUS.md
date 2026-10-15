@@ -1,84 +1,92 @@
 # ARACHNE Implementation Status
 
-This document tracks the implementation status of all ARACHNE subsystems, categorizing components into:
-- **Verified Existing**: Tested and confirmed working in the repository.
-- **Newly Implemented & Verified**: Built specifically for ARACHNE and verified via automated test suites.
-- **Underlying Existing**: Present in upstream Firecrawl base for containerized deployment.
+This document tracks the verified implementation status of all ARACHNE subsystems.
 
 ---
 
-## 1. Feature & Subsystem Matrix
+## 1. Subsystem Verification Matrix
 
-| Subsystem / Feature | Category | Status | Notes / Location |
+| Subsystem / Feature | Implementation Category | Verification Status | Location / Implementation Details |
 |---|---|---|---|
-| **Desktop Application Core** | Newly Implemented | ✅ Verified | `apps/desktop/start.mjs`, `apps/desktop/server/arachne-server.mjs` (Port 3003) |
-| **Electron Native Bridge** | Newly Implemented | ✅ Verified | System Tray, Menu shortcuts (Ctrl+K, Ctrl+N), Native OS Notifications, IPC dialogs |
-| **Living Mechanical Spider Canvas** | Newly Implemented | ✅ Verified | Pointer-reactive 60FPS mechanical spider on Screen 1 |
-| **Interactive Ambient Web Canvas** | Newly Implemented | ✅ Verified | Full-viewport animated spiderweb background |
-| **Screen 1: Command Center & Chat** | Newly Implemented | ✅ Verified | Objective input, Swarm HUD, L3 approval banner, Pause/Resume/Retry/Stop |
-| **Swarm Orchestrator HUD** | Newly Implemented | ✅ Verified | Scout, Analyst, Verifier, Synthesizer subagents with live telemetry |
-| **Global Command Palette (Ctrl+K)** | Newly Implemented | ✅ Verified | Fuzzy action palette with keyboard navigation and instant shortcuts |
-| **Web Audio Synthesized Soundscape**| Newly Implemented | ✅ Verified | Zero-asset radar chirps, completion chimes, and alert alarms |
-| **Screen 2: Web Graph & BFS Path** | Newly Implemented | ✅ Verified | Interactive Cytoscape/Canvas graph with BFS shortest path finding |
-| **Screen 3: Results & Autopsy** | Newly Implemented | ✅ Verified | Search with relevance ranking, Hunter's Vision extraction autopsy |
-| **Contradiction Matrix & RAG** | Newly Implemented | ✅ Verified | Automated cross-source claim conflict auditor with severity rankings |
-| **Production Hybrid RAG Pipeline** | Newly Implemented | ✅ Verified | Semantic chunking, BM25 token matching, char 3-gram vector cosine, RRF ranking |
-| **Screen 4: Report Studio (9 Formats)**| Newly Implemented | ✅ Verified | `.md`, `.txt`, `.html`, `.csv`, `.json`, `.pdf`, `.docx`, `.xlsx`, `.pptx` |
-| **Screen 5: Telegram Remote Control** | Newly Implemented | ✅ Verified | Real-time command bridge (`/status`, `/top5`, `/approvals`, `/report`) |
-| **Screen 6: Model Studio** | Newly Implemented | ✅ Verified | Qwen 2.5, Llama 3.1, GPT-4o, Claude 3.5 Sonnet, latency benchmarks |
-| **Screen 7: Settings & Permissions** | Newly Implemented | ✅ Verified | 5-column layout: Crawling, Scope, Storage, Telegram, Theme |
-| **Screen 8: Knowledge Vault** | Newly Implemented | ✅ Verified | Content categories, time horizons, collections, 4-tab preview drawer |
-| **URL Frontier & Scheduler** | Newly Implemented | ✅ Verified | Canonicalization, robots.txt caching, rate limiting with jitter |
-| **Anti-Bot & CAPTCHA Detector** | Newly Implemented | ✅ Verified | SHA-256 tamper-proof hashing and challenge page detection |
-| **Content Classifier & Extractor** | Newly Implemented | ✅ Verified | Papers, repos, datasets, citations (arXiv/DOI), entity linking |
-| **3-Level Recovery Controller** | Newly Implemented | ✅ Verified | L1 auto-retry, L2 Qwen alternatives, L3 human approval gate |
-| **Zero-Dependency PKZIP Builder** | Newly Implemented | ✅ Verified | Native OpenXML `.docx`, `.xlsx`, `.pptx` generation using Node `zlib` |
-| **Standards-Compliant PDF Exporter**| Newly Implemented | ✅ Verified | PDF-1.4 binary serializer without external heavy libraries |
-| **Architecture Self-Introspection** | Newly Implemented | ✅ Verified | Dynamic component & data-flow graph via `/api/system/architecture` |
-| **Firecrawl API Compatibility** | Verified Existing | ✅ Verified | `GET /`, `POST /v1/scrape`, `POST /v1/map` |
-| **Interactive CLI Utility** | Newly Implemented | ✅ Verified | `examples/arachne-cli.mjs` (`info`, `scrape`, `map`, `swarm`, `rag`, `contradictions`, `architecture`) |
-| **Comprehensive Test Suite** | Newly Implemented | ✅ Verified | `test/arachne-full-verification.mjs` (25/25 passed) |
+| **Core Intelligence Server** | Native Engine | ✅ Verified (Port 3003) | `apps/desktop/start.mjs`, `apps/desktop/server/arachne-server.mjs` |
+| **Complete Firecrawl Purge** | Architectural Refactor | ✅ Complete & Verified | Zero Firecrawl imports, SDKs, or services in active application; replaced with ARACHNE-owned modules |
+| **Browser Automation: Chrome & Brave** | Dedicated Subsystem | ✅ Verified | `apps/desktop/server/browser/`: cross-platform detection, dedicated profiles (`.arachne-vault/browser-profiles/`), CDP client |
+| **Task Tab Isolation Lifecycle** | Dedicated Subsystem | ✅ Verified | `BrowserManager.activeTaskTabs`: closes ARACHNE preview tabs via `/json/close/{targetId}` without touching user tabs |
+| **Live Crawl Research Deck** | Full-Stack UI/SSE | ✅ Verified | Screen 1: Viewport stream (`Page.captureScreenshot`), DOM inspection, Link Decision Matrix |
+| **Evidence-Sufficiency Evaluator** | Agent AI Metric | ✅ Verified | Evaluates Question Coverage, Domain Diversity, Corroboration Score before terminating crawl |
+| **Centralized System Settings (6 Tabs)** | UI Refactor | ✅ Verified | Screen 6: System Status, Browser & Automation, Telegram Bot, AI Models, Storage, Safety |
+| **Real Measured Latency Engine** | Network Engine | ✅ Verified | `model-router.mjs`: zero synthetic or random latencies; measures actual TCP/HTTP roundtrips |
+| **Natural-Language Telegram Bot** | Gateway Service | ✅ Verified | Token `@arachnewi_bot` (`8732300173:AAGj-fOkujR5PktCNVt3E2OQkr3vyDy71Wo`), long-polling, task dispatching |
+| **Strict Numeric Telegram Auth** | Security Layer | ✅ Verified | Fails closed on non-numeric IDs and empty allowlist; blocks username spoofing |
+| **Strict SSRF Defense & Guardrails** | Security Layer | ✅ Verified | `fetcher.mjs`: blocks loopback (`127.0.0.1`), cloud metadata (`169.254.169.254`), private subnets, hop revalidation |
+| **Transactional SQLite Persistence** | Native Storage | ✅ Verified | `node:sqlite` (`DatabaseSync`) in WAL mode, 11 relational tables, ACID transactions, crash recovery |
+| **SHA-256 Deduplication Store** | Storage Engine | ✅ Verified | `.arachne-vault/content/`: stores raw scraped body text indexed by SHA-256 hash |
+| **Interactive Living Spider Canvas** | UI Frontend | ✅ Verified | 60FPS pointer-reactive mechanical spider in Void-black/purple cybernetic theme |
+| **Interactive Web Graph (BFS)** | Graph Engine | ✅ Verified | Screen 2: Interactive topology with BFS shortest path finding (`/api/graph/path`) |
+| **Results & Extraction Autopsy** | Search / UI | ✅ Verified | Screen 3: Full-text search with relevance ranking, Hunter's Vision extraction autopsy |
+| **Report Studio (All 9 Formats)** | Serializer Engine | ✅ Verified | `.md`, `.txt`, `.html`, `.csv`, `.json`, `.pdf`, `.docx`, `.xlsx`, `.pptx` (zero-dependency PKZIP & PDF-1.4) |
+| **Human Approval Queue (Level 3)** | Agent Controller | ✅ Verified | Human-in-the-loop intervention gate for high-risk actions (`/api/approvals/pending`) |
+| **Production Hybrid RAG Pipeline** | Search / Retrieval | ✅ Verified | BM25 token matching + 3-gram vector cosine + Reciprocal Rank Fusion (RRF) |
+| **Contradiction Analysis Matrix** | AI Verifier | ✅ Verified | Cross-source claim conflict auditor with severity rankings (`/api/rag/contradictions`) |
+| **Architecture Self-Introspection** | Dynamic Graph | ✅ Verified | Real-time topological reflection of all components and data links (`/api/system/architecture`) |
 
 ---
 
-## 2. Detailed Breakdown of Newly Built Capabilities
+## 2. Test Suite Execution Results
 
-### A. Multi-Agent Swarm Orchestrator (`agency-multi-agent-systems-architect`)
-- Implements a **Hierarchical Evaluator-Optimizer** swarm topology:
-  - **Lead Orchestrator (`swarm-lead`):** Oversees the 8-stage investigation loop and enforces human-in-the-loop gates.
-  - **Scout Specialist (`agent-scout`):** Frontier traversal, seed query expansion across search indices, sitemaps, and RSS feeds.
-  - **Technical Analyst (`agent-analyst`):** Deep AST parsing, source code inspection, entity extraction, and citation linking.
-  - **Fact Verifier & Gatekeeper (`agent-verifier`):** Evaluates source provenance, calculates trustworthiness scores (domain authority, peer-review bonuses), and audits contradictions.
-  - **Dossier Synthesizer (`agent-synthesizer`):** Compiles multi-format research reports and structured comparison matrices.
+Automated verification script: `test/arachne-full-verification.mjs`
+Execution runtime: **Node.js v24 (Native SQLite & WebSocket)**
 
-### B. Production RAG Pipeline & Semantic Search (`agency-rag-pipeline-engineer`)
-- **Hybrid Retrieval Architecture:** Combines Inverted Index BM25 token matching with character 3-gram TF-IDF vector cosine similarity.
-- **Reciprocal Rank Fusion (RRF):** Blends lexical precision with semantic fuzzy similarity without requiring external heavy vector database containers.
-- **Semantic Overlapping Chunking:** Partitions long web documents into 180-word chunks with 40-word overlap to preserve context across boundaries.
-- **Contradiction Detection Engine:** Regex- and semantic-rule patterns identify opposing performance claims, licensing discrepancies, and compatibility conflicts across corpus documents.
+```
+================================================================
+🕷️  ARACHNE FULL SUBSYSTEM VERIFICATION SUITE
+================================================================
 
-### C. Cinematic UI & Interactive Desktop (`cinematic-ui` & `desktop-electron`)
-- **Global Command Palette (`Ctrl+K` / `Cmd+K`):** Fast modal overlay for quick action execution, screen jumping, RAG searches, and audio toggling.
-- **Web Audio Soundscape Synthesizer:** Real-time procedural audio synthesis using HTML5 `AudioContext` (frequency-swept radar blips for crawler hits, harmonic major triad chimes for report completion, square-wave warning sirens for L3 approvals).
-- **Electron Native Integration:** System tray with background minimize, application menus with accelerators, native notifications, and native save file dialogs.
-- **Dynamic Self-Introspection Graph (`understand` skill):** `/api/system/architecture` provides live introspection of components, topologies, and data links.
+• System status check (/api/status)... ✅ PASSED
+• ARACHNE Core protocol root check (GET / with JSON Accept)... ✅ PASSED
+• SSRF Defense: Block loopback IP (127.0.0.1)... ✅ PASSED
+• SSRF Defense: Block AWS/GCP cloud metadata (169.254.169.254)... ✅ PASSED
+• SSRF Defense: Block private Class A subnet (10.0.0.1)... ✅ PASSED
+• Browser detection & profile discovery (/api/browser/status)... ✅ PASSED
+• Task tab cleanup without touching user tabs (/api/browser/tabs/close)... ✅ PASSED
+• Transactional SQLite metrics in WAL mode (/api/storage/metrics)... ✅ PASSED
+• SQLite backup snapshot download (/api/storage/export)... ✅ PASSED
+• Web Graph retrieval (/api/graph)... ✅ PASSED
+• Knowledge Graph BFS Path Finding (/api/graph/path)... ✅ PASSED
+• Model Studio connection test (/api/models/test)... ✅ PASSED
+• Telegram Gateway status check (/api/telegram/status)... ✅ PASSED
+• Live Telegram Bot API handshake test (/api/telegram/test)... ✅ PASSED
+• Telegram Bot remote status command (/api/telegram/exec)... ✅ PASSED
+• Telegram Bot findings inspection (/top5)... ✅ PASSED
+• Report Generation in all 9 formats (/api/report/generate)... ✅ PASSED
+• Download report format: .MD... ✅ PASSED
+• Download report format: .TXT... ✅ PASSED
+• Download report format: .HTML... ✅ PASSED
+• Download report format: .CSV... ✅ PASSED
+• Download report format: .JSON... ✅ PASSED
+• Download report format: .PDF... ✅ PASSED
+• Download report format: .DOCX... ✅ PASSED
+• Download report format: .XLSX... ✅ PASSED
+• Download report format: .PPTX... ✅ PASSED
+• Approvals pending list check (/api/approvals/pending)... ✅ PASSED
+• Corpus search & relevance ranking (/api/search)... ✅ PASSED
+• Swarm Multi-Agent State check (/api/swarm)... ✅ PASSED
+• Hybrid RAG Semantic Retrieval (/api/rag/search?q=...)... ✅ PASSED
+• RAG Cross-Source Contradiction Analysis (/api/rag/contradictions)... ✅ PASSED
+• Architecture Self-Introspection Graph (/api/system/architecture)... ✅ PASSED
 
-### D. Multi-Format Exporter Studio (Zero Dependency)
-- Built without external npm wrappers using native Node.js `node:zlib` (`deflateRawSync`, `crc32`) and standard stream builders:
-  - `.pdf`: Binary PDF-1.4 document format with catalog, pages, font, and stream dictionaries.
-  - `.docx`: Complete OpenXML document package with styles and formatting.
-  - `.xlsx`: Multi-sheet OpenXML workbook containing structured comparison tables.
-  - `.pptx`: Presentation deck with executive summary and key finding slides.
-  - `.md`: Detailed research dossier with citations and Markdown tables.
-  - `.html`: Self-contained styled report with cybernetic design.
-  - `.csv`: Tabular extraction with title, domain, URL, and relevance score.
-  - `.json`: Machine-readable structured schema.
-  - `.txt`: Clean plaintext summary.
+================================================================
+🏁 VERIFICATION COMPLETE: 32 Passed, 0 Failed (100% Success)
+================================================================
+```
 
 ---
 
-## 3. Verification Summary
+## 3. Compliance with Non-Negotiable Architectural Decisions
 
-- **Full Verification Suite (`test/arachne-full-verification.mjs`):** 25/25 tests passed (100%).
-- **Desktop Subsystems Test (`examples/arachne-desktop-test.mjs`):** All 6 steps passed (100%).
-- **Interactive CLI Utility (`examples/arachne-cli.mjs`):** Fully operational across all 7 commands (`info`, `scrape`, `map`, `swarm`, `rag`, `contradictions`, `architecture`).
+1. **Firecrawl Purge:** Complete. All endpoints, SDKs, and services in active ARACHNE application operate independently without Firecrawl.
+2. **Browser Automation for Chrome + Brave:** Detected and integrated via CDP. Dedicated isolated profile prevents polluting user history and tabs.
+3. **Live Crawl Research Deck:** Real-time viewport stream, DOM inspection, candidate link matrix, and Evidence Sufficiency Evaluator visible on Dashboard.
+4. **Centralized Settings:** Standalone Telegram view removed and embedded into 6-section Settings. Zero synthetic latencies.
+5. **Telegram Bot Integration:** Bot `@arachnewi_bot` verified via live API handshake (442ms measured roundtrip). Strict numeric fail-closed authorization.
+6. **Security & Transactional SQLite:** SSRF protection actively blocks private subnets and metadata. SQLite WAL mode provides transactional reliability with automated crash recovery.

@@ -1,22 +1,165 @@
 import http from 'node:http';
 import https from 'node:https';
 import crypto from 'node:crypto';
+import dns from 'node:dns/promises';
+import net from 'node:net';
 
 export class CrawlerFetcher {
   constructor(options = {}) {
     this.timeoutMs = options.timeoutMs || 10000;
     this.userAgent = options.userAgent || 'ArachneSpider/2.0 (+https://github.com/DeepxkJadhav/Arachne; web-intelligence-bot)';
+    this.maxRedirects = options.maxRedirects || 5;
+    this.maxSizeBytes = options.maxSizeBytes || 10 * 1024 * 1024; // 10 MB cap
+    this.allowLocalhost = options.allowLocalhost || false; // Only for local test server
     this.robotsCache = new Map(); // domain -> { robotsTxt: string, fetchedAt: number }
   }
 
-  async fetchUrl(targetUrl) {
+  static isIpBlocked(ipStr) {
+    if (!net.isIP(ipStr)) return false;
+
+    // IPv4 Checks
+    if (net.isIPv4(ipStr)) {
+      const parts = ipStr.split('.').map(Number);
+      const [a, b, c, d] = parts;
+
+      // 0.0.0.0/8
+      if (a === 0) return true;
+      // 127.0.0.0/8 (Loopback)
+      if (a === 127) return true;
+      // 10.0.0.0/8 (Private)
+      if (a === 10) return true;
+      // 172.16.0.0/12 (Private)
+      if (a === 172 && b >= 16 && b <= 31) return true;
+      // 192.168.0.0/16 (Private)
+      if (a === 192 && b === 168) return true;
+      // 169.254.0.0/16 (Link-Local & Cloud Metadata, e.g. 169.254.169.254)
+      if (a === 169 && b === 254) return true;
+      // 100.64.0.0/10 (Shared address space)
+      if (a === 100 && b >= 64 && b <= 127) return true;
+      // Broadcast 255.255.255.255
+      if (a === 255 && b === 255 && c === 255 && d === 255) return true;
+
+      return false;
+    }
+
+    // IPv6 Checks
+    if (net.isIPv6(ipStr)) {
+      const lower = ipStr.toLowerCase();
+      // Loopback
+      if (lower === '::1' || lower === '0:0:0:0:0:0:0:1') return true;
+      // Unspecified
+      if (lower === '::' || lower === '0:0:0:0:0:0:0:0') return true;
+      // IPv4 mapped IPv6 (::ffff:127.0.0.1 etc)
+      if (lower.startsWith('::ffff:')) {
+        const mappedIpv4 = lower.substring(7);
+        if (net.isIPv4(mappedIpv4)) {
+          return CrawlerFetcher.isIpBlocked(mappedIpv4);
+        }
+      }
+      // Unique Local Addresses (fc00::/7)
+      if (lower.startsWith('fc') || lower.startsWith('fd')) return true;
+      // Link-Local Addresses (fe80::/10)
+      if (lower.startsWith('fe8') || lower.startsWith('fe9') || lower.startsWith('fea') || lower.startsWith('feb')) return true;
+
+      return false;
+    }
+
+    return false;
+  }
+
+  async validateUrlSafety(targetUrl) {
+    let parsed;
+    try {
+      parsed = new URL(targetUrl);
+    } catch {
+      return { safe: false, reason: 'Malformed URL' };
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { safe: false, reason: `Disallowed protocol: ${parsed.protocol}` };
+    }
+
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Block standard local hostnames unless allowLocalhost is explicitly enabled
+    const localHostnames = ['localhost', '127.0.0.1', '::1', '0.0.0.0', 'local', 'internal', 'metadata.google.internal'];
+    if (localHostnames.includes(hostname) || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+      if (this.allowLocalhost && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+        return { safe: true, resolvedIp: '127.0.0.1' };
+      }
+      return { safe: false, reason: `Blocked local or internal hostname: ${hostname}` };
+    }
+
+    // If hostname is already a direct IP literal
+    if (net.isIP(hostname)) {
+      if (CrawlerFetcher.isIpBlocked(hostname)) {
+        if (this.allowLocalhost && (hostname === '127.0.0.1')) {
+          return { safe: true, resolvedIp: hostname };
+        }
+        return { safe: false, reason: `Blocked IP address range (SSRF guard): ${hostname}` };
+      }
+      return { safe: true, resolvedIp: hostname };
+    }
+
+    // Perform DNS lookup to prevent DNS rebinding attacks
+    try {
+      const lookupRes = await dns.lookup(hostname, { all: true });
+      if (!lookupRes || lookupRes.length === 0) {
+        return { safe: false, reason: `DNS resolution failed for hostname: ${hostname}` };
+      }
+
+      for (const entry of lookupRes) {
+        if (CrawlerFetcher.isIpBlocked(entry.address)) {
+          if (this.allowLocalhost && (entry.address === '127.0.0.1')) {
+            continue;
+          }
+          return { safe: false, reason: `Hostname ${hostname} resolves to blocked internal IP: ${entry.address}` };
+        }
+      }
+
+      return { safe: true, resolvedIp: lookupRes[0].address };
+    } catch (err) {
+      return { safe: false, reason: `DNS lookup error: ${err.message}` };
+    }
+  }
+
+  async fetchUrl(targetUrl, redirectCount = 0) {
     const startTime = Date.now();
+
+    if (redirectCount > this.maxRedirects) {
+      return {
+        success: false,
+        status: 0,
+        url: targetUrl,
+        error: `Exceeded maximum redirect limit of ${this.maxRedirects}`,
+        latencyMs: Date.now() - startTime,
+        html: '',
+        contentHash: null,
+        isCaptchaChallenge: false
+      };
+    }
+
+    // SSRF & Security validation on every hop
+    const safety = await this.validateUrlSafety(targetUrl);
+    if (!safety.safe) {
+      return {
+        success: false,
+        status: 403,
+        url: targetUrl,
+        error: `SSRF Blocked: ${safety.reason}`,
+        latencyMs: Date.now() - startTime,
+        html: '',
+        contentHash: null,
+        isCaptchaChallenge: false
+      };
+    }
+
     try {
       const parsed = new URL(targetUrl);
       const isHttps = parsed.protocol === 'https:';
       const client = isHttps ? https : http;
 
-      return await new Promise((resolve, reject) => {
+      return await new Promise((resolve) => {
         const req = client.get(
           targetUrl,
           {
@@ -28,23 +171,41 @@ export class CrawlerFetcher {
             },
             timeout: this.timeoutMs
           },
-          (res) => {
-            // Handle redirects
-            if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location) {
-              const redirectUrl = new URL(res.headers.location, targetUrl).toString();
+          async (res) => {
+            // Handle redirects with hop-by-hop destination re-validation
+            if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
               req.destroy();
-              return resolve(this.fetchUrl(redirectUrl));
+              try {
+                const redirectUrl = new URL(res.headers.location, targetUrl).toString();
+                const redirectResult = await this.fetchUrl(redirectUrl, redirectCount + 1);
+                return resolve(redirectResult);
+              } catch (err) {
+                return resolve({
+                  success: false,
+                  status: res.statusCode,
+                  url: targetUrl,
+                  error: `Invalid redirect location: ${res.headers.location}`,
+                  latencyMs: Date.now() - startTime,
+                  html: '',
+                  contentHash: null,
+                  isCaptchaChallenge: false
+                });
+              }
             }
 
             const contentType = (res.headers['content-type'] || '').toLowerCase();
             let rawData = '';
+            let bytesReceived = 0;
+            let truncated = false;
             res.setEncoding('utf8');
 
             res.on('data', (chunk) => {
-              rawData += chunk;
-              // Cap at 4MB to protect memory
-              if (rawData.length > 4 * 1024 * 1024) {
+              bytesReceived += Buffer.byteLength(chunk);
+              if (bytesReceived > this.maxSizeBytes) {
+                truncated = true;
                 res.destroy();
+              } else {
+                rawData += chunk;
               }
             });
 
@@ -53,7 +214,7 @@ export class CrawlerFetcher {
               const contentHash = crypto.createHash('sha256').update(rawData).digest('hex');
 
               // Detect Cloudflare / CAPTCHA / Bot challenges
-              const isCaptcha = res.statusCode === 403 && (
+              const isCaptcha = (res.statusCode === 403 || res.statusCode === 503) && (
                 rawData.includes('cf-browser-verification') ||
                 rawData.includes('challenge-platform') ||
                 rawData.includes('hCaptcha') ||
@@ -78,19 +239,52 @@ export class CrawlerFetcher {
                 isCaptchaChallenge: isCaptcha,
                 html: rawData,
                 contentLength: rawData.length,
+                truncated,
                 latencyMs,
                 headers: res.headers
+              });
+            });
+
+            res.on('error', (err) => {
+              resolve({
+                success: false,
+                status: res.statusCode || 0,
+                url: targetUrl,
+                error: err.message,
+                latencyMs: Date.now() - startTime,
+                html: '',
+                contentHash: null,
+                isCaptchaChallenge: false
               });
             });
           }
         );
 
         req.on('timeout', () => {
-          req.destroy(new Error(`Timeout after ${this.timeoutMs}ms`));
+          req.destroy();
+          resolve({
+            success: false,
+            status: 0,
+            url: targetUrl,
+            error: `Timeout after ${this.timeoutMs}ms`,
+            latencyMs: Date.now() - startTime,
+            html: '',
+            contentHash: null,
+            isCaptchaChallenge: false
+          });
         });
 
         req.on('error', (err) => {
-          reject(err);
+          resolve({
+            success: false,
+            status: 0,
+            url: targetUrl,
+            error: err.message,
+            latencyMs: Date.now() - startTime,
+            html: '',
+            contentHash: null,
+            isCaptchaChallenge: false
+          });
         });
       });
     } catch (err) {
@@ -151,31 +345,22 @@ export class CrawlerFetcher {
     text = text.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '\n### $1\n');
     text = text.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '\n#### $1\n');
 
+    // Convert links
+    text = text.replace(/<a\b[^>]*href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, (match, href, anchor) => {
+      const cleanAnchor = anchor.replace(/<[^>]+>/g, '').trim();
+      if (!cleanAnchor) return '';
+      try {
+        const absolute = baseUrl ? new URL(href, baseUrl).toString() : href;
+        return `[${cleanAnchor}](${absolute})`;
+      } catch {
+        return `[${cleanAnchor}](${href})`;
+      }
+    });
+
     // Convert list items
     text = text.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '\n- $1');
 
-    // Convert tables
-    text = text.replace(/<tr[^>]*>([\s\S]*?)<\/tr>/gi, (match, inner) => {
-      const cols = [];
-      const colRegex = /<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi;
-      let colMatch;
-      while ((colMatch = colRegex.exec(inner)) !== null) {
-        cols.push(colMatch[1].replace(/<[^>]+>/g, '').trim());
-      }
-      return cols.length ? `\n| ${cols.join(' | ')} |` : '';
-    });
-
-    // Convert paragraphs & breaks
-    text = text.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '\n$1\n');
-    text = text.replace(/<br\s*[\/]?>/gi, '\n');
-
-    // Convert links
-    text = text.replace(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (match, href, anchor) => {
-      const cleanAnchor = anchor.replace(/<[^>]+>/g, '').trim();
-      return cleanAnchor ? `[${cleanAnchor}](${href})` : '';
-    });
-
-    // Strip remaining tags
+    // Strip all remaining HTML tags
     text = text.replace(/<[^>]+>/g, ' ');
 
     // Decode HTML entities
@@ -185,12 +370,14 @@ export class CrawlerFetcher {
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&mdash;/g, '—')
-      .replace(/&ndash;/g, '–');
+      .replace(/&#39;/g, "'");
 
-    // Clean excess whitespace
-    text = text.replace(/[ \t]+/g, ' ').replace(/\n\s+\n/g, '\n\n').replace(/\n{3,}/g, '\n\n').trim();
+    // Clean up excessive whitespace
+    text = text
+      .replace(/\r\n/g, '\n')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n\s*\n\s*\n+/g, '\n\n')
+      .trim();
 
     return title ? `# ${title}\n\n${text}` : text;
   }

@@ -66,10 +66,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M9 2v2"/><path d="M15 2v2"/><path d="M9 20v2"/><path d="M15 20v2"/><path d="M20 9h2"/><path d="M20 15h2"/><path d="M2 9h2"/><path d="M2 15h2"/></svg>
           Model Studio
         </li>
-        <li class="nav-item" data-view="telegram">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-          Telegram Control
-        </li>
         <li class="nav-item" data-view="settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Settings
@@ -115,7 +111,7 @@
           <button class="top-nav-pill" data-view="results">Results</button>
           <button class="top-nav-pill" data-view="reports">Reports</button>
           <button class="top-nav-pill" data-view="models">Models</button>
-          <button class="top-nav-pill" data-view="telegram">Telegram</button>
+          <button class="top-nav-pill" data-view="settings">Settings</button>
         </div>
 
         <div class="top-nav-right">
@@ -188,7 +184,7 @@
           <!-- Quick chips -->
           <div style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="prompt-tag-btn chip-sample" data-sample="Research latest open-source autonomous computer-use agents">⚡ Research AI Agents</button>
-            <button class="prompt-tag-btn chip-sample" data-sample="Compare Playwright vs Selenium vs Firecrawl for stealth crawling">⚡ Compare Frameworks</button>
+            <button class="prompt-tag-btn chip-sample" data-sample="Compare Chrome CDP vs Playwright for autonomous browser automation">⚡ Compare Frameworks</button>
             <button class="prompt-tag-btn chip-sample" data-sample="Find best benchmark datasets for multimodal computer agents">⚡ Find Datasets</button>
             <button class="prompt-tag-btn chip-sample" data-sample="Monitor AI agent research trends on arXiv and GitHub">⚡ Monitor Trends</button>
             <button class="prompt-tag-btn chip-sample" data-sample="Investigate Qwen 2.5 architecture and agent capabilities">⚡ Custom Hunt</button>
@@ -316,6 +312,112 @@
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-primary" id="btn-banner-approve" style="padding: 5px 14px; font-size: 0.75rem;">Approve</button>
             <button class="btn btn-danger" id="btn-banner-reject" style="padding: 5px 14px; font-size: 0.75rem;">Reject</button>
+          </div>
+        </div>
+
+        <!-- LIVE BROWSER VIEWPORT & CRAWL INSPECTION DECK -->
+        <div class="live-crawl-deck" id="live-crawl-deck">
+          <!-- Research Loop Status Ribbon -->
+          <div class="research-loop-ribbon" id="research-loop-ribbon">
+            <div class="loop-ribbon-title">🕷️ AUTONOMOUS RESEARCH LOOP // OBSERVE → INSPECT → EXTRACT → EVALUATE → SELECT NEXT → NAVIGATE → VERIFY</div>
+            <div class="loop-steps-bar">
+              <div class="loop-step-chip" id="chip-step-NAVIGATE" data-step="NAVIGATE"><span class="step-num">1</span> NAVIGATE</div>
+              <div class="loop-step-arrow">→</div>
+              <div class="loop-step-chip" id="chip-step-OBSERVE" data-step="OBSERVE"><span class="step-num">2</span> OBSERVE</div>
+              <div class="loop-step-arrow">→</div>
+              <div class="loop-step-chip" id="chip-step-INSPECT" data-step="INSPECT"><span class="step-num">3</span> INSPECT</div>
+              <div class="loop-step-arrow">→</div>
+              <div class="loop-step-chip" id="chip-step-EXTRACT" data-step="EXTRACT"><span class="step-num">4</span> EXTRACT</div>
+              <div class="loop-step-arrow">→</div>
+              <div class="loop-step-chip" id="chip-step-EVALUATE" data-step="EVALUATE"><span class="step-num">5</span> EVALUATE</div>
+              <div class="loop-step-arrow">→</div>
+              <div class="loop-step-chip" id="chip-step-SELECT" data-step="SELECT NEXT PAGE"><span class="step-num">6</span> SELECT NEXT</div>
+              <div class="loop-step-arrow">→</div>
+              <div class="loop-step-chip" id="chip-step-VERIFY" data-step="VERIFY"><span class="step-num">7</span> VERIFY</div>
+              <div class="loop-step-arrow">→</div>
+              <div class="loop-step-chip" id="chip-step-REPEAT" data-step="REPEAT"><span class="step-num">8</span> REPEAT</div>
+            </div>
+          </div>
+
+          <div class="live-workspace-grid">
+            <!-- Left: Real-time Browser Viewport -->
+            <div class="browser-viewport-card">
+              <div class="browser-chrome-bar">
+                <div class="browser-dots">
+                  <span class="browser-dot" style="background:#ff5f56;"></span>
+                  <span class="browser-dot" style="background:#ffbd2e;"></span>
+                  <span class="browser-dot" style="background:#27c93f;"></span>
+                </div>
+                <div class="browser-url-bar" id="live-browser-url-bar">
+                  <span id="live-browser-proto" style="color:var(--neon-green);">https://</span>
+                  <span id="live-browser-active-url">about:blank</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span class="status-badge-green" id="live-browser-status-pill" style="font-size:0.65rem; padding:2px 6px;"><span class="status-badge-dot"></span> Ready</span>
+                  <span id="live-browser-latency" style="font-size:0.68rem; font-family:var(--font-mono); color:var(--neon-cyan);">0ms</span>
+                </div>
+              </div>
+
+              <!-- Viewport Screencast Area -->
+              <div class="viewport-stream-area" id="live-viewport-container">
+                <img id="live-viewport-img" src="" alt="Live Viewport Preview" style="display:none;">
+                <div class="viewport-placeholder" id="viewport-placeholder">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  <span>ARACHNE Live Viewport Stream</span>
+                  <span style="font-size:0.68rem; color:var(--text-dim);">Chrome / Brave DevTools Screencast Active</span>
+                </div>
+              </div>
+
+              <!-- Evidence Sufficiency Evaluator Bar -->
+              <div class="evidence-sufficiency-card">
+                <div class="gauge-row">
+                  <span style="font-weight:700; color:#fff;">EVIDENCE SUFFICIENCY EVALUATOR</span>
+                  <span id="sufficiency-score-badge" style="font-family:var(--font-mono); font-weight:700; color:var(--neon-magenta); font-size:0.8rem;">0% (GATHERING)</span>
+                </div>
+                <div class="gauge-track">
+                  <div class="gauge-fill" id="sufficiency-gauge-fill" style="width: 0%;"></div>
+                </div>
+                <div class="sufficiency-submetrics">
+                  <span>Questions: <strong id="val-q-coverage">0%</strong></span>
+                  <span>Diversity: <strong id="val-diversity">0%</strong></span>
+                  <span>Corroboration: <strong id="val-corroboration">0%</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Live DOM & Link Candidates Panel -->
+            <div class="panel" style="display:flex; flex-direction:column; gap:8px;">
+              <div class="sub-tabs-bar" style="margin-bottom:4px;">
+                <button class="sub-tab-pill active" id="btn-tab-live-dom">DOM & Semantics</button>
+                <button class="sub-tab-pill" id="btn-tab-link-candidates">Link Decision Matrix</button>
+              </div>
+
+              <!-- Tab Pane: Live DOM & Text Preview -->
+              <div id="pane-live-dom" style="flex:1; display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:300px;">
+                <div style="font-size:0.75rem; color:#fff; font-weight:700;" id="live-dom-title">Awaiting Navigation Target...</div>
+                <div id="live-dom-headings" style="font-size:0.72rem; font-family:var(--font-mono); color:var(--neon-cyan); display:flex; flex-direction:column; gap:2px;"></div>
+                <div id="live-dom-snippet" style="background:var(--bg-surface-0); border:1px solid var(--border-subtle); border-radius:6px; padding:10px; font-size:0.74rem; color:var(--text-muted); line-height:1.45; max-height:160px; overflow-y:auto;">
+                  Target page text and extracted semantic statements will stream here in real time.
+                </div>
+              </div>
+
+              <!-- Tab Pane: Link Decision Matrix -->
+              <div id="pane-link-candidates" style="flex:1; display:none; overflow-y:auto; max-height:300px;">
+                <table class="link-candidates-table">
+                  <thead>
+                    <tr>
+                      <th>Candidate URL</th>
+                      <th>Priority</th>
+                      <th>Decision</th>
+                      <th>AI Rationale</th>
+                    </tr>
+                  </thead>
+                  <tbody id="link-candidates-tbody">
+                    <tr><td colspan="4" style="color:var(--text-dim); text-align:center; padding:16px;">No links discovered in current cycle.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -586,74 +688,7 @@
         </div>
       </section>
 
-      <!-- ======================================================== -->
-      <!-- SCREEN 5: TELEGRAM CONTROL (Remote Interface) -->
-      <!-- ======================================================== -->
-      <section class="screen-view" id="view-telegram">
-        <div class="tg-container">
-          <div class="tg-header">
-            <div class="tg-avatar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-            </div>
-            <div>
-              <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">ARACHNE</div>
-              <div style="font-size: 0.7rem; color: var(--neon-cyan);">bot • Online</div>
-            </div>
-          </div>
 
-          <div class="tg-messages-box" id="tg-messages-thread">
-            <div class="tg-bubble-user">Find latest open-source AI agents for computer control.</div>
-            <div class="tg-bubble-bot">
-              I'll investigate GitHub repos, research papers, tutorials and real-world examples. Starting task <strong>AR-0042</strong>.
-              <div class="tg-task-card">
-                <div style="display: flex; justify-content: space-between; font-weight: 700;">
-                  <span style="color: #fff;">🕷️ AR-0042 • In Progress</span>
-                  <span style="color: var(--neon-green);">Online</span>
-                </div>
-                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">Discovering sources... 12%</div>
-                <div class="tg-progress-bar-wrap">
-                  <div class="tg-progress-bar-fill"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-dim);">
-                  <span>Sources found: 34</span>
-                  <span>10:24 AM</span>
-                </div>
-                <div style="display: flex; gap: 8px; margin-top: 10px;">
-                  <button class="btn btn-secondary tg-quick-cmd" data-cmd="/status" style="flex: 1; padding: 5px;">View Progress</button>
-                  <button class="btn btn-secondary tg-quick-cmd" data-cmd="/top5" style="flex: 1; padding: 5px;">Show Findings</button>
-                </div>
-              </div>
-            </div>
-            <div class="tg-bubble-user">Show the top 5 findings so far</div>
-            <div class="tg-bubble-bot">
-              Here are the top 5 findings so far:<br><br>
-              1. <strong>AutoGPT</strong> (GitHub)<br>
-              2. <strong>OpenHands</strong> (Research Paper)<br>
-              3. <strong>MetaGPT</strong> (GitHub)<br>
-              4. <strong>Computer Use Survey</strong> (arXiv)<br>
-              5. <strong>Browser-Use</strong> (GitHub)<br><br>
-              <button class="btn btn-primary tg-quick-cmd" data-cmd="/report" style="padding: 4px 10px; font-size: 0.72rem;">Generate Report</button>
-            </div>
-          </div>
-
-          <!-- Quick Commands Row -->
-          <div style="padding: 8px 12px; background: var(--bg-surface-0); display: flex; gap: 6px; overflow-x: auto; border-top: 1px solid var(--border-subtle);">
-            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/status">/status</button>
-            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/hunt AI Agents">/hunt</button>
-            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/top5">/top5</button>
-            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/report">/report</button>
-            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/pause">/pause</button>
-            <button class="prompt-tag-btn tg-quick-cmd" data-cmd="/stop">/stop</button>
-          </div>
-
-          <div style="padding: 12px; background: var(--bg-surface-1); border-top: 1px solid var(--border-subtle); display: flex; gap: 10px;">
-            <input type="text" id="tg-interactive-input" class="global-search-input" style="flex: 1;" placeholder="Message ARACHNE...">
-            <button class="btn btn-primary" id="btn-tg-interactive-send" style="padding: 8px 14px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-          </div>
-        </div>
-      </section>
 
       <!-- ======================================================== -->
       <!-- SCREEN 6: MODEL STUDIO (Connect Local Models or API Keys) -->
@@ -851,164 +886,298 @@
       <!-- ======================================================== -->
       <!-- SCREEN 7: SETTINGS (Permissions, Crawling, Storage, Telegram) -->
       <!-- ======================================================== -->
+      <!-- ======================================================== -->
+      <!-- SCREEN 7: CENTRALIZED SYSTEM SETTINGS -->
+      <!-- ======================================================== -->
       <section class="screen-view" id="view-settings">
-        <div class="sub-tabs-bar">
-          <button class="sub-tab-pill">General</button>
-          <button class="sub-tab-pill active">Crawling</button>
-          <button class="sub-tab-pill">Permissions</button>
-          <button class="sub-tab-pill">Storage</button>
-          <button class="sub-tab-pill">Telegram</button>
-          <button class="sub-tab-pill">Reports</button>
-          <button class="sub-tab-pill">Appearance</button>
-          <button class="sub-tab-pill">Advanced</button>
+        <!-- Settings Sub-Tabs Navigation -->
+        <div class="sub-tabs-bar" id="settings-sub-tabs">
+          <button class="sub-tab-pill active" data-settings-tab="status">System Status</button>
+          <button class="sub-tab-pill" data-settings-tab="browser">Browser & Automation</button>
+          <button class="sub-tab-pill" data-settings-tab="telegram">Telegram Integration</button>
+          <button class="sub-tab-pill" data-settings-tab="models">AI Models & Inference</button>
+          <button class="sub-tab-pill" data-settings-tab="storage">Storage & Retention</button>
+          <button class="sub-tab-pill" data-settings-tab="safety">Crawler & Safety</button>
         </div>
 
-        <div class="settings-five-cols">
-          <!-- Panel 1: Crawling Settings -->
-          <div class="panel">
-            <div class="panel-title" style="margin-bottom: 12px;">🕷️ Crawling Settings</div>
-            <div style="display: flex; flex-direction: column; gap: 11px; font-size: 0.78rem;">
-              <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;"><span>Max Concurrent</span> <strong id="val-max-concurrent">20</strong></div>
-                <input type="range" id="cfg-max-concurrent" min="1" max="50" value="20">
+        <!-- SETTINGS TAB 1: SYSTEM STATUS -->
+        <div class="settings-tab-pane" id="pane-settings-status">
+          <div class="grid-3" style="margin-top: 14px; margin-bottom: 16px;">
+            <div class="panel">
+              <div class="panel-header">
+                <div class="panel-title">🖥️ Server & Core Engine</div>
+                <span class="status-badge-green"><span class="status-badge-dot"></span> Online</span>
               </div>
-              <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;"><span>Request Delay (s)</span> <strong id="val-req-delay">1.0</strong></div>
-                <input type="range" id="cfg-req-delay" min="0" max="5" step="0.5" value="1.0">
+              <div style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between;"><span>HTTP Server:</span> <strong style="color: #fff;">Port 3003 (Running)</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span>Runtime:</span> <strong style="color: var(--neon-cyan);">Node.js v24 (Native SQLite & CDP)</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span>Uptime:</span> <span id="sys-uptime" style="color: #fff; font-family: var(--font-mono);">Active</span></div>
+                <div style="display: flex; justify-content: space-between;"><span>Architecture:</span> <span style="color: var(--neon-violet);">Standalone Intelligence Engine</span></div>
               </div>
-              <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;"><span>Max Crawl Depth</span> <strong id="val-max-depth">5</strong></div>
-                <input type="range" id="cfg-max-depth" min="1" max="10" value="5">
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div class="panel-title">💾 Transactional SQLite Database</div>
+                <span class="status-badge-green"><span class="status-badge-dot"></span> WAL Mode</span>
               </div>
-              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
-                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" id="cfg-robots" checked> Respect robots.txt</label>
-                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" id="cfg-sitemaps" checked> Follow sitemaps</label>
-                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" id="cfg-subdomains"> Crawl subdomains</label>
-                <label style="display: flex; gap: 8px; align-items: center;"><input type="checkbox" id="cfg-js" checked> Enable JS parsing</label>
+              <div style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between;"><span>Database Path:</span> <span style="color: var(--neon-cyan); font-family: var(--font-mono); font-size: 0.7rem;">.arachne-vault/arachne.sqlite</span></div>
+                <div style="display: flex; justify-content: space-between;"><span>Database Size:</span> <strong id="sys-db-size" style="color: #fff;">1.32 MB</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span>Total Records:</span> <strong id="sys-db-records" style="color: var(--neon-green);">1,339 records</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span>Integrity:</span> <span style="color: var(--neon-green);">ACID Synchronous (Normal)</span></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div class="panel-title">🌐 Browser Automation (CDP)</div>
+                <span class="status-badge-green" id="sys-browser-badge"><span class="status-badge-dot"></span> Detected</span>
+              </div>
+              <div style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between;"><span>Active Browser:</span> <strong id="sys-active-browser" style="color: #fff;">Google Chrome</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span>Brave Browser:</span> <span id="sys-brave-detected" style="color: var(--neon-green);">Installed</span></div>
+                <div style="display: flex; justify-content: space-between;"><span>CDP Port:</span> <span style="color: var(--neon-cyan); font-family: var(--font-mono);">127.0.0.1:9222</span></div>
+                <div style="display: flex; justify-content: space-between;"><span>Profile Isolation:</span> <span style="color: var(--neon-violet);">Dedicated Profile (.arachne-vault)</span></div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Panel 2: Permissions & Access Control -->
-          <div class="panel">
-            <div class="panel-title" style="margin-bottom: 12px;">🛡️ Permissions & Scope</div>
-            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.78rem;">
-              <div style="font-weight: 600; color: #fff;">Crawl Scope</div>
-              <label style="display: flex; gap: 7px;"><input type="radio" name="scope" value="all" checked> Public web (respect policies)</label>
-              <label style="display: flex; gap: 7px;"><input type="radio" name="scope" value="domain"> Specified domains only</label>
-              <label style="display: flex; gap: 7px;"><input type="radio" name="scope" value="allowlist"> Strict allowlist only</label>
+        <!-- SETTINGS TAB 2: BROWSER & AUTOMATION -->
+        <div class="settings-tab-pane" id="pane-settings-browser" style="display: none;">
+          <div class="settings-layout-grid">
+            <div class="settings-section-card">
+              <div class="panel-title">🌐 Primary Research Browser Selection</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+                ARACHNE uses native Chrome and Brave automation via Chrome DevTools Protocol (CDP). No third-party scrapers or external proxies required.
+              </div>
+              <div style="display: flex; gap: 16px; margin-top: 6px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="radio" name="browser-choice" value="chrome" id="browser-radio-chrome" checked>
+                  <strong>Google Chrome</strong>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="radio" name="browser-choice" value="brave" id="browser-radio-brave">
+                  <strong>Brave Browser</strong>
+                </label>
+              </div>
 
-              <div style="margin-top: 6px; font-weight: 600; color: #fff;">Allowlist Domains</div>
-              <div style="display: flex; gap: 5px;">
-                <input type="text" id="cfg-new-domain" class="global-search-input" style="flex: 1; font-size: 0.74rem;" placeholder="e.g. huggingface.co">
-                <button class="btn btn-secondary" id="btn-add-domain" style="padding: 4px 8px; font-size: 0.72rem;">+ Add</button>
-              </div>
-              <div id="cfg-domain-tags" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
-                <span class="tag-badge purple" style="cursor: pointer;" title="Click to remove">arxiv.org ✕</span>
-                <span class="tag-badge purple" style="cursor: pointer;" title="Click to remove">github.com ✕</span>
-                <span class="tag-badge purple" style="cursor: pointer;" title="Click to remove">paperswithcode.com ✕</span>
-              </div>
-              <div style="margin-top: 4px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                  <span style="color: var(--text-dim);">Domain Rate Limit</span>
-                  <span style="color: var(--neon-cyan); font-family: var(--font-mono);">2.0 req/s</span>
-                </div>
-                <input type="range" id="cfg-domain-rate" min="0.5" max="10" step="0.5" value="2">
-              </div>
-            </div>
-          </div>
-
-          <!-- Panel 3: Storage & Data Management -->
-          <div class="panel">
-            <div class="panel-title" style="margin-bottom: 12px;">💾 Storage & Vault</div>
-            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.78rem;">
-              <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Storage Location</label>
-                <div style="display: flex; gap: 5px;">
-                  <input type="text" id="cfg-storage-path" class="global-search-input" style="flex: 1; font-size: 0.74rem;" value=".arachne-vault/data">
-                  <button class="btn btn-secondary" id="btn-browse-storage" style="padding: 4px 8px; font-size: 0.72rem;">Browse</button>
-                </div>
-              </div>
-              <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;"><span>Disk Limit</span> <strong id="val-disk-limit">500 GB</strong></div>
-                <input type="range" id="cfg-disk-limit" min="50" max="1000" step="50" value="500">
-              </div>
-              <div style="background: var(--bg-surface-2); padding: 8px; border-radius: 6px; font-size: 0.72rem;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                  <span>Vault Usage</span>
-                  <strong style="color: var(--neon-cyan);">4.2 GB / 500 GB</strong>
-                </div>
-                <div style="height: 5px; background: var(--bg-surface-3); border-radius: 3px; overflow: hidden;">
-                  <div style="width: 1%; height: 100%; background: var(--neon-magenta);"></div>
-                </div>
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 2px;">
-                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-compress" checked> Compress stored content</label>
-                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-dedup" checked> Deduplicate SHA-256</label>
-                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-autoprune" checked> Auto-prune HTML > 30d</label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Panel 4: Telegram Integration -->
-          <div class="panel">
-            <div class="panel-title" style="margin-bottom: 12px;">📱 Telegram Bridge</div>
-            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.78rem;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>Enable Telegram Control</span>
-                <label class="switch-toggle"><input type="checkbox" id="cfg-tg-enabled" checked><span class="switch-slider"></span></label>
-              </div>
-              <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Bot Token</label>
-                <div style="display: flex; gap: 5px;">
-                  <input type="password" id="cfg-tg-token" class="global-search-input" style="flex: 1; font-size: 0.74rem;" value="••••••••••••••••">
-                  <button class="btn btn-secondary" id="btn-test-tg" style="padding: 4px 8px; font-size: 0.72rem;">Test</button>
-                </div>
-              </div>
-              <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Allowed User IDs</label>
-                <input type="text" id="cfg-tg-users" class="global-search-input" style="width: 100%; font-size: 0.74rem;" value="12345678, 87654321">
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 2px;">
-                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-tg-alerts" checked> Task completion alerts</label>
-                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-tg-approvals" checked> Level 3 Approval prompts</label>
-                <label style="display: flex; gap: 8px;"><input type="checkbox" id="cfg-tg-remote-rep" checked> Remote report requests</label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Panel 5: Appearance & Theme -->
-          <div class="panel">
-            <div class="panel-title" style="margin-bottom: 12px;">🎨 Theme & System</div>
-            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 0.78rem;">
-              <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Visual Theme</label>
-                <select class="btn btn-secondary" id="cfg-theme" style="width: 100%;">
-                  <option value="void">Dark (Spider Void)</option>
-                  <option value="cyberpunk">Cyberpunk Neon</option>
-                  <option value="crimson">Obsidian Crimson</option>
+              <div style="margin-top: 10px;">
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Browser Profile Mode</label>
+                <select class="btn btn-secondary" id="select-browser-profile" style="width: 100%;">
+                  <option value="dedicated" selected>🛡️ ARACHNE Dedicated Profile (Isolated, Safe - Won't touch user data)</option>
+                  <option value="Default">User Profile: Default (Gaming)</option>
+                  <option value="Profile 1">User Profile: College (Profile 1)</option>
+                  <option value="Profile 2">User Profile: A Profile (Profile 2)</option>
+                  <option value="Profile 3">User Profile: personal (Profile 3)</option>
+                  <option value="Profile 4">User Profile: Gojo (Profile 4)</option>
+                  <option value="Profile 5">User Profile: Tsukiko (Profile 5)</option>
+                  <option value="Profile 6">User Profile: Purushottam (Profile 6)</option>
                 </select>
-              </div>
-              <div>
-                <label style="display: block; color: var(--text-dim); margin-bottom: 3px;">Accent Glow Color</label>
-                <div class="accent-color-picker" id="accent-swatches">
-                  <div class="color-swatch active" style="background: #9d4edd;" data-color="#9d4edd" title="Violet"></div>
-                  <div class="color-swatch" style="background: #f72585;" data-color="#f72585" title="Magenta"></div>
-                  <div class="color-swatch" style="background: #ff0054;" data-color="#ff0054" title="Crimson"></div>
-                  <div class="color-swatch" style="background: #4cc9f0;" data-color="#4cc9f0" title="Cyan"></div>
-                  <div class="color-swatch" style="background: #10b981;" data-color="#10b981" title="Emerald"></div>
+                <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 4px;">
+                  ℹ️ Dedicated profile uses <code>.arachne-vault/browser-profiles/</code> and protects your personal history and active logins.
                 </div>
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                <span>System Telemetry</span>
-                <label class="switch-toggle"><input type="checkbox" id="cfg-telemetry" checked><span class="switch-slider"></span></label>
+            </div>
+
+            <div class="settings-section-card">
+              <div class="panel-title">⚡ Remote Debugging Protocol (CDP)</div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Remote Debugging Port</label>
+                <input type="number" id="input-cdp-port" class="global-search-input" style="width: 100%;" value="9222">
               </div>
-              <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
-                <button class="btn btn-primary" id="btn-save-master-settings" style="width: 100%; padding: 7px;">Save All Settings</button>
-                <button class="btn btn-secondary" id="btn-reset-settings" style="width: 100%; padding: 5px; font-size: 0.74rem;">Reset Defaults</button>
+              <div style="display: flex; gap: 8px; margin-top: 4px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem;">
+                  <input type="checkbox" id="cfg-browser-headless" checked> Run in Headless Automation Mode
+                </label>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn btn-primary" id="btn-launch-browser" style="flex: 1; padding: 7px;">Launch Dedicated Browser</button>
+                <button class="btn btn-secondary" id="btn-test-cdp" style="flex: 1; padding: 7px;">Test CDP Connection</button>
+              </div>
+              <button class="btn btn-secondary" id="btn-close-browser-tabs" style="width: 100%; padding: 6px; font-size: 0.74rem;">Close ARACHNE Task Tabs</button>
+              <div id="browser-test-feedback" style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--neon-cyan);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS TAB 3: TELEGRAM INTEGRATION -->
+        <div class="settings-tab-pane" id="pane-settings-telegram" style="display: none;">
+          <div class="settings-layout-grid">
+            <div class="settings-section-card">
+              <div class="panel-title">📱 Telegram Bot Gateway</div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Bot Token</label>
+                <div class="token-mask-wrap">
+                  <input type="password" id="cfg-tg-token" class="global-search-input" style="width: 100%;" value="8732300173:AAGj-fOkujR5PktCNVt3E2OQkr3vyDy71Wo">
+                  <button type="button" class="btn-toggle-reveal" id="btn-toggle-token-reveal" title="Show/Hide Token">👁️</button>
+                </div>
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Operator Numeric Chat ID</label>
+                <input type="text" id="cfg-tg-chat-id" class="global-search-input" style="width: 100%;" placeholder="e.g. 123456789 (numeric only)">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Authorized Numeric User IDs (Fail-Closed)</label>
+                <input type="text" id="cfg-tg-users" class="global-search-input" style="width: 100%;" value="123456789">
+                <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 3px;">
+                  ⚠️ Security Policy: String usernames (@name) are rejected. Strict numeric Telegram user IDs required.
+                </div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <span style="font-size: 0.78rem;">Background Long-Polling</span>
+                <button class="btn btn-secondary" id="btn-toggle-tg-poll" style="padding: 4px 10px; font-size: 0.75rem;">Start Polling</button>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 6px;">
+                <button class="btn btn-primary" id="btn-test-tg" style="flex: 1; padding: 7px;">Test Telegram Connection</button>
+                <button class="btn btn-secondary" id="btn-send-tg-test" style="flex: 1; padding: 7px;">Send Ping Message</button>
+              </div>
+              <div id="tg-test-feedback" style="font-size: 0.72rem; font-family: var(--font-mono); color: var(--neon-green);"></div>
+            </div>
+
+            <div class="settings-section-card">
+              <div class="panel-title">📜 Recent Telegram Gateway Events</div>
+              <div style="max-height: 250px; overflow-y: auto;">
+                <table class="link-candidates-table" id="tg-events-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Sender</th>
+                      <th>Command / Instruction</th>
+                      <th>Response</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tg-events-tbody">
+                    <tr><td colspan="4" style="color: var(--text-dim); text-align: center; padding: 12px;">No Telegram events logged yet.</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- SETTINGS TAB 4: AI MODELS & INFERENCE -->
+        <div class="settings-tab-pane" id="pane-settings-models" style="display: none;">
+          <div class="settings-layout-grid">
+            <div class="settings-section-card">
+              <div class="panel-title">🧠 Local Qwen & LLM Endpoints</div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Local Ollama Endpoint</label>
+                <input type="text" id="cfg-ollama-endpoint" class="global-search-input" style="width: 100%;" value="http://localhost:11434">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Local Model Name</label>
+                <input type="text" id="cfg-ollama-model" class="global-search-input" style="width: 100%;" value="qwen2.5:latest">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">OpenAI API Key (Optional Fallback)</label>
+                <input type="password" id="cfg-openai-key" class="global-search-input" style="width: 100%;" placeholder="sk-...">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 3px;">Anthropic API Key (Optional Fallback)</label>
+                <input type="password" id="cfg-anthropic-key" class="global-search-input" style="width: 100%;" placeholder="sk-ant-...">
+              </div>
+            </div>
+
+            <div class="settings-section-card">
+              <div class="panel-title">⏱️ Real Latency Testing</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+                Every test executes an actual HTTP request to the configured model endpoint. Latency is measured directly from the TCP roundtrip (zero simulated or random values).
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn btn-primary" id="btn-test-ollama-real" style="flex: 1; padding: 7px;">Test Local Qwen Latency</button>
+                <button class="btn btn-secondary" id="btn-test-openai-real" style="flex: 1; padding: 7px;">Test OpenAI Latency</button>
+              </div>
+              <div id="model-real-test-feedback" style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--neon-cyan); background: var(--bg-surface-0); padding: 10px; border-radius: 6px; min-height: 60px;">
+                Click a test button above to execute a real latency ping.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS TAB 5: STORAGE & RETENTION -->
+        <div class="settings-tab-pane" id="pane-settings-storage" style="display: none;">
+          <div class="settings-layout-grid">
+            <div class="settings-section-card">
+              <div class="panel-title">💾 Knowledge Vault Storage Breakdown</div>
+              <div id="storage-table-breakdown" style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 6px;">
+                <!-- Populated dynamically from storage metrics -->
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button class="btn btn-secondary" id="btn-refresh-storage" style="flex: 1; padding: 6px;">Refresh Metrics</button>
+                <button class="btn btn-secondary" id="btn-export-sqlite" style="flex: 1; padding: 6px;">Export SQLite DB</button>
+              </div>
+            </div>
+
+            <div class="settings-section-card">
+              <div class="panel-title">🧹 Content Cache & Checkpoints</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.5;">
+                Raw scraped document text is stored in <code>.arachne-vault/content/</code> and deduplicated by SHA-256 hash. Checkpoints store phase state for crash recovery.
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 0.78rem;">
+                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> WAL-mode enabled for crash resistance</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> SHA-256 Content Deduplication</label>
+                <label style="display: flex; gap: 8px;"><input type="checkbox" checked> Auto-recover interrupted tasks on reboot</label>
+              </div>
+              <button class="btn btn-danger" id="btn-clear-cache" style="margin-top: 12px; padding: 6px; font-size: 0.74rem;">Prune Old Checkpoints</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS TAB 6: CRAWLER & SAFETY -->
+        <div class="settings-tab-pane" id="pane-settings-safety" style="display: none;">
+          <div class="settings-layout-grid">
+            <div class="settings-section-card">
+              <div class="panel-title">🛡️ SSRF Defense & Security Controls</div>
+              <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.78rem;">
+                <label style="display: flex; gap: 8px; align-items: center;">
+                  <input type="checkbox" id="cfg-ssrf-block" checked disabled>
+                  <strong>Strict SSRF Protection Enabled (Hardcoded)</strong>
+                </label>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin-left: 24px;">
+                  Blocks loopback (127.0.0.0/8), link-local/cloud metadata (169.254.169.254), private ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16), IPv6 loopback (::1).
+                </div>
+                <label style="display: flex; gap: 8px; align-items: center;">
+                  <input type="checkbox" id="cfg-redirect-guard" checked disabled>
+                  <strong>Hop-by-hop Redirect Revalidation (Max 5 hops)</strong>
+                </label>
+                <label style="display: flex; gap: 8px; align-items: center;">
+                  <input type="checkbox" id="cfg-robots" checked>
+                  <span>Respect robots.txt</span>
+                </label>
+                <div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 3px;"><span>Max Response Size Cap</span> <strong style="color: var(--neon-cyan);">10 MB</strong></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-section-card">
+              <div class="panel-title">🕷️ Scope & Domain Governance</div>
+              <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.78rem;">
+                <div style="font-weight: 600; color: #fff;">Crawl Scope</div>
+                <label style="display: flex; gap: 7px;"><input type="radio" name="scope" value="all" checked> Public web (respect policies)</label>
+                <label style="display: flex; gap: 7px;"><input type="radio" name="scope" value="allowlist"> Strict allowlist only</label>
+
+                <div style="margin-top: 6px; font-weight: 600; color: #fff;">Allowlist Domains</div>
+                <div style="display: flex; gap: 5px;">
+                  <input type="text" id="cfg-new-domain" class="global-search-input" style="flex: 1; font-size: 0.74rem;" placeholder="e.g. huggingface.co">
+                  <button class="btn btn-secondary" id="btn-add-domain" style="padding: 4px 8px; font-size: 0.72rem;">+ Add</button>
+                </div>
+                <div id="cfg-domain-tags" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
+                  <span class="tag-badge purple" style="cursor: pointer;">arxiv.org ✕</span>
+                  <span class="tag-badge purple" style="cursor: pointer;">github.com ✕</span>
+                  <span class="tag-badge purple" style="cursor: pointer;">paperswithcode.com ✕</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Save Bar -->
+        <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button class="btn btn-secondary" id="btn-reset-settings" style="padding: 7px 16px;">Reset Defaults</button>
+          <button class="btn btn-primary" id="btn-save-master-settings" style="padding: 7px 22px;">Save Settings</button>
         </div>
       </section>
 
