@@ -21,8 +21,23 @@ export class ModelRouter {
         capabilities: ['Test', 'Code', 'Tool Calling', 'Structured Output', 'High-Speed LPU']
       },
       {
+        id: 'openrouter-nemotron-omni',
+        name: 'NVIDIA Nemotron 3 Nano Omni Reasoning (Free)',
+        provider: 'OpenRouter Cloud',
+        endpoint: 'https://openrouter.ai/api/v1',
+        model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+        role: 'Deep Reasoning Specialist',
+        rolesList: ['Deep Reasoning', 'Long Context Synthesis', 'Complex Extraction'],
+        context: '256K',
+        status: 'Online',
+        latencyMs: 22379,
+        temperature: 0.3,
+        maxTokens: 4096,
+        capabilities: ['Test', 'Code', 'Tool Calling', 'Structured Output', 'High Context']
+      },
+      {
         id: 'openrouter-free',
-        name: 'OpenRouter (Free Tier Meta)',
+        name: 'OpenRouter (Auto Free Route)',
         provider: 'OpenRouter Cloud',
         endpoint: 'https://openrouter.ai/api/v1',
         model: 'openrouter/free',

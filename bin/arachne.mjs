@@ -1078,33 +1078,211 @@ async function cmdLinks(targetUrl) {
   console.log();
 }
 
-// 15. Help Command
+// 15. Hunts / History / Tasks Command
+async function cmdHunts(options = {}) {
+  const res = await api('/api/investigations');
+  const hunts = res.data?.data || res.data || [];
+
+  if (options.json) {
+    console.log(JSON.stringify(hunts, null, 2));
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: AUTONOMOUS RESEARCH HUNTS (${hunts.length} recorded)${C.reset}\n`);
+  if (hunts.length === 0) {
+    console.log(`${C.gray}No research hunts recorded in vault yet. Run: /hunt "<topic>"${C.reset}\n`);
+    return;
+  }
+
+  const rows = hunts.slice(0, 15).map((h, i) => [
+    `#${i + 1}`,
+    h.id ? h.id.slice(0, 14) : 'N/A',
+    h.objective ? (h.objective.length > 36 ? h.objective.slice(0, 33) + '...' : h.objective) : 'Untitled',
+    (h.status || 'IDLE').toUpperCase(),
+    `${h.metrics?.durationSeconds || 0}s`,
+    `${h.metrics?.pagesCrawled || 0}`,
+    `${h.metrics?.entitiesExtracted || 0}`
+  ]);
+
+  drawTable(['IDX', 'TASK ID', 'RESEARCH OBJECTIVE', 'STATUS', 'TIME', 'PAGES', 'ENTITIES'], rows, { color: C.darkGray });
+  console.log();
+}
+
+// 16. Results Command
+async function cmdResults(taskId, options = {}) {
+  const currRes = await api('/api/investigation/current');
+  const inv = currRes.data?.data;
+
+  if (options.json) {
+    console.log(JSON.stringify(inv?.recentFindings || [], null, 2));
+    return;
+  }
+
+  const findings = inv?.recentFindings || [];
+  console.log(`\n${C.crimson}:: RESEARCH DISCOVERIES & EXTRACTED EVIDENCE (${findings.length} findings)${C.reset}\n`);
+  if (findings.length === 0) {
+    console.log(`${C.gray}No discrete findings recorded in current session yet.${C.reset}\n`);
+    return;
+  }
+
+  const rows = findings.slice(0, 15).map((f, i) => [
+    `#${i + 1}`,
+    f.title ? (f.title.length > 35 ? f.title.slice(0, 32) + '...' : f.title) : 'Untitled',
+    f.type || 'Web',
+    `${Math.round((f.confidenceScore || 0.85) * 100)}%`,
+    f.url ? (f.url.length > 40 ? f.url.slice(0, 37) + '...' : f.url) : 'N/A'
+  ]);
+
+  drawTable(['IDX', 'DISCOVERY TITLE', 'TYPE', 'CONF', 'SOURCE URL'], rows, { color: C.darkGray });
+  console.log();
+}
+
+// 17. Knowledge Graph Command
+async function cmdGraph(options = {}) {
+  const res = await api('/api/graph');
+  const graph = res.data?.data || res.data || { nodes: [], edges: [] };
+
+  if (options.json) {
+    console.log(JSON.stringify(graph, null, 2));
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: KNOWLEDGE GRAPH TOPOLOGY & ENTITY MAPPINGS${C.reset}`);
+  console.log(`${C.gray}Total Graph Nodes: ${C.white}${graph.nodes?.length || 0}${C.gray} | Total Connections (Edges): ${C.white}${graph.edges?.length || 0}${C.reset}\n`);
+
+  const typeCounts = {};
+  for (const n of (graph.nodes || [])) {
+    const t = n.type || 'Other';
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  }
+
+  const typeRows = Object.entries(typeCounts).map(([type, count]) => [
+    type,
+    String(count)
+  ]);
+  drawTable(['ENTITY CLASSIFICATION', 'NODE COUNT'], typeRows, { color: C.darkGray });
+
+  if (graph.nodes && graph.nodes.length > 0) {
+    console.log(`\n${C.bold}${C.white}TOP IDENTIFIED ENTITIES:${C.reset}`);
+    const topNodes = graph.nodes.slice(0, 10).map((n, i) => [
+      `#${i + 1}`,
+      n.label || n.title || n.id,
+      n.type || 'Entity',
+      n.url ? (n.url.length > 45 ? n.url.slice(0, 42) + '...' : n.url) : 'Internal'
+    ]);
+    drawTable(['IDX', 'ENTITY NAME', 'CLASS', 'ORIGIN URL'], topNodes, { color: C.darkGray });
+  }
+  console.log();
+}
+
+// 18. Vault Storage Command
+async function cmdVault(options = {}) {
+  const res = await api('/api/storage/metrics');
+  const metrics = res.data?.data || res.data || {};
+
+  if (options.json) {
+    console.log(JSON.stringify(metrics, null, 2));
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: SQLITE WAL KNOWLEDGE VAULT AUDIT${C.reset}\n`);
+  console.log(`  ${C.gray}Vault Directory:${C.reset}  ${C.white}${metrics.vaultPath || 'N/A'}${C.reset}`);
+  console.log(`  ${C.gray}Database File:${C.reset}    ${C.white}${metrics.sqlitePath || 'N/A'}${C.reset}`);
+  console.log(`  ${C.gray}Storage Footprint:${C.reset}${C.white} ${metrics.totalMb || '0'} MB (${metrics.totalBytes || 0} bytes)${C.reset}`);
+  console.log(`  ${C.gray}Journaling Mode:${C.reset}  ${C.white}Write-Ahead Logging (WAL)${C.reset}`);
+  console.log(`  ${C.gray}Total Records:${C.reset}    ${C.white}${metrics.totalRecords || 0}${C.reset}\n`);
+
+  if (metrics.counts) {
+    const tableRows = Object.entries(metrics.counts).map(([table, count]) => [
+      table,
+      String(count)
+    ]);
+    drawTable(['VAULT TABLE', 'RECORD COUNT'], tableRows, { color: C.darkGray });
+  }
+  console.log();
+}
+
+// 19. Settings Command
+async function cmdSettings(options = {}) {
+  const res = await api('/api/settings');
+  const settings = res.data?.data || res.data || {};
+
+  if (options.json) {
+    console.log(JSON.stringify(settings, null, 2));
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: SYSTEM CONFIGURATION & SECURITY GATES${C.reset}\n`);
+  console.log(`  ${C.gray}Selected Browser:${C.reset}       ${C.white}${settings.selectedBrowser || 'chrome'}${C.reset}`);
+  console.log(`  ${C.gray}Browser Profile Mode:${C.reset}   ${C.white}${settings.browserProfileMode || 'dedicated'}${C.reset}`);
+  console.log(`  ${C.gray}CDP Debugging Port:${C.reset}     ${C.white}${settings.remoteDebuggingPort || 9222}${C.reset}`);
+  console.log(`  ${C.gray}OpenRouter Key:${C.reset}         ${C.white}${settings.openrouterApiKey ? `${settings.openrouterApiKey.slice(0, 10)}••••••••` : 'Not configured'}${C.reset}`);
+  console.log(`  ${C.gray}Groq Cloud Key:${C.reset}         ${C.white}${settings.groqApiKey ? `${settings.groqApiKey.slice(0, 8)}••••••••` : 'Not configured'}${C.reset}`);
+  console.log(`  ${C.gray}Telegram Bot Token:${C.reset}     ${C.white}${settings.telegramBotToken ? `${settings.telegramBotToken.slice(0, 6)}••••••••` : 'Not configured'}${C.reset}`);
+  console.log(`  ${C.gray}Allowed Telegram Users:${C.reset} ${C.white}${(settings.allowedTelegramUserIds || []).join(', ') || '123456789 (Fail-Closed)'}${C.reset}`);
+  console.log(`  ${C.gray}Ignored Items Policy:${C.reset}   ${C.white}${settings.telegramIgnoredItemsPolicy || 'important'}${C.reset}\n`);
+}
+
+// 20. Notifications Command
+async function cmdNotifications(options = {}) {
+  const res = await api('/api/telegram/logs');
+  const logs = res.data?.data || res.data || [];
+
+  if (options.json) {
+    console.log(JSON.stringify(logs, null, 2));
+    return;
+  }
+
+  console.log(`\n${C.crimson}:: TELEGRAM NOTIFICATION AUDIT TRAIL (${logs.length} messages)${C.reset}\n`);
+  if (logs.length === 0) {
+    console.log(`${C.gray}No notifications logged yet.${C.reset}\n`);
+    return;
+  }
+
+  const rows = logs.slice(0, 15).map((l, i) => [
+    `#${i + 1}`,
+    l.direction === 'inbound' ? 'IN' : 'OUT',
+    l.sender || 'Operator',
+    l.command ? (l.command.length > 28 ? l.command.slice(0, 25) + '...' : l.command) : 'Notification',
+    l.response ? (l.response.length > 32 ? l.response.slice(0, 29) + '...' : l.response) : 'Delivered',
+    l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : 'N/A'
+  ]);
+
+  drawTable(['IDX', 'DIR', 'SENDER', 'QUERY / INTENT', 'RESPONSE SUMMARY', 'TIME'], rows, { color: C.darkGray });
+  console.log();
+}
+
+// 21. Help Command
 function cmdHelp() {
   console.log(`
-${C.bold}${C.white}FAST SHORTCUTS (EASY & MEMORABLE):${C.reset}
-  ${C.crimson}run "<objective>"${C.reset}       Launch autonomous research mission immediately (alias: go, i)
-  ${C.crimson}crawl <url>${C.reset}             Scrape web page & extract clean markdown (alias: get, c)
-  ${C.crimson}pdf [destination]${C.reset}        Export latest dossier as PDF document
-  ${C.crimson}excel [destination]${C.reset}      Export latest dossier as Excel workbook (xlsx)
-  ${C.crimson}txt [destination]${C.reset}        Export latest dossier as clean plain text
-  ${C.crimson}docx [destination]${C.reset}       Export latest dossier as Word document
-  ${C.crimson}search "<query>"${C.reset}          Search local indexed knowledge vault (alias: q, find)
-  ${C.crimson}status${C.reset}                    Audit subsystem health, database size, and counts
-  ${C.crimson}tg [test|ignored|send]${C.reset}   Telegram bot remote control & audit (alias: telegram)
+${C.bold}${C.white}INTERACTIVE SLASH COMMANDS:${C.reset}
+  ${C.crimson}/hunt <topic>${C.reset}          Launch autonomous research mission (alias: /run, /investigate)
+  ${C.crimson}/hunts${C.reset}                 List research missions with duration and counts (alias: /tasks, /history)
+  ${C.crimson}/results [id]${C.reset}          Display findings, claims, and citations from latest task
+  ${C.crimson}/status${C.reset}                Audit subsystem health, database size, and counts
+  ${C.crimson}/report [fmt] [id]${C.reset}     Generate or view intelligence report (pdf, xlsx, docx, txt, md)
+  ${C.crimson}/graph [id]${C.reset}            Display knowledge graph topology, nodes, and relationships
+  ${C.crimson}/model${C.reset}                 Test and display AI model matrix with live TCP roundtrips
+  ${C.crimson}/settings${C.reset}              Inspect system settings, ports, and allowed Telegram IDs
+  ${C.crimson}/vault${C.reset}                 Audit SQLite WAL knowledge vault, size, and table records
+  ${C.crimson}/telegram${C.reset}              Telegram bot status, test connection, and polling audit
+  ${C.crimson}/notifications${C.reset}         View Telegram notification audit trail
+  ${C.crimson}/approvals${C.reset}             Inspect pending human-in-the-loop intervention queue
+  ${C.crimson}/pause | /resume${C.reset}        Pause or resume ongoing research crawl
+  ${C.crimson}/cancel | /stop${C.reset}        Abort active research task
+  ${C.crimson}/exit | /quit${C.reset}          Terminate CLI session
 
-${C.bold}${C.white}FULL DIRECTORY & CONTROLS:${C.reset}
-  ${C.crimson}browser${C.reset}                   Inspect Chrome/Brave CDP connection & dedicated profile
-  ${C.crimson}tabs${C.reset}                      List active ARACHNE automation task tabs
-  ${C.crimson}findings${C.reset}                  List extracted entities, claims, and trust scores
-  ${C.crimson}reports [list|view <id>]${C.reset}  List or preview synthesized intelligence dossiers
-  ${C.crimson}export <fmt> [dest]${C.reset}        Export dossier (pdf, xlsx, docx, txt, md, json, html)
-  ${C.crimson}models${C.reset}                    Ping real TCP latency to Groq, OpenRouter, and Ollama
-  ${C.crimson}links <url>${C.reset}              Extract and classify hyperlinks from web page (alias: l)
-  ${C.crimson}pause | resume | stop${C.reset}    Control active investigation execution state
-  ${C.crimson}retry${C.reset}                     Restart active investigation from initial goal
-  ${C.crimson}approvals${C.reset}                 Inspect pending human-in-the-loop intervention queue
-  ${C.crimson}help${C.reset}                      Display this reference guide
-  ${C.crimson}exit | quit${C.reset}               Terminate CLI session
+${C.bold}${C.white}NATURAL-LANGUAGE DISPATCH (NO SLASH REQUIRED):${C.reset}
+  Type any research question directly at the prompt:
+  ${C.gray}arachne #${C.reset} ${C.white}Find actively maintained computer vision repos on github${C.reset}
+  ${C.gray}arachne #${C.reset} ${C.white}Investigate synthetic data generation pipelines in LLMs${C.reset}
+
+${C.bold}${C.white}INSTANT DOCUMENT EXPORTS:${C.reset}
+  ${C.crimson}pdf [dest]${C.reset}             Export latest dossier as validated PDF
+  ${C.crimson}excel [dest]${C.reset}           Export latest dossier as validated Excel workbook (xlsx)
+  ${C.crimson}docx [dest]${C.reset}            Export latest dossier as validated Word document
+  ${C.crimson}txt [dest]${C.reset}             Export latest dossier as clean plain text
+  ${C.crimson}md [dest]${C.reset}              Export latest dossier as Markdown
 `);
 }
 
@@ -1133,7 +1311,8 @@ async function startRepl() {
     }
 
     const parts = input.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
-    const cmd = (parts[0] || '').toLowerCase();
+    const rawCmd = (parts[0] || '').toLowerCase();
+    const cmd = rawCmd.startsWith('/') ? rawCmd.slice(1) : rawCmd;
     const args = parts.slice(1).map(s => s.replace(/^"|"$/g, ''));
 
     switch (cmd) {
@@ -1157,12 +1336,40 @@ async function startRepl() {
         await cmdStatus();
         break;
 
+      case 'hunt':
       case 'run':
       case 'go':
       case 'investigate':
       case 'research':
       case 'i':
         await cmdInvestigate(args.join(' '));
+        break;
+
+      case 'hunts':
+      case 'tasks':
+      case 'history':
+        await cmdHunts();
+        break;
+
+      case 'results':
+        await cmdResults(args[0]);
+        break;
+
+      case 'graph':
+        await cmdGraph();
+        break;
+
+      case 'vault':
+        await cmdVault();
+        break;
+
+      case 'settings':
+      case 'config':
+        await cmdSettings();
+        break;
+
+      case 'notifications':
+        await cmdNotifications();
         break;
 
       case 'pdf':
@@ -1242,23 +1449,17 @@ async function startRepl() {
       case 'pause':
       case 'resume':
       case 'retry':
-      case 'stop':
         await cmdLifecycle(cmd);
+        break;
+
+      case 'stop':
+      case 'cancel':
+        await cmdLifecycle('stop');
         break;
 
       case 'approvals':
       case 'approval':
         await cmdApprovals();
-        break;
-
-      case 'crawl':
-      case 'scrape':
-        await cmdCrawl(args[0]);
-        break;
-
-      case 'links':
-      case 'map':
-        await cmdLinks(args[0]);
         break;
 
       case 'hud':
@@ -1271,7 +1472,13 @@ async function startRepl() {
         break;
 
       default:
-        console.log(`  ${C.crimson}[ERR] Unknown command: "${cmd}". Type 'help' for directory.${C.reset}`);
+        if (input.length > 5 && !input.startsWith('/')) {
+          console.log(`\n${C.crimson}► AUTONOMOUS RESEARCH INTENT DETECTED:${C.reset} ${C.white}"${input}"${C.reset}`);
+          console.log(`${C.gray}Dispatching research hunt directly...${C.reset}\n`);
+          await cmdInvestigate(input);
+        } else {
+          console.log(`  ${C.crimson}[ERR] Unknown command: "${rawCmd}". Type '/help' for directory.${C.reset}`);
+        }
     }
 
     rl.prompt();
@@ -1296,7 +1503,8 @@ async function main() {
 
   const isJson = args.includes('--json');
   const cleanArgs = args.filter(a => a !== '--json');
-  const cmd = (cleanArgs[0] || '').toLowerCase();
+  const rawCmd = (cleanArgs[0] || '').toLowerCase();
+  const cmd = rawCmd.startsWith('/') ? rawCmd.slice(1) : rawCmd;
   const subArgs = cleanArgs.slice(1);
 
   if (cmd === '--version' || cmd === '-v' || cmd === 'version') {
@@ -1324,12 +1532,40 @@ async function main() {
       await cmdStatus({ json: isJson });
       break;
 
+    case 'hunt':
     case 'run':
     case 'go':
     case 'investigate':
     case 'research':
     case 'i':
       await cmdInvestigate(subArgs.join(' '), { json: isJson });
+      break;
+
+    case 'hunts':
+    case 'tasks':
+    case 'history':
+      await cmdHunts({ json: isJson });
+      break;
+
+    case 'results':
+      await cmdResults(subArgs[0], { json: isJson });
+      break;
+
+    case 'graph':
+      await cmdGraph({ json: isJson });
+      break;
+
+    case 'vault':
+      await cmdVault({ json: isJson });
+      break;
+
+    case 'settings':
+    case 'config':
+      await cmdSettings({ json: isJson });
+      break;
+
+    case 'notifications':
+      await cmdNotifications({ json: isJson });
       break;
 
     case 'pdf':
@@ -1410,28 +1646,29 @@ async function main() {
     case 'pause':
     case 'resume':
     case 'retry':
-    case 'stop':
       await cmdLifecycle(cmd);
+      break;
+
+    case 'stop':
+    case 'cancel':
+      await cmdLifecycle('stop');
       break;
 
     case 'approvals':
       await cmdApprovals();
       break;
 
-    case 'crawl':
-    case 'scrape':
-      await cmdCrawl(subArgs[0]);
-      break;
-
-    case 'links':
-    case 'map':
-      await cmdLinks(subArgs[0]);
-      break;
-
     default:
-      console.log(`${C.crimson}[ERR] Unknown command: ${cmd}${C.reset}`);
-      cmdHelp();
-      process.exit(1);
+      if (cleanArgs.length > 0 && !cleanArgs[0].startsWith('-') && !cleanArgs[0].startsWith('/')) {
+        const fullObjective = cleanArgs.join(' ');
+        console.log(`\n${C.crimson}► AUTONOMOUS RESEARCH INTENT DETECTED:${C.reset} ${C.white}"${fullObjective}"${C.reset}`);
+        console.log(`${C.gray}Dispatching research hunt directly...${C.reset}\n`);
+        await cmdInvestigate(fullObjective, { json: isJson });
+      } else {
+        console.log(`${C.crimson}[ERR] Unknown command: ${rawCmd}${C.reset}`);
+        cmdHelp();
+        process.exit(1);
+      }
   }
 }
 

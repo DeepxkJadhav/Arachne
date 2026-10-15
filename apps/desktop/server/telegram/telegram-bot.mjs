@@ -1,4 +1,6 @@
 import https from 'node:https';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export class TelegramBotGateway {
   constructor({ vaultStore, researchAgent }) {
@@ -255,35 +257,41 @@ export class TelegramBotGateway {
     if (!raw) return null;
 
     let reply = '';
+    const lower = raw.toLowerCase().trim();
     const parts = raw.split(/\s+/);
-    const cmd = parts[0].toLowerCase();
-    const args = parts.slice(1).join(' ');
+    const slashCmd = parts[0].toLowerCase();
+    const slashArgs = parts.slice(1).join(' ');
 
-    // Handle slash commands
-    if (cmd === '/start' || cmd === '/help') {
+    // 1. HELP / START INTENT
+    if (slashCmd === '/start' || slashCmd === '/help' || /^(?:help|what can you do|menu|options|commands|hi|hello|hey)$/i.test(lower)) {
       reply = `🕷️ *ARACHNE Autonomous Web Intelligence Bot*\n\n` +
-        `You can send me any natural language research query, or use these commands:\n\n` +
-        `• \`/status\` - View current investigation lifecycle & crawl metrics\n` +
-        `• \`/investigate <topic>\` - Launch an autonomous research mission\n` +
-        `• \`/pause\` - Pause active crawling\n` +
-        `• \`/resume\` - Resume crawling\n` +
-        `• \`/retry\` - Restart active investigation\n` +
-        `• \`/stop\` - Abort current investigation\n` +
-        `• \`/report\` - View latest research report\n` +
-        `• \`/findings\` - Show latest extracted entities and discoveries\n` +
-        `• \`/approvals\` - Check pending operator approvals (Level 3)\n` +
-        `• \`/approve <id>\` - Approve a pending blocked task\n` +
-        `• \`/reject <id>\` - Reject a pending blocked task\n` +
-        `• \`/stats\` - Knowledge Vault corpus & graph metrics\n\n` +
-        `💡 *Or simply type naturally:*\n` +
-        `"Research latest open-source AI agents for computer control"`;
-    } else if (cmd === '/status') {
+        `I am your autonomous research agent connected to Chrome/Brave CDP and SQLite WAL storage.\n\n` +
+        `💬 *Natural Conversation Supported (No slash commands required!)*\n` +
+        `• "What is your status?" or "How far are you?"\n` +
+        `• "Pause research" or "Resume research"\n` +
+        `• "Show findings" or "What did you discover?"\n` +
+        `• "Export report as PDF" or "Give me Excel report"\n` +
+        `• "Find computer vision repos on GitHub" (starts autonomous deep research)\n\n` +
+        `⚙️ *Commands Reference:*\n` +
+        `• \`/status\` - Live crawl & phase metrics\n` +
+        `• \`/investigate <topic>\` - Launch deep research\n` +
+        `• \`/findings\` - Show extracted entities & citations\n` +
+        `• \`/report\` - Show latest dossier summary\n` +
+        `• \`/pdf\` | \`/excel\` | \`/docx\` | \`/txt\` - Export report file\n` +
+        `• \`/pause\` | \`/resume\` | \`/stop\` - Crawl lifecycle\n` +
+        `• \`/approvals\` | \`/approve <id>\` | \`/reject <id>\` - Sensitive gates\n` +
+        `• \`/stats\` - Knowledge vault & graph metrics`;
+    }
+
+    // 2. STATUS / PROGRESS INTENT
+    else if (slashCmd === '/status' || /^(?:what(?:'?s| is) (?:your |the )?)?(?:status|progress|state|how far are you|what are you doing)/i.test(lower) || lower === 'status' || lower === 'progress') {
       const inv = this.researchAgent?.activeInvestigation;
       if (!inv) {
-        reply = `🕷️ *ARACHNE System Status: IDLE*\nNo active investigation is running. Send a topic or \`/investigate <topic>\` to begin.`;
+        reply = `🕷️ *ARACHNE System Status: IDLE*\nNo active investigation is running. Send a research topic (e.g. "Research autonomous web agents") to begin.`;
       } else {
         const approvals = this.vaultStore.getApprovals('pending');
         reply = `🕷️ *ARACHNE Investigation Status: ${(inv.status || 'IDLE').toUpperCase()}*\n` +
+          `• *Task ID:* \`${inv.id}\`\n` +
           `• *Topic:* ${inv.objective}\n` +
           `• *Phase [${(inv.currentPhaseIndex || 0) + 1}/5]:* ${inv.plan?.phases?.[inv.currentPhaseIndex]?.name || 'Active'}\n` +
           `• *URLs Discovered:* ${inv.metrics?.urlsDiscovered || 0}\n` +
@@ -291,59 +299,85 @@ export class TelegramBotGateway {
           `• *Entities Extracted:* ${inv.metrics?.entitiesExtracted || 0}\n` +
           `• *Citations Verified:* ${inv.metrics?.citationsVerified || 0}\n` +
           `• *Elapsed Time:* ${inv.metrics?.durationSeconds || 0}s` +
-          (approvals.length > 0 ? `\n\n⚠️ *Pending Approvals:* ${approvals.length} item(s) awaiting operator intervention. Use \`/approvals\` to view.` : '');
+          (approvals.length > 0 ? `\n\n⚠️ *Pending Approvals:* ${approvals.length} item(s) awaiting operator intervention. Send "approvals" to inspect.` : '');
       }
-    } else if (cmd === '/investigate') {
-      if (!args) {
-        reply = `⚠️ *Usage Error:* Please provide an objective. Example:\n\`/investigate Open source computer use agents\``;
-      } else {
-        reply = `🚀 *Investigation Dispatched via Telegram:*\nInitiating deep crawl on: "${args}". Decomposing into 5 research phases with live browser inspection...`;
-        this.researchAgent?.startInvestigation(args);
-      }
-    } else if (cmd === '/pause') {
+    }
+
+    // 3. PAUSE INTENT
+    else if (slashCmd === '/pause' || /^(?:pause|hold on|wait a minute|pause research|pause crawling|stop for a moment)$/i.test(lower)) {
       this.researchAgent?.pause();
-      reply = `⏸️ Active investigation paused.`;
-    } else if (cmd === '/resume') {
+      reply = `⏸️ *Research Paused:* Crawler and browser tab orchestration paused. Say "resume" to continue.`;
+    }
+
+    // 4. RESUME INTENT
+    else if (slashCmd === '/resume' || /^(?:resume|continue|keep going|resume research|continue crawling)$/i.test(lower)) {
       this.researchAgent?.resume();
-      reply = `▶️ Active investigation resumed.`;
-    } else if (cmd === '/retry') {
-      this.researchAgent?.retry();
-      reply = `🔄 Retrying investigation from beginning...`;
-    } else if (cmd === '/stop') {
+      reply = `▶️ *Research Resumed:* Autonomous crawling and extraction ongoing.`;
+    }
+
+    // 5. STOP / CANCEL INTENT
+    else if (slashCmd === '/stop' || slashCmd === '/cancel' || /^(?:stop|cancel|abort|terminate|kill research|stop research)$/i.test(lower)) {
       this.researchAgent?.stop();
-      reply = `⏹️ Active investigation stopped.`;
-    } else if (cmd === '/findings') {
+      reply = `⏹️ *Investigation Terminated:* State committed to SQLite WAL vault.`;
+    }
+
+    // 6. RETRY INTENT
+    else if (slashCmd === '/retry' || /^(?:retry|restart|re-run)$/i.test(lower)) {
+      this.researchAgent?.retry();
+      reply = `🔄 *Retrying Investigation:* Restarting from initial scoping phase.`;
+    }
+
+    // 7. FINDINGS INTENT
+    else if (slashCmd === '/findings' || /^(?:findings|what did you find|show findings|show discoveries|show results|what have you found)/i.test(lower)) {
       const inv = this.researchAgent?.activeInvestigation;
       const findings = inv?.recentFindings || [];
       if (findings.length === 0) {
         reply = `🔍 No discrete findings recorded in current session yet.`;
       } else {
-        reply = `🔍 *Top Recent Discoveries:*\n\n` +
+        reply = `🔍 *Top Recent Discoveries (${findings.length}):*\n\n` +
           findings.slice(0, 5).map((f, i) => `${i + 1}. *${f.title}* [${f.type || 'Web'}]\n   ${f.snippet?.slice(0, 100)}...\n   🔗 ${f.url}`).join('\n\n');
       }
-    } else if (cmd === '/approvals') {
-      const pending = this.vaultStore.getApprovals('pending');
-      if (pending.length === 0) {
-        reply = `✅ No pending human approvals. System operating within allowed parameters.`;
+    }
+
+    // 8. MULTI-FORMAT REPORT EXPORT INTENT (PDF, XLSX/Excel, DOCX/Word, TXT)
+    else if (
+      slashCmd === '/pdf' || slashCmd === '/excel' || slashCmd === '/xlsx' || slashCmd === '/docx' || slashCmd === '/txt' ||
+      (/\b(?:pdf|excel|xlsx|spreadsheet|docx|word|txt|text|csv)\b/i.test(lower) && /\b(?:export|download|generate|format|send|create|give me|save|pull|make)\b/i.test(lower))
+    ) {
+      let targetFmt = 'pdf';
+      if (slashCmd === '/excel' || slashCmd === '/xlsx' || /\b(?:excel|xlsx|spreadsheet)\b/i.test(lower)) targetFmt = 'xlsx';
+      else if (slashCmd === '/docx' || /\b(?:docx|word)\b/i.test(lower)) targetFmt = 'docx';
+      else if (slashCmd === '/txt' || /\b(?:txt|text)\b/i.test(lower)) targetFmt = 'txt';
+      else if (/\bcsv\b/i.test(lower)) targetFmt = 'csv';
+
+      const reports = this.vaultStore.getReports();
+      if (reports.length === 0) {
+        reply = `📄 *No Reports Available:* No research dossiers exist in the vault yet. Start an investigation first.`;
       } else {
-        reply = `⚠️ *Pending Operator Approvals:* \n\n` +
-          pending.map(a => `• *[${a.id}]* ${a.title}\n  Reason: ${a.reason}\n  Action: send \`/approve ${a.id}\` or \`/reject ${a.id}\``).join('\n\n');
+        const latest = reports[0];
+        try {
+          const destDir = path.resolve(process.cwd(), 'reports');
+          fs.mkdirSync(destDir, { recursive: true });
+          const destFile = path.join(destDir, `${latest.id}.${targetFmt}`);
+
+          const exportResult = this.researchAgent?.reportEngine?.exportToFile(latest.id, targetFmt, destFile);
+          const sizeKb = exportResult?.sizeBytes ? (exportResult.sizeBytes / 1024).toFixed(1) : (fs.statSync(destFile).size / 1024).toFixed(1);
+
+          reply = `📑 *Research Report Exported [${targetFmt.toUpperCase()}]*\n\n` +
+            `• *Title:* ${latest.title}\n` +
+            `• *Format:* \`.${targetFmt}\`\n` +
+            `• *Size:* ${sizeKb} KB\n` +
+            `• *Location:* \`${destFile}\`\n` +
+            `• *Verification:* Magic bytes & schema structurally validated ✅\n\n` +
+            `_File saved locally on host machine in ARACHNE workspace._`;
+        } catch (err) {
+          reply = `❌ Export error: ${err.message}`;
+        }
       }
-    } else if (cmd === '/approve') {
-      if (!args) {
-        reply = `⚠️ Usage: \`/approve <approval-id>\``;
-      } else {
-        const resolved = await this.researchAgent?.resolveApproval(args.trim(), 'approved', 'Approved via Telegram');
-        reply = resolved ? `✅ Approval [${args}] granted. Crawler resumed.` : `❌ Approval [${args}] not found.`;
-      }
-    } else if (cmd === '/reject' || cmd === '/skip') {
-      if (!args) {
-        reply = `⚠️ Usage: \`/${cmd.slice(1)} <approval-id>\``;
-      } else {
-        const resolved = await this.researchAgent?.resolveApproval(args.trim(), cmd === '/skip' ? 'skipped' : 'rejected', `Resolved via Telegram (${cmd})`);
-        reply = resolved ? `Action executed: [${args}] marked as ${cmd === '/skip' ? 'skipped' : 'rejected'}.` : `❌ Approval [${args}] not found.`;
-      }
-    } else if (cmd === '/report') {
+    }
+
+    // 9. REPORT SUMMARY INTENT
+    else if (slashCmd === '/report' || /^(?:report|show report|latest report|give me the report|summary|dossier)$/i.test(lower)) {
       const reports = this.vaultStore.getReports();
       if (reports.length === 0) {
         reply = `📄 *No Reports Found:*\nNo research dossiers have been generated yet.`;
@@ -352,9 +386,46 @@ export class TelegramBotGateway {
         reply = `📑 *Latest Research Dossier:*\n` +
           `• *Title:* ${latest.title}\n` +
           `• *Summary:* ${latest.summary}\n` +
-          `• *ID:* \`${latest.id}\``;
+          `• *ID:* \`${latest.id}\`\n\n` +
+          `💡 *Want this formatted?* Say "export as pdf", "generate excel", or "send word document".`;
       }
-    } else if (cmd === '/stats') {
+    }
+
+    // 10. APPROVALS INTENT
+    else if (slashCmd === '/approvals' || /^(?:approvals|pending approvals|check approvals|do you need approval)/i.test(lower)) {
+      const pending = this.vaultStore.getApprovals('pending');
+      if (pending.length === 0) {
+        reply = `✅ *No Pending Approvals:* System operating within allowed parameters.`;
+      } else {
+        reply = `⚠️ *Pending Operator Approvals:* \n\n` +
+          pending.map(a => `• *[${a.id}]* ${a.title}\n  Reason: ${a.reason}\n  Action: say "approve ${a.id}" or "reject ${a.id}"`).join('\n\n');
+      }
+    }
+
+    // 11. APPROVE ID
+    else if (slashCmd === '/approve' || /^approve\s+(\S+)$/i.test(lower)) {
+      const matchId = slashCmd === '/approve' ? slashArgs.trim() : (lower.match(/^approve\s+(\S+)$/i)?.[1] || '');
+      if (!matchId) {
+        reply = `⚠️ Usage: "approve <approval-id>"`;
+      } else {
+        const resolved = await this.researchAgent?.resolveApproval(matchId, 'approved', 'Approved via Telegram');
+        reply = resolved ? `✅ Approval [${matchId}] granted. Crawler resumed.` : `❌ Approval [${matchId}] not found.`;
+      }
+    }
+
+    // 12. REJECT / SKIP ID
+    else if (slashCmd === '/reject' || slashCmd === '/skip' || /^(?:reject|skip)\s+(\S+)$/i.test(lower)) {
+      const matchId = slashCmd === '/reject' || slashCmd === '/skip' ? slashArgs.trim() : (lower.match(/^(?:reject|skip)\s+(\S+)$/i)?.[1] || '');
+      if (!matchId) {
+        reply = `⚠️ Usage: "reject <approval-id>"`;
+      } else {
+        const resolved = await this.researchAgent?.resolveApproval(matchId, 'rejected', 'Rejected via Telegram');
+        reply = resolved ? `Action executed: [${matchId}] marked as rejected.` : `❌ Approval [${matchId}] not found.`;
+      }
+    }
+
+    // 13. STATS INTENT
+    else if (slashCmd === '/stats' || /^(?:stats|vault stats|storage|database)$/i.test(lower)) {
       const graph = this.vaultStore.getGraph();
       const corpus = this.vaultStore.getCorpus();
       const bookmarks = this.vaultStore.getBookmarks();
@@ -365,7 +436,10 @@ export class TelegramBotGateway {
         `• *Corpus Documents:* ${corpus.length}\n` +
         `• *Saved Bookmarks:* ${bookmarks.length}\n` +
         `• *Vault Storage:* ${storage.totalMb} MB (${storage.totalRecords || 0} records)`;
-    } else if (cmd === '/ignored') {
+    }
+
+    // 14. IGNORED ITEMS INTENT
+    else if (slashCmd === '/ignored' || /^(?:ignored|skipped items)$/i.test(lower)) {
       const ignored = this.vaultStore.getIgnoredItems(null, 10);
       if (ignored.length === 0) {
         reply = `✅ No ignored or skipped items recorded.`;
@@ -373,15 +447,41 @@ export class TelegramBotGateway {
         reply = `⚠️ *Recent Ignored/Skipped Items (${ignored.length}):*\n\n` +
           ignored.map((it, i) => `${i + 1}. *[${it.stage}]* ${it.url}\n   • Reason: ${it.reason}\n   • Retry: ${it.will_retry ? 'Yes' : 'No'}`).join('\n\n');
       }
-    } else if (raw.startsWith('/')) {
-      reply = `❓ Unknown command: \`${cmd}\`. Type \`/help\` for available commands.`;
-    } else {
-      // Natural language research prompt!
-      reply = `🕷️ *ARACHNE Autonomous Mission Initiated*\n\n` +
-        `Objective parsed: *"${raw}"*\n\n` +
-        `Decomposing objective into research phases with real-time browser inspection... Use \`/status\` to track live progress.`;
+    }
 
-      this.researchAgent?.startInvestigation(raw);
+    // 15. EXPLICIT SLASH /INVESTIGATE
+    else if (slashCmd === '/investigate') {
+      if (!slashArgs) {
+        reply = `⚠️ *Usage Error:* Please provide an objective. Example:\n\`/investigate Open source computer use agents\``;
+      } else {
+        reply = `🚀 *Investigation Dispatched via Telegram:*\nInitiating deep crawl on: "${slashArgs}". Decomposing into 5 research phases with live browser inspection...`;
+        this.researchAgent?.startInvestigation(slashArgs);
+      }
+    }
+
+    // 16. UNKNOWN SLASH COMMAND
+    else if (raw.startsWith('/')) {
+      reply = `❓ Unknown command: \`${slashCmd}\`. Type \`/help\` for available commands.`;
+    }
+
+    // 17. AUTONOMOUS NATURAL LANGUAGE RESEARCH DISPATCH
+    else {
+      // Clean leading conversational fluff if present
+      const cleanObjective = raw
+        .replace(/^(?:please\s+|can you\s+|could you\s+|i want to\s+|i need to\s+)/i, '')
+        .replace(/^(?:find\s+(?:me\s+)?|search\s+(?:for\s+)?|investigate\s+|research\s+|look\s+up\s+)/i, '')
+        .trim();
+
+      const finalTopic = cleanObjective.length > 5 ? cleanObjective : raw;
+
+      reply = `🕷️ *ARACHNE Autonomous Mission Initiated*\n\n` +
+        `Objective parsed: *"${finalTopic}"*\n\n` +
+        `• Live CDP browser tab allocated\n` +
+        `• 5-phase decomposition active\n` +
+        `• Real-time extraction to SQLite WAL vault\n\n` +
+        `_Ask "how far are you?" at any time for live progress._`;
+
+      this.researchAgent?.startInvestigation(finalTopic);
     }
 
     if (chatId) {

@@ -538,8 +538,12 @@ export function createArachneServer(port = 3003) {
 
       if (pathname === '/api/telegram/exec' && req.method === 'POST') {
         const body = await readBody();
-        const log = await telegramGateway.processCommand(body.command || '/status', body.sender || 'Web Console');
-        return sendJson({ success: true, data: log });
+        const text = body.text || body.command || '/status';
+        const senderId = body.senderId || body.sender || 'Operator';
+        const chatId = body.chatId || null;
+        const log = await telegramGateway.processIncomingMessage({ text, senderId, chatId });
+        const isAuthorized = log?.messageType !== 'unauthorized';
+        return sendJson({ success: isAuthorized, denied: !isAuthorized, data: log });
       }
 
       if (pathname === '/api/telegram/logs' && req.method === 'GET') {
