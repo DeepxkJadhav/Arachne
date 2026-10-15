@@ -82,9 +82,10 @@ export class SwarmOrchestrator extends EventEmitter {
 
     const discoveredUrls = [];
     for (const q of queries) {
-      const formattedQ = encodeURIComponent(q);
+      if (!q || !q.trim()) continue;
+      const formattedQ = encodeURIComponent(q.trim());
       discoveredUrls.push(`https://arxiv.org/search/?query=${formattedQ}&searchtype=all`);
-      discoveredUrls.push(`https://github.com/topics/${q.toLowerCase().replace(/[^a-z0-9]/g, '-')}`);
+      discoveredUrls.push(`https://github.com/search?q=${formattedQ}&type=repositories`);
       discoveredUrls.push(`https://paperswithcode.com/search?q_meta=&q_type=&q=${formattedQ}`);
     }
 

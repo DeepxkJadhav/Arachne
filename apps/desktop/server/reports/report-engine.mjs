@@ -102,6 +102,39 @@ export class ReportEngine {
     const pptxBuffer = this.exportPptx(data);
 
     const reportId = `rep-${Date.now()}`;
+    const reportsDir = path.join(this.vaultStore.vaultDir, 'reports');
+    try {
+      fs.mkdirSync(reportsDir, { recursive: true });
+    } catch {}
+
+    const artifacts = [
+      { fmt: 'md', data: markdown },
+      { fmt: 'txt', data: txt },
+      { fmt: 'html', data: html },
+      { fmt: 'csv', data: csv },
+      { fmt: 'json', data: json },
+      { fmt: 'pdf', data: pdfBuffer },
+      { fmt: 'docx', data: docxBuffer },
+      { fmt: 'xlsx', data: xlsxBuffer },
+      { fmt: 'pptx', data: pptxBuffer }
+    ];
+
+    const verifiedFormats = [];
+    try {
+      for (const art of artifacts) {
+        const filePath = path.join(reportsDir, `${reportId}.${art.fmt}`);
+        fs.writeFileSync(filePath, art.data);
+        if (fs.existsSync(filePath) && fs.statSync(filePath).size > 0) {
+          const val = this.validateArtifact(art.fmt, art.data);
+          if (val.valid) {
+            verifiedFormats.push(art.fmt);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[ReportEngine] Error writing files to vault:', err.message);
+    }
+
     const reportObj = {
       id: reportId,
       investigationId: investigation.id,
@@ -114,25 +147,9 @@ export class ReportEngine {
       csv,
       json,
       createdAt: timestamp,
-      formats: ['md', 'txt', 'html', 'csv', 'json', 'pdf', 'docx', 'xlsx', 'pptx'],
-      formatsAvailable: ['md', 'txt', 'html', 'csv', 'json', 'pdf', 'docx', 'xlsx', 'pptx']
+      formats: verifiedFormats,
+      formatsAvailable: verifiedFormats
     };
-
-    // Persist binary artifacts into vault reports directory
-    const reportsDir = path.join(this.vaultStore.vaultDir, 'reports');
-    try {
-      fs.writeFileSync(path.join(reportsDir, `${reportId}.md`), markdown, 'utf8');
-      fs.writeFileSync(path.join(reportsDir, `${reportId}.txt`), txt, 'utf8');
-      fs.writeFileSync(path.join(reportsDir, `${reportId}.html`), html, 'utf8');
-      fs.writeFileSync(path.join(reportsDir, `${reportId}.csv`), csv, 'utf8');
-      fs.writeFileSync(path.join(reportsDir, `${reportId}.json`), json, 'utf8');
-      fs.writeFileSync(path.join(reportsDir, `${reportId}.pdf`), pdfBuffer);
-      fs.writeFileSync(path.join(reportsDir, `${reportId}.docx`), docxBuffer);
-      fs.writeFileSync(path.join(reportsDir, `${reportId}.xlsx`), xlsxBuffer);
-      fs.writeFileSync(path.join(reportsDir, `${reportId}.pptx`), pptxBuffer);
-    } catch (err) {
-      console.error('[ReportEngine] Error writing files to vault:', err.message);
-    }
 
     return this.vaultStore.saveReport(reportObj);
   }
@@ -700,20 +717,62 @@ export class ReportEngine {
     return { valid: false, error: `Unknown format: ${format}` };
   }
 
-  exportToFile(reportId, format, destinationPath) {
-    const rep = this.vaultStore.getReports().find(r => r.id === reportId);
-    if (!rep) throw new Error(`Report not found: ${reportId}`);
+  getLatestCompletedReport() {
+    const reports = this.vaultStore.getReports() || [];
+    if (reports.length === 0) return null;
+
+    const investigations = this.vaultStore.getInvestigations() || [];
+    const completedInvIds = new Set(
+      investigations
+        .filter(i => (i.status || '').toUpperCase() === 'COMPLETED')
+        .map(i => i.id)
+    );
+
+    // Look for report matching a completed investigation
+    for (const rep of reports) {
+      if (rep.investigationId && completedInvIds.has(rep.investigationId)) {
+        return rep;
+      }
+    }
+
+    // Secondary: If report itself has full dossier content
+    for (const rep of reports) {
+      if (rep.markdown || rep.summary) {
+        return rep;
+      }
+    }
+
+    return reports[0] || null;
+  }
+
+  exportToFile(reportId, format, destinationPath, options = {}) {
+    let rep = null;
+    if (!reportId || reportId === 'latest') {
+      rep = this.getLatestCompletedReport();
+      if (!rep) throw new Error('No completed research reports found in the vault.');
+    } else {
+      rep = this.vaultStore.getReports().find(r => r.id === reportId);
+      if (!rep) throw new Error(`Report not found: ${reportId}`);
+    }
+
+    // Verify task completion if investigation is known
+    if (rep.investigationId) {
+      const inv = this.vaultStore.getInvestigation?.(rep.investigationId);
+      if (inv && (inv.status || '').toUpperCase() !== 'COMPLETED') {
+        throw new Error(`Report ${rep.id} belongs to incomplete task ${inv.id} (${inv.status})`);
+      }
+    }
 
     const fmt = (format || 'md').toLowerCase();
     const reportsDir = path.join(this.vaultStore.vaultDir, 'reports');
-    const sourceVaultFile = path.join(reportsDir, `${reportId}.${fmt}`);
+    const sourceVaultFile = path.join(reportsDir, `${rep.id}.${fmt}`);
 
     let fileBufferOrStr = null;
     if (fs.existsSync(sourceVaultFile)) {
       fileBufferOrStr = fs.readFileSync(sourceVaultFile);
     } else {
       const data = {
-        investigation: { id: rep.investigationId, objective: rep.title, title: rep.title },
+        investigation: { id: rep.investigationId || rep.id, objective: rep.title, title: rep.title },
         corpus: this.vaultStore.getCorpus().slice(0, 40),
         graph: this.vaultStore.getGraph(),
         keyEntities: (this.vaultStore.getGraph().nodes || []).slice(0, 20),
@@ -725,7 +784,7 @@ export class ReportEngine {
       else if (fmt === 'docx') fileBufferOrStr = this.exportDocx(data);
       else if (fmt === 'xlsx') fileBufferOrStr = this.exportXlsx(data);
       else if (fmt === 'pptx') fileBufferOrStr = this.exportPptx(data);
-      else if (fmt === 'json') fileBufferOrStr = rep.json ? JSON.stringify(rep.json, null, 2) : JSON.stringify({ title: rep.title, summary: rep.summary }, null, 2);
+      else if (fmt === 'json') fileBufferOrStr = rep.json ? (typeof rep.json === 'string' ? rep.json : JSON.stringify(rep.json, null, 2)) : JSON.stringify({ title: rep.title, summary: rep.summary }, null, 2);
       else if (fmt === 'csv') fileBufferOrStr = rep.csv || this.exportCsv(data);
       else if (fmt === 'html') fileBufferOrStr = rep.html || this.exportHtml(data, rep.markdown || '');
       else if (fmt === 'txt') fileBufferOrStr = rep.txt || this.exportPlainText(data);
@@ -737,7 +796,19 @@ export class ReportEngine {
       throw new Error(`Report validation failed for .${fmt}: ${validation.error}`);
     }
 
-    const resolvedDest = path.resolve(destinationPath);
+    // Safe unique filename policy: do not overwrite existing files without explicit overwrite option
+    let resolvedDest = path.resolve(destinationPath);
+    if (fs.existsSync(resolvedDest) && !options.overwrite) {
+      const parsed = path.parse(resolvedDest);
+      let counter = 1;
+      let candidate = path.join(parsed.dir, `${parsed.name}_${counter}${parsed.ext}`);
+      while (fs.existsSync(candidate)) {
+        counter++;
+        candidate = path.join(parsed.dir, `${parsed.name}_${counter}${parsed.ext}`);
+      }
+      resolvedDest = candidate;
+    }
+
     fs.mkdirSync(path.dirname(resolvedDest), { recursive: true });
     fs.writeFileSync(resolvedDest, fileBufferOrStr);
 
@@ -748,7 +819,7 @@ export class ReportEngine {
 
     return {
       success: true,
-      reportId,
+      reportId: rep.id,
       format: fmt,
       path: resolvedDest,
       sizeBytes: stat.size,

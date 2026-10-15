@@ -371,14 +371,23 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: rep });
       }
 
+      if (pathname === '/api/reports/latest' && req.method === 'GET') {
+        const latest = reportEngine.getLatestCompletedReport();
+        if (!latest) {
+          return sendJson({ success: false, error: 'No completed research reports found' }, 404);
+        }
+        return sendJson({ success: true, data: latest });
+      }
+
       if (pathname === '/api/reports/export' && req.method === 'POST') {
         const body = await readBody();
-        const { reportId, format, destinationPath } = body;
-        if (!reportId || !format || !destinationPath) {
-          return sendJson({ success: false, error: 'reportId, format, and destinationPath are required' }, 400);
+        const { reportId, format, destinationPath, overwrite } = body;
+        const targetReportId = reportId || 'latest';
+        if (!format || !destinationPath) {
+          return sendJson({ success: false, error: 'format and destinationPath are required' }, 400);
         }
         try {
-          const exportRes = reportEngine.exportToFile(reportId, format, destinationPath);
+          const exportRes = reportEngine.exportToFile(targetReportId, format, destinationPath, { overwrite });
           return sendJson(exportRes);
         } catch (err) {
           return sendJson({ success: false, error: err.message }, 500);

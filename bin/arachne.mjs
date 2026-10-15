@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { classifyIntent, INTENTS } from '../apps/desktop/server/agent/intent-classifier.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -352,36 +353,48 @@ async function showHud() {
     const cdpStatus = b.status === 'ready' ? 'READY' : (b.status === 'connecting' ? 'CONNECTING' : 'DISCONNECTED');
     const tabCount = b.activeTaskTabsCount !== undefined ? b.activeTaskTabsCount : 0;
     lines.push(`${C.gray}BROWSER:    ${C.white}${browserName}${C.reset} ${C.gray}(CDP: 127.0.0.1:${b.remoteDebuggingPort || 9222}, Status: ${cdpStatus}, Active Tabs: ${tabCount})${C.reset}`);
+  } else if (isServerOnline) {
+    lines.push(`${C.gray}BROWSER:    ${C.gray}HEADLESS / NO BROWSER DETECTED${C.reset}`);
   } else {
-    lines.push(`${C.gray}BROWSER:    ${C.gray}UNKNOWN (Backend offline)${C.reset}`);
+    lines.push(`${C.gray}BROWSER:    ${C.gray}OFFLINE (Backend unreachable)${C.reset}`);
   }
 
   // 3. AI Models & Router
-  if (isServerOnline && m.models) {
-    const activeProvider = m.activeProvider || 'Local / Groq';
-    const activeModel = m.models.find(x => x.active)?.id || 'qwen/qwen3.8-27b';
-    lines.push(`${C.gray}MODELS:     ${C.white}${activeProvider}${C.reset} ${C.gray}(Model: ${activeModel})${C.reset}`);
+  const modelList = Array.isArray(m) ? m : (m.models || []);
+  if (isServerOnline && modelList.length > 0) {
+    const primary = modelList.find(x => x.role === 'Primary' || x.active) || modelList[0];
+    const activeProvider = primary?.provider || 'Groq Cloud';
+    const activeModel = primary?.model || primary?.name || 'qwen/qwen3.8-27b';
+    const latency = primary?.latencyMs ? ` (${primary.latencyMs}ms)` : '';
+    lines.push(`${C.gray}MODELS:     ${C.white}${activeProvider}${C.reset} ${C.gray}(Model: ${activeModel}${latency})${C.reset}`);
+  } else if (isServerOnline) {
+    lines.push(`${C.gray}MODELS:     ${C.gray}STANDALONE (No active provider)${C.reset}`);
   } else {
-    lines.push(`${C.gray}MODELS:     ${C.gray}UNKNOWN (Backend offline)${C.reset}`);
+    lines.push(`${C.gray}MODELS:     ${C.gray}OFFLINE (Backend unreachable)${C.reset}`);
   }
 
   // 4. Telegram Gateway State
-  if (isServerOnline && t.status) {
-    const botUser = t.botInfo?.username ? `@${t.botInfo.username}` : 'NOT CONFIGURED';
+  if (isServerOnline && (t.status || t.configured || t.botInfo)) {
+    const botUser = t.botInfo?.username ? `@${t.botInfo.username}` : (t.configured ? 'CONFIGURED' : 'NOT CONFIGURED');
     const tgState = t.isPolling ? 'POLLING (ACTIVE)' : (t.status || 'IDLE').toUpperCase();
-    lines.push(`${C.gray}TELEGRAM:   ${C.white}${botUser}${C.reset} ${C.gray}(State: ${tgState}, Policy: Operator Fail-Closed)${C.reset}`);
-  } else {
+    lines.push(`${C.gray}TELEGRAM:   ${C.white}${botUser}${C.reset} ${C.gray}(State: ${tgState}, Fail-Closed)${C.reset}`);
+  } else if (isServerOnline) {
     lines.push(`${C.gray}TELEGRAM:   ${C.gray}NOT CONFIGURED${C.reset}`);
+  } else {
+    lines.push(`${C.gray}TELEGRAM:   ${C.gray}OFFLINE (Backend unreachable)${C.reset}`);
   }
 
   // 5. Database & Storage State
-  if (isServerOnline && st.dbPath) {
+  const dbPath = st.sqlitePath || st.dbPath || st.vaultPath;
+  if (isServerOnline && dbPath) {
     const dbSize = st.totalMb ? `${st.totalMb} MB` : 'N/A';
-    const docCount = st.counts?.corpus_documents !== undefined ? st.counts.corpus_documents : (st.totalDocuments || 0);
-    const invCount = st.counts?.investigations !== undefined ? st.counts.investigations : 0;
-    lines.push(`${C.gray}DATABASE:   ${C.white}${path.basename(st.dbPath)}${C.reset} ${C.gray}(Size: ${dbSize}, Docs: ${docCount}, Investigations: ${invCount})${C.reset}`);
+    const docCount = st.totalDocuments !== undefined ? st.totalDocuments : (st.counts?.corpus_documents || 0);
+    const invCount = st.totalInvestigations !== undefined ? st.totalInvestigations : (st.counts?.investigations || 0);
+    lines.push(`${C.gray}DATABASE:   ${C.white}${path.basename(dbPath)}${C.reset} ${C.gray}(Size: ${dbSize}, Docs: ${docCount}, Investigations: ${invCount})${C.reset}`);
+  } else if (isServerOnline) {
+    lines.push(`${C.gray}DATABASE:   ${C.white}IN-MEMORY / UNCONFIGURED${C.reset}`);
   } else {
-    lines.push(`${C.gray}DATABASE:   ${C.gray}N/A${C.reset}`);
+    lines.push(`${C.gray}DATABASE:   ${C.gray}OFFLINE (Backend unreachable)${C.reset}`);
   }
 
   // 6. Active Investigation & Last Event
@@ -757,33 +770,67 @@ async function cmdReports(subcommand, reportId, options = {}) {
   }
 }
 
+function cmdFormatHelp(requestedFormat = null) {
+  console.log(`\n${C.bold}${C.crimson}:: ARACHNE DELIVERABLE FORMAT DIRECTORY${C.reset}\n`);
+  console.log(`${C.gray}ARACHNE supports 9 validated multi-format output deliverables from persistent vaults:${C.reset}\n`);
+
+  const rows = [
+    ['.TXT', 'Plain text dossier with structured headers and evidence lists', 'export txt / "Give me report in txt file"'],
+    ['.PDF', 'Binary PDF-1.4 with typography, summary, and citations', 'export pdf / "Export report as PDF"'],
+    ['.XLSX', 'OpenXML spreadsheet with entities, metrics, and corpus tabs', 'export xlsx / "Give me Excel report"'],
+    ['.DOCX', 'OpenXML Word document with executive briefing layout', 'export docx / "Export as Word doc"'],
+    ['.PPTX', 'OpenXML PowerPoint slides for briefing presentations', 'export pptx / "Create slides presentation"'],
+    ['.MD', 'Clean GitHub-flavored markdown with full provenance links', 'export md / "Save markdown report"'],
+    ['.HTML', 'Standalone dark-mode responsive dossier webpage', 'export html / "Export as HTML page"'],
+    ['.CSV', 'Tabular comma-separated values of verified corpus claims', 'export csv / "Download CSV data"'],
+    ['.JSON', 'Structured machine-readable research AST and entity graph', 'export json / "Export JSON dossier"']
+  ];
+
+  drawTable(['FORMAT', 'SPECIFICATION & CONTENT', 'USAGE COMMAND'], rows, { color: C.darkGray });
+  console.log(`\n${C.gray}To export an existing report, run:${C.reset} ${C.white}export <format> [reportId]${C.reset}`);
+  console.log(`${C.gray}Example:${C.reset} ${C.crimson}export txt${C.reset} ${C.gray}or${C.reset} ${C.crimson}export pdf rep-1792069973534${C.reset}\n`);
+}
+
 // 8. Export Command (Real File Generation & Structural Verification)
 async function cmdExport(param1, param2, param3) {
-  const KNOWN_FORMATS = ['pdf', 'txt', 'xlsx', 'docx', 'pptx', 'html', 'json', 'csv', 'md', 'excel', 'word', 'text'];
-  let reportId = param1;
-  let format = param2;
-  let destinationPath = param3;
+  const KNOWN_FORMATS = ['pdf', 'txt', 'xlsx', 'docx', 'pptx', 'html', 'json', 'csv', 'md', 'excel', 'word', 'text', 'spreadsheet'];
+  let reportId = null;
+  let format = null;
+  let destinationPath = null;
 
-  // Smart shortcut: if first arg is a format (e.g. "arachne export pdf" or "arachne pdf")
-  if (param1 && KNOWN_FORMATS.includes(param1.toLowerCase())) {
-    format = param1.toLowerCase();
-    if (format === 'excel') format = 'xlsx';
-    if (format === 'word') format = 'docx';
-    if (format === 'text') format = 'txt';
-    destinationPath = param2;
-
-    // Fetch latest report ID automatically
-    const repsRes = await api('/api/reports');
-    const reports = repsRes.data?.data || repsRes.data || [];
-    if (reports.length === 0) {
-      console.log(`${C.crimson}[ERR] No dossiers exist in vault yet. Run an investigation first.${C.reset}\n`);
-      return;
+  const rawArgs = [param1, param2, param3].filter(Boolean);
+  for (const a of rawArgs) {
+    const s = String(a).trim();
+    if (s.startsWith('rep-') || s.startsWith('inv-')) {
+      reportId = s;
+    } else if (KNOWN_FORMATS.includes(s.toLowerCase())) {
+      format = s.toLowerCase();
+    } else if (s.includes('/') || s.includes('\\') || s.endsWith('.pdf') || s.endsWith('.txt') || s.endsWith('.xlsx')) {
+      destinationPath = s;
     }
-    reportId = reports[0].id;
   }
 
-  if (!format) {
-    format = 'pdf';
+  if (format === 'excel' || format === 'spreadsheet') format = 'xlsx';
+  if (format === 'word') format = 'docx';
+  if (format === 'text') format = 'txt';
+  if (!format) format = 'pdf';
+
+  // If reportId not provided, fetch latest completed report
+  if (!reportId) {
+    const latestRes = await api('/api/reports/latest');
+    if (latestRes.ok && latestRes.data?.data?.id) {
+      reportId = latestRes.data.data.id;
+    } else {
+      const repsRes = await api('/api/reports');
+      const reports = repsRes.data?.data || repsRes.data || [];
+      if (!reports || reports.length === 0) {
+        console.log(`\n${C.crimson}[INFO] No completed research reports found in the vault.${C.reset}`);
+        console.log(`${C.gray}Would you like to start a research hunt first?${C.reset}`);
+        console.log(`${C.white}Example: hunt "Your research topic" or 'Start research on <topic>'${C.reset}\n`);
+        return;
+      }
+      reportId = reports[0].id;
+    }
   }
 
   if (!destinationPath) {
@@ -1471,14 +1518,35 @@ async function startRepl() {
         cmdHelp();
         break;
 
-      default:
-        if (input.length > 5 && !input.startsWith('/')) {
-          console.log(`\n${C.crimson}► AUTONOMOUS RESEARCH INTENT DETECTED:${C.reset} ${C.white}"${input}"${C.reset}`);
+      default: {
+        const classified = classifyIntent(input);
+        if (classified.intent === INTENTS.EXPORT_REPORT) {
+          await cmdExport(classified.params.format || 'txt', null, classified.params.reportId);
+        } else if (classified.intent === INTENTS.VIEW_REPORT) {
+          await cmdReports('view', classified.params.reportId);
+        } else if (classified.intent === INTENTS.FORMAT_HELP) {
+          cmdFormatHelp(classified.params.format);
+        } else if (classified.intent === INTENTS.SYSTEM_STATUS) {
+          await cmdStatus();
+        } else if (classified.intent === INTENTS.NEW_RESEARCH && classified.params.objective) {
+          console.log(`\n${C.crimson}► AUTONOMOUS RESEARCH INTENT DETECTED:${C.reset} ${C.white}"${classified.params.objective}"${C.reset}`);
           console.log(`${C.gray}Dispatching research hunt directly...${C.reset}\n`);
-          await cmdInvestigate(input);
+          await cmdInvestigate(classified.params.objective);
+        } else if (classified.intent === INTENTS.LIFECYCLE && classified.params.action) {
+          await cmdLifecycle(classified.params.action);
+        } else if (classified.intent === INTENTS.FINDINGS) {
+          await cmdFindings();
+        } else if (classified.intent === INTENTS.VAULT_STATS) {
+          await cmdVault();
+        } else if (classified.intent === INTENTS.APPROVALS) {
+          await cmdApprovals();
+        } else if (classified.intent === INTENTS.HELP) {
+          cmdHelp();
         } else {
-          console.log(`  ${C.crimson}[ERR] Unknown command: "${rawCmd}". Type '/help' for directory.${C.reset}`);
+          console.log(`  ${C.crimson}[ERR] Unknown command or ambiguous inquiry: "${rawCmd}".${C.reset}`);
+          console.log(`  ${C.gray}Type '/help' for command directory, or specify a research topic (e.g. 'Start research on <topic>').${C.reset}`);
         }
+      }
     }
 
     rl.prompt();
@@ -1658,17 +1726,38 @@ async function main() {
       await cmdApprovals();
       break;
 
-    default:
-      if (cleanArgs.length > 0 && !cleanArgs[0].startsWith('-') && !cleanArgs[0].startsWith('/')) {
-        const fullObjective = cleanArgs.join(' ');
-        console.log(`\n${C.crimson}► AUTONOMOUS RESEARCH INTENT DETECTED:${C.reset} ${C.white}"${fullObjective}"${C.reset}`);
+    default: {
+      const fullInput = cleanArgs.join(' ');
+      const classified = classifyIntent(fullInput);
+
+      if (classified.intent === INTENTS.EXPORT_REPORT) {
+        await cmdExport(classified.params.format || 'txt', null, classified.params.reportId);
+      } else if (classified.intent === INTENTS.VIEW_REPORT) {
+        await cmdReports('view', classified.params.reportId, { json: isJson });
+      } else if (classified.intent === INTENTS.FORMAT_HELP) {
+        cmdFormatHelp(classified.params.format);
+      } else if (classified.intent === INTENTS.SYSTEM_STATUS) {
+        await cmdStatus({ json: isJson });
+      } else if (classified.intent === INTENTS.NEW_RESEARCH && classified.params.objective) {
+        console.log(`\n${C.crimson}► AUTONOMOUS RESEARCH INTENT DETECTED:${C.reset} ${C.white}"${classified.params.objective}"${C.reset}`);
         console.log(`${C.gray}Dispatching research hunt directly...${C.reset}\n`);
-        await cmdInvestigate(fullObjective, { json: isJson });
-      } else {
-        console.log(`${C.crimson}[ERR] Unknown command: ${rawCmd}${C.reset}`);
+        await cmdInvestigate(classified.params.objective, { json: isJson });
+      } else if (classified.intent === INTENTS.LIFECYCLE && classified.params.action) {
+        await cmdLifecycle(classified.params.action);
+      } else if (classified.intent === INTENTS.FINDINGS) {
+        await cmdFindings({ json: isJson });
+      } else if (classified.intent === INTENTS.VAULT_STATS) {
+        await cmdVault({ json: isJson });
+      } else if (classified.intent === INTENTS.APPROVALS) {
+        await cmdApprovals();
+      } else if (classified.intent === INTENTS.HELP) {
         cmdHelp();
+      } else {
+        console.log(`${C.crimson}[ERR] Unknown command or ambiguous inquiry: "${rawCmd}".${C.reset}`);
+        console.log(`${C.gray}Type 'arachne --help' for directory, or specify a research topic (e.g. arachne hunt "topic").${C.reset}`);
         process.exit(1);
       }
+    }
   }
 }
 

@@ -1,6 +1,7 @@
 import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
+import { classifyIntent, INTENTS } from '../agent/intent-classifier.mjs';
 
 export class TelegramBotGateway {
   constructor({ vaultStore, researchAgent }) {
@@ -262,16 +263,25 @@ export class TelegramBotGateway {
     const slashCmd = parts[0].toLowerCase();
     const slashArgs = parts.slice(1).join(' ');
 
+    const classified = classifyIntent(raw);
+
     // 1. HELP / START INTENT
-    if (slashCmd === '/start' || slashCmd === '/help' || /^(?:help|what can you do|menu|options|commands|hi|hello|hey)$/i.test(lower)) {
+    if (
+      classified.intent === INTENTS.HELP ||
+      slashCmd === '/start' ||
+      slashCmd === '/help' ||
+      /^(?:help|what can you do|menu|options|commands|hi|hello|hey)$/i.test(lower)
+    ) {
       reply = `🕷️ *ARACHNE Autonomous Web Intelligence Bot*\n\n` +
         `I am your autonomous research agent connected to Chrome/Brave CDP and SQLite WAL storage.\n\n` +
         `💬 *Natural Conversation Supported (No slash commands required!)*\n` +
         `• "What is your status?" or "How far are you?"\n` +
         `• "Pause research" or "Resume research"\n` +
         `• "Show findings" or "What did you discover?"\n` +
-        `• "Export report as PDF" or "Give me Excel report"\n` +
-        `• "Find computer vision repos on GitHub" (starts autonomous deep research)\n\n` +
+        `• "Export report as PDF" or "Give me report in txt file"\n` +
+        `• "How do I generate a PDF?" (Format directory)\n` +
+        `• "Check whether Arachne is working." (System health)\n` +
+        `• "Start research on <topic>" (Starts deep autonomous research)\n\n` +
         `⚙️ *Commands Reference:*\n` +
         `• \`/status\` - Live crawl & phase metrics\n` +
         `• \`/investigate <topic>\` - Launch deep research\n` +
@@ -283,11 +293,33 @@ export class TelegramBotGateway {
         `• \`/stats\` - Knowledge vault & graph metrics`;
     }
 
-    // 2. STATUS / PROGRESS INTENT
-    else if (slashCmd === '/status' || /^(?:what(?:'?s| is) (?:your |the )?)?(?:status|progress|state|how far are you|what are you doing)/i.test(lower) || lower === 'status' || lower === 'progress') {
+    // 2. FORMAT / CAPABILITY HELP INTENT (MUST NOT export and MUST NOT trigger research)
+    else if (classified.intent === INTENTS.FORMAT_HELP) {
+      reply = `📑 *ARACHNE Deliverable Formats Guide*\n\n` +
+        `I support 9 validated deliverable formats from research dossiers in the vault:\n` +
+        `• *PDF (.pdf)* - Formatted intelligence report with executive summary & citations\n` +
+        `• *Excel (.xlsx)* - Structured spreadsheet workbook with entities, corpus & metrics\n` +
+        `• *Plain Text (.txt)* - Clean text briefing with structured headers\n` +
+        `• *Word Document (.docx)* - Standard executive briefing layout\n` +
+        `• *PowerPoint (.pptx)* - Presentation slides for briefings\n` +
+        `• *Markdown (.md)* - GitHub-flavored document with full links\n` +
+        `• *HTML (.html)* - Responsive standalone dark-mode webpage\n` +
+        `• *CSV (.csv)* - Tabular verified evidence claims\n` +
+        `• *JSON (.json)* - Structured AST and knowledge graph\n\n` +
+        `💡 *To export an existing report:* Say "give me report in txt file", "export report as pdf", or "export <id> as excel". Exporting an existing report never restarts web research.`;
+    }
+
+    // 3. SYSTEM STATUS / PROGRESS INTENT (MUST NOT trigger research)
+    else if (
+      classified.intent === INTENTS.SYSTEM_STATUS ||
+      slashCmd === '/status' ||
+      /^(?:what(?:'?s| is) (?:your |the )?)?(?:status|progress|state|how far are you|what are you doing)/i.test(lower) ||
+      lower === 'status' ||
+      lower === 'progress'
+    ) {
       const inv = this.researchAgent?.activeInvestigation;
       if (!inv) {
-        reply = `🕷️ *ARACHNE System Status: IDLE*\nNo active investigation is running. Send a research topic (e.g. "Research autonomous web agents") to begin.`;
+        reply = `🕷️ *ARACHNE System Status: IDLE*\nNo active investigation is running. All subsystems nominal (SQLite WAL storage, CDP browser automation, model router online). Send a research topic (e.g. "Start research on AI agents") to begin.`;
       } else {
         const approvals = this.vaultStore.getApprovals('pending');
         reply = `🕷️ *ARACHNE Investigation Status: ${(inv.status || 'IDLE').toUpperCase()}*\n` +
@@ -303,32 +335,107 @@ export class TelegramBotGateway {
       }
     }
 
-    // 3. PAUSE INTENT
-    else if (slashCmd === '/pause' || /^(?:pause|hold on|wait a minute|pause research|pause crawling|stop for a moment)$/i.test(lower)) {
-      this.researchAgent?.pause();
-      reply = `⏸️ *Research Paused:* Crawler and browser tab orchestration paused. Say "resume" to continue.`;
+    // 4. LIFECYCLE INTENT (Pause / Resume / Stop / Retry)
+    else if (
+      classified.intent === INTENTS.LIFECYCLE ||
+      slashCmd === '/pause' ||
+      slashCmd === '/resume' ||
+      slashCmd === '/stop' ||
+      slashCmd === '/cancel' ||
+      slashCmd === '/retry'
+    ) {
+      const act = classified.params?.action || (slashCmd ? slashCmd.replace('/', '') : 'pause');
+      if (act === 'pause') {
+        this.researchAgent?.pause();
+        reply = `⏸️ *Research Paused:* Crawler and browser tab orchestration paused. Say "resume" to continue.`;
+      } else if (act === 'resume') {
+        this.researchAgent?.resume();
+        reply = `▶️ *Research Resumed:* Autonomous crawling and extraction ongoing.`;
+      } else if (act === 'stop' || act === 'cancel') {
+        this.researchAgent?.stop();
+        reply = `⏹️ *Investigation Terminated:* State committed to SQLite WAL vault.`;
+      } else if (act === 'retry') {
+        this.researchAgent?.retry();
+        reply = `🔄 *Retrying Investigation:* Restarting from initial scoping phase.`;
+      }
     }
 
-    // 4. RESUME INTENT
-    else if (slashCmd === '/resume' || /^(?:resume|continue|keep going|resume research|continue crawling)$/i.test(lower)) {
-      this.researchAgent?.resume();
-      reply = `▶️ *Research Resumed:* Autonomous crawling and extraction ongoing.`;
+    // 5. MULTI-FORMAT REPORT EXPORT INTENT (PDF, XLSX/Excel, DOCX/Word, TXT)
+    else if (
+      classified.intent === INTENTS.EXPORT_REPORT ||
+      slashCmd === '/pdf' || slashCmd === '/excel' || slashCmd === '/xlsx' || slashCmd === '/docx' || slashCmd === '/txt'
+    ) {
+      let targetFmt = classified.params?.format || 'pdf';
+      if (slashCmd === '/excel' || slashCmd === '/xlsx') targetFmt = 'xlsx';
+      else if (slashCmd === '/docx') targetFmt = 'docx';
+      else if (slashCmd === '/txt') targetFmt = 'txt';
+
+      const reportId = classified.params?.reportId || null;
+      const reports = this.vaultStore.getReports();
+      let targetRep = null;
+
+      if (reportId) {
+        targetRep = reports.find(r => r.id === reportId) || null;
+      } else {
+        targetRep = this.researchAgent?.reportEngine?.getLatestCompletedReport?.() || reports[0] || null;
+      }
+
+      if (!targetRep) {
+        reply = `📄 *No Completed Reports Found*\n\n` +
+          `No completed research dossiers exist in the vault yet.\n` +
+          `Would you like to start a research hunt first? (e.g. "Start research on AI agents" or \`/investigate <topic>\`)`;
+      } else {
+        try {
+          const destDir = path.resolve(process.cwd(), 'reports');
+          fs.mkdirSync(destDir, { recursive: true });
+          const destFile = path.join(destDir, `${targetRep.id}.${targetFmt}`);
+
+          const exportResult = this.researchAgent?.reportEngine?.exportToFile(targetRep.id, targetFmt, destFile);
+          const finalPath = exportResult?.path || destFile;
+          const sizeKb = exportResult?.sizeBytes ? (exportResult.sizeBytes / 1024).toFixed(1) : (fs.existsSync(finalPath) ? (fs.statSync(finalPath).size / 1024).toFixed(1) : '0');
+
+          reply = `📑 *Research Report Exported [${targetFmt.toUpperCase()}]*\n\n` +
+            `• *Title:* ${targetRep.title}\n` +
+            `• *Format:* \`.${targetFmt}\`\n` +
+            `• *Size:* ${sizeKb} KB\n` +
+            `• *Location:* \`${finalPath}\`\n` +
+            `• *Verification:* Magic bytes & schema structurally validated ✅\n\n` +
+            `_File saved locally on host machine in ARACHNE workspace._`;
+        } catch (err) {
+          reply = `❌ Export error: ${err.message}`;
+        }
+      }
     }
 
-    // 5. STOP / CANCEL INTENT
-    else if (slashCmd === '/stop' || slashCmd === '/cancel' || /^(?:stop|cancel|abort|terminate|kill research|stop research)$/i.test(lower)) {
-      this.researchAgent?.stop();
-      reply = `⏹️ *Investigation Terminated:* State committed to SQLite WAL vault.`;
-    }
+    // 6. REPORT VIEW / SUMMARY INTENT
+    else if (
+      classified.intent === INTENTS.VIEW_REPORT ||
+      slashCmd === '/report' ||
+      /^(?:report|show report|latest report|give me the report|summary|dossier)$/i.test(lower)
+    ) {
+      const reportId = classified.params?.reportId || null;
+      const reports = this.vaultStore.getReports();
+      let targetRep = null;
 
-    // 6. RETRY INTENT
-    else if (slashCmd === '/retry' || /^(?:retry|restart|re-run)$/i.test(lower)) {
-      this.researchAgent?.retry();
-      reply = `🔄 *Retrying Investigation:* Restarting from initial scoping phase.`;
+      if (reportId) {
+        targetRep = reports.find(r => r.id === reportId) || null;
+      } else {
+        targetRep = this.researchAgent?.reportEngine?.getLatestCompletedReport?.() || reports[0] || null;
+      }
+
+      if (!targetRep) {
+        reply = `📄 *No Reports Found:*\nNo research dossiers have been generated yet. Send a research topic to start your first investigation.`;
+      } else {
+        reply = `📑 *Research Dossier [${targetRep.id}]:*\n` +
+          `• *Title:* ${targetRep.title}\n` +
+          `• *Summary:* ${targetRep.summary || targetRep.title}\n` +
+          `• *Generated:* ${targetRep.createdAt || 'Recent'}\n\n` +
+          `💡 *Want this formatted?* Say "give me report in txt file", "export as pdf", or "generate excel".`;
+      }
     }
 
     // 7. FINDINGS INTENT
-    else if (slashCmd === '/findings' || /^(?:findings|what did you find|show findings|show discoveries|show results|what have you found)/i.test(lower)) {
+    else if (classified.intent === INTENTS.FINDINGS || slashCmd === '/findings' || /^(?:findings|what did you find|show findings|show discoveries|show results|what have you found)/i.test(lower)) {
       const inv = this.researchAgent?.activeInvestigation;
       const findings = inv?.recentFindings || [];
       if (findings.length === 0) {
@@ -339,60 +446,8 @@ export class TelegramBotGateway {
       }
     }
 
-    // 8. MULTI-FORMAT REPORT EXPORT INTENT (PDF, XLSX/Excel, DOCX/Word, TXT)
-    else if (
-      slashCmd === '/pdf' || slashCmd === '/excel' || slashCmd === '/xlsx' || slashCmd === '/docx' || slashCmd === '/txt' ||
-      (/\b(?:pdf|excel|xlsx|spreadsheet|docx|word|txt|text|csv)\b/i.test(lower) && /\b(?:export|download|generate|format|send|create|give me|save|pull|make)\b/i.test(lower))
-    ) {
-      let targetFmt = 'pdf';
-      if (slashCmd === '/excel' || slashCmd === '/xlsx' || /\b(?:excel|xlsx|spreadsheet)\b/i.test(lower)) targetFmt = 'xlsx';
-      else if (slashCmd === '/docx' || /\b(?:docx|word)\b/i.test(lower)) targetFmt = 'docx';
-      else if (slashCmd === '/txt' || /\b(?:txt|text)\b/i.test(lower)) targetFmt = 'txt';
-      else if (/\bcsv\b/i.test(lower)) targetFmt = 'csv';
-
-      const reports = this.vaultStore.getReports();
-      if (reports.length === 0) {
-        reply = `📄 *No Reports Available:* No research dossiers exist in the vault yet. Start an investigation first.`;
-      } else {
-        const latest = reports[0];
-        try {
-          const destDir = path.resolve(process.cwd(), 'reports');
-          fs.mkdirSync(destDir, { recursive: true });
-          const destFile = path.join(destDir, `${latest.id}.${targetFmt}`);
-
-          const exportResult = this.researchAgent?.reportEngine?.exportToFile(latest.id, targetFmt, destFile);
-          const sizeKb = exportResult?.sizeBytes ? (exportResult.sizeBytes / 1024).toFixed(1) : (fs.statSync(destFile).size / 1024).toFixed(1);
-
-          reply = `📑 *Research Report Exported [${targetFmt.toUpperCase()}]*\n\n` +
-            `• *Title:* ${latest.title}\n` +
-            `• *Format:* \`.${targetFmt}\`\n` +
-            `• *Size:* ${sizeKb} KB\n` +
-            `• *Location:* \`${destFile}\`\n` +
-            `• *Verification:* Magic bytes & schema structurally validated ✅\n\n` +
-            `_File saved locally on host machine in ARACHNE workspace._`;
-        } catch (err) {
-          reply = `❌ Export error: ${err.message}`;
-        }
-      }
-    }
-
-    // 9. REPORT SUMMARY INTENT
-    else if (slashCmd === '/report' || /^(?:report|show report|latest report|give me the report|summary|dossier)$/i.test(lower)) {
-      const reports = this.vaultStore.getReports();
-      if (reports.length === 0) {
-        reply = `📄 *No Reports Found:*\nNo research dossiers have been generated yet.`;
-      } else {
-        const latest = reports[0];
-        reply = `📑 *Latest Research Dossier:*\n` +
-          `• *Title:* ${latest.title}\n` +
-          `• *Summary:* ${latest.summary}\n` +
-          `• *ID:* \`${latest.id}\`\n\n` +
-          `💡 *Want this formatted?* Say "export as pdf", "generate excel", or "send word document".`;
-      }
-    }
-
-    // 10. APPROVALS INTENT
-    else if (slashCmd === '/approvals' || /^(?:approvals|pending approvals|check approvals|do you need approval)/i.test(lower)) {
+    // 8. APPROVALS INTENT
+    else if (classified.intent === INTENTS.APPROVALS && classified.params?.action === 'list') {
       const pending = this.vaultStore.getApprovals('pending');
       if (pending.length === 0) {
         reply = `✅ *No Pending Approvals:* System operating within allowed parameters.`;
@@ -402,7 +457,7 @@ export class TelegramBotGateway {
       }
     }
 
-    // 11. APPROVE ID
+    // 9. APPROVE ID
     else if (slashCmd === '/approve' || /^approve\s+(\S+)$/i.test(lower)) {
       const matchId = slashCmd === '/approve' ? slashArgs.trim() : (lower.match(/^approve\s+(\S+)$/i)?.[1] || '');
       if (!matchId) {
@@ -413,7 +468,7 @@ export class TelegramBotGateway {
       }
     }
 
-    // 12. REJECT / SKIP ID
+    // 10. REJECT / SKIP ID
     else if (slashCmd === '/reject' || slashCmd === '/skip' || /^(?:reject|skip)\s+(\S+)$/i.test(lower)) {
       const matchId = slashCmd === '/reject' || slashCmd === '/skip' ? slashArgs.trim() : (lower.match(/^(?:reject|skip)\s+(\S+)$/i)?.[1] || '');
       if (!matchId) {
@@ -424,8 +479,8 @@ export class TelegramBotGateway {
       }
     }
 
-    // 13. STATS INTENT
-    else if (slashCmd === '/stats' || /^(?:stats|vault stats|storage|database)$/i.test(lower)) {
+    // 11. STATS / VAULT INTENT
+    else if (classified.intent === INTENTS.VAULT_STATS || slashCmd === '/stats' || /^(?:stats|vault stats|storage|database)$/i.test(lower)) {
       const graph = this.vaultStore.getGraph();
       const corpus = this.vaultStore.getCorpus();
       const bookmarks = this.vaultStore.getBookmarks();
@@ -438,7 +493,7 @@ export class TelegramBotGateway {
         `• *Vault Storage:* ${storage.totalMb} MB (${storage.totalRecords || 0} records)`;
     }
 
-    // 14. IGNORED ITEMS INTENT
+    // 12. IGNORED ITEMS INTENT
     else if (slashCmd === '/ignored' || /^(?:ignored|skipped items)$/i.test(lower)) {
       const ignored = this.vaultStore.getIgnoredItems(null, 10);
       if (ignored.length === 0) {
@@ -449,39 +504,38 @@ export class TelegramBotGateway {
       }
     }
 
-    // 15. EXPLICIT SLASH /INVESTIGATE
-    else if (slashCmd === '/investigate') {
-      if (!slashArgs) {
-        reply = `⚠️ *Usage Error:* Please provide an objective. Example:\n\`/investigate Open source computer use agents\``;
+    // 13. EXPLICIT SLASH /INVESTIGATE OR UNAMBIGUOUS NATURAL LANGUAGE RESEARCH DISPATCH
+    else if (slashCmd === '/investigate' || classified.intent === INTENTS.NEW_RESEARCH) {
+      const finalTopic = classified.params?.objective || slashArgs.trim() || raw;
+      if (!finalTopic || finalTopic.length < 3) {
+        reply = `⚠️ *Usage Error:* Please provide a research topic. Example:\n\`/investigate Autonomous computer-use agents\``;
       } else {
-        reply = `🚀 *Investigation Dispatched via Telegram:*\nInitiating deep crawl on: "${slashArgs}". Decomposing into 5 research phases with live browser inspection...`;
-        this.researchAgent?.startInvestigation(slashArgs);
+        reply = `🕷️ *ARACHNE Autonomous Mission Initiated*\n\n` +
+          `Objective parsed: *"${finalTopic}"*\n\n` +
+          `• Live CDP browser tab allocated\n` +
+          `• 5-phase decomposition active\n` +
+          `• Real-time extraction to SQLite WAL vault\n\n` +
+          `_Ask "what is your status?" at any time for live progress._`;
+
+        this.researchAgent?.startInvestigation(finalTopic);
       }
     }
 
-    // 16. UNKNOWN SLASH COMMAND
+    // 14. UNKNOWN SLASH COMMAND
     else if (raw.startsWith('/')) {
       reply = `❓ Unknown command: \`${slashCmd}\`. Type \`/help\` for available commands.`;
     }
 
-    // 17. AUTONOMOUS NATURAL LANGUAGE RESEARCH DISPATCH
+    // 15. UNKNOWN / AMBIGUOUS NATURAL LANGUAGE (DO NOT ACCIDENTALLY HUNT)
     else {
-      // Clean leading conversational fluff if present
-      const cleanObjective = raw
-        .replace(/^(?:please\s+|can you\s+|could you\s+|i want to\s+|i need to\s+)/i, '')
-        .replace(/^(?:find\s+(?:me\s+)?|search\s+(?:for\s+)?|investigate\s+|research\s+|look\s+up\s+)/i, '')
-        .trim();
-
-      const finalTopic = cleanObjective.length > 5 ? cleanObjective : raw;
-
-      reply = `🕷️ *ARACHNE Autonomous Mission Initiated*\n\n` +
-        `Objective parsed: *"${finalTopic}"*\n\n` +
-        `• Live CDP browser tab allocated\n` +
-        `• 5-phase decomposition active\n` +
-        `• Real-time extraction to SQLite WAL vault\n\n` +
-        `_Ask "how far are you?" at any time for live progress._`;
-
-      this.researchAgent?.startInvestigation(finalTopic);
+      reply = `🕷️ *ARACHNE Web Intelligence Command Center*\n\n` +
+        `I didn't recognize that request. Here is what I can do:\n` +
+        `• *Research:* "Start research on <topic>" or \`/investigate <topic>\`\n` +
+        `• *Export Report:* "Give me report in txt file" or "Export report as pdf"\n` +
+        `• *System Health:* "Check whether Arachne is working."\n` +
+        `• *Format Guide:* "How do I generate a PDF?"\n` +
+        `• *Progress:* "What is your status?"\n` +
+        `• *Directory:* Type \`/help\` for commands reference.`;
     }
 
     if (chatId) {

@@ -167,6 +167,9 @@ export class ResearchAgent {
         sourceDiversity: 0,
         corroborationScore: 0,
         factCount: 0,
+        uniqueUsableSources: 0,
+        evidenceCount: 0,
+        unresolvedQuestions: (inv?.objective || '').toLowerCase().split(/\s+/).filter(w => w.length > 3),
         sufficiencyScore: 0,
         verdict: 'CONTINUE_HUNT',
         reasons: ['No documents crawled yet.']
@@ -177,13 +180,17 @@ export class ResearchAgent {
     const uniqueTypes = new Set(corpus.map(d => d.type).filter(Boolean));
     const totalEntities = corpus.reduce((acc, d) => acc + (d.entities?.length || 0), 0);
     const totalCitations = corpus.reduce((acc, d) => acc + (d.citations?.length || 0), 0);
+    const evidenceCount = totalEntities + totalCitations;
 
     // Question coverage based on key terms from objective present in titles & snippets
     const objectiveWords = (inv.objective || '').toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    const unresolvedQuestions = [];
     let coveredWords = 0;
     for (const word of objectiveWords) {
       if (corpus.some(d => (d.title || '').toLowerCase().includes(word) || (d.snippet || '').toLowerCase().includes(word))) {
         coveredWords++;
+      } else {
+        unresolvedQuestions.push(word);
       }
     }
     const questionCoverage = objectiveWords.length > 0 ? Math.min(100, Math.round((coveredWords / objectiveWords.length) * 100)) : 80;
@@ -197,19 +204,22 @@ export class ResearchAgent {
 
     // Overall sufficiency weighted calculation
     const sufficiencyScore = Math.round(questionCoverage * 0.45 + diversityScore * 0.35 + Math.min(100, corroborationScore) * 0.20);
-    const isSufficient = sufficiencyScore >= 80 && uniqueDomains.size >= 2 && corpus.length >= 3;
+    const isSufficient = sufficiencyScore >= 75 && uniqueDomains.size >= 2 && evidenceCount >= 3 && unresolvedQuestions.length <= 1;
 
     return {
       questionCoverage,
       sourceDiversity: diversityScore,
       corroborationScore: Math.min(100, corroborationScore),
       uniqueDomainsCount: uniqueDomains.size,
+      uniqueUsableSources: uniqueDomains.size,
+      evidenceCount,
       factCount,
+      unresolvedQuestions,
       sufficiencyScore,
       verdict: isSufficient ? 'SUFFICIENT' : 'CONTINUE_HUNT',
       reasons: isSufficient
-        ? ['Broad domain coverage achieved', 'Hypotheses answered by corroborated sources', 'Evidence sufficiency threshold satisfied']
-        : ['Gathering additional corroborated primary sources to satisfy hypotheses']
+        ? ['Broad domain coverage achieved', 'Key hypotheses answered by corroborated sources', 'Evidence sufficiency threshold satisfied']
+        : [`Gathering additional corroborated sources (Unresolved aspects: ${unresolvedQuestions.slice(0, 3).join(', ') || 'Domain breadth'})`]
     };
   }
 
@@ -239,6 +249,12 @@ export class ResearchAgent {
       plan: initialPlan,
       metrics: {
         urlsDiscovered: 0,
+        fetchesAttempted: 0,
+        fetchesSuccessful: 0,
+        documentsAnalyzed: 0,
+        rejectedUrls: 0,
+        uniqueUsableSources: 0,
+        evidenceCount: 0,
         pagesCrawled: 0,
         entitiesExtracted: 0,
         citationsVerified: 0,
@@ -318,8 +334,11 @@ export class ResearchAgent {
           const check = this.modelRouter.validateToolCall('crawl_url', { url });
           const permitted = frontier.isUrlPermitted(url);
           if (check.valid && permitted.permitted) {
-            frontier.enqueue(url, 0, 8, 'search-discovery');
+            if (frontier.enqueue(url, 0, 8, 'search-discovery')) {
+              inv.metrics.urlsDiscovered++;
+            }
           } else {
+            inv.metrics.rejectedUrls++;
             this.recordIgnoredItem({
               url,
               title: '',
@@ -330,7 +349,6 @@ export class ResearchAgent {
             });
           }
         }
-        inv.metrics.urlsDiscovered += allSeeds.length;
 
         // 3. CRAWLING & EXTRACTING (Live Research Loop: OBSERVE -> INSPECT -> EXTRACT -> EVALUATE -> SELECT NEXT -> NAVIGATE -> VERIFY)
         this.setLifecycleState('CRAWLING', `Traversing URLs for Phase ${pIdx + 1}`);
@@ -350,6 +368,7 @@ export class ResearchAgent {
           // Scope & Permission validation
           const permCheck = frontier.isUrlPermitted(target.url);
           if (!permCheck.permitted) {
+            inv.metrics.rejectedUrls++;
             this.log(`Skipping restricted URL ${target.url}: ${permCheck.reason}`, 'warn');
             this.recordIgnoredItem({
               url: target.url,
@@ -377,6 +396,7 @@ export class ResearchAgent {
               const domain = new URL(target.url).hostname;
               const robotsTxt = await this.fetcher.fetchRobotsTxt(domain);
               if (!frontier.isAllowedByRobots(target.url, robotsTxt)) {
+                inv.metrics.rejectedUrls++;
                 this.log(`Robots.txt forbids crawling path for: ${target.url}`, 'warn');
                 this.recordIgnoredItem({
                   url: target.url,
@@ -408,6 +428,7 @@ export class ResearchAgent {
           }
 
           // Fetch page content
+          inv.metrics.fetchesAttempted++;
           fetchResult = await this.fetcher.fetchUrl(target.url);
 
           // === LOOP STEP: OBSERVE ===
@@ -430,6 +451,7 @@ export class ResearchAgent {
 
           // Error & Approval Handling
           if (!fetchResult.success) {
+            inv.metrics.rejectedUrls++;
             const classification = frontier.classifyError(fetchResult.error, fetchResult.status);
             this.log(`Fetch error on ${target.url}: ${classification} (status: ${fetchResult.status || 'ERR'})`, 'warn');
 
@@ -438,7 +460,7 @@ export class ResearchAgent {
               title: fetchResult.title || '',
               reason: `FETCH_FAILURE: ${classification} (${fetchResult.error || fetchResult.status || 'UNKNOWN_ERROR'})`,
               stage: 'PAGE_FETCH',
-              willRetry: classification !== 'CAPTCHA_CHALLENGE' && classification !== 'REQUIRES_AUTHENTICATION',
+              willRetry: classification !== 'CAPTCHA_CHALLENGE' && classification !== 'REQUIRES_AUTHENTICATION' && classification !== 'NOT_FOUND',
               continues: true
             });
 
@@ -476,6 +498,48 @@ export class ResearchAgent {
             }
           }
 
+          inv.metrics.fetchesSuccessful++;
+
+          // Check for login pages, auth walls, or 404 pages that returned 200
+          const lowerUrl = target.url.toLowerCase();
+          const lowerTitle = (fetchResult.title || '').toLowerCase();
+          const lowerHtml = (fetchResult.html || '').slice(0, 3000).toLowerCase();
+
+          const isLoginPage = lowerUrl.includes('/login') || lowerUrl.includes('/signin') || lowerUrl.includes('/auth') ||
+            lowerTitle.includes('log in') || lowerTitle.includes('sign in') || lowerTitle.includes('authentication required') ||
+            (lowerHtml.includes('type="password"') && (lowerHtml.includes('username') || lowerHtml.includes('email')));
+
+          const isNotFoundPage = lowerTitle.includes('404') || lowerTitle.includes('page not found') || lowerTitle.includes('not found') || fetchResult.status === 404;
+
+          if (isLoginPage) {
+            inv.metrics.rejectedUrls++;
+            this.log(`Rejecting login page boundary: ${target.url}`, 'warn');
+            this.recordIgnoredItem({
+              url: target.url,
+              title: fetchResult.title || '',
+              reason: 'LOGIN_PAGE_BOUNDARY',
+              stage: 'AUTH_BOUNDARY',
+              willRetry: false,
+              continues: true
+            });
+            continue;
+          }
+
+          if (isNotFoundPage) {
+            inv.metrics.rejectedUrls++;
+            this.log(`Rejecting 404/Not Found response page: ${target.url}`, 'warn');
+            this.recordIgnoredItem({
+              url: target.url,
+              title: fetchResult.title || '',
+              reason: 'HTTP_404_NOT_FOUND',
+              stage: 'PAGE_FETCH',
+              willRetry: false,
+              continues: true
+            });
+            continue;
+          }
+
+          inv.metrics.documentsAnalyzed++;
           inv.metrics.pagesCrawled++;
           phaseUrlCount++;
 
@@ -518,6 +582,7 @@ export class ResearchAgent {
 
           inv.metrics.entitiesExtracted += entities.length;
           inv.metrics.citationsVerified += citations.length;
+          inv.metrics.evidenceCount = (inv.metrics.entitiesExtracted || 0) + (inv.metrics.citationsVerified || 0);
 
           // Ingest into Knowledge Graph
           this.graphEngine.ingestDocument({
@@ -560,6 +625,10 @@ export class ResearchAgent {
           doc.trustReasons = verification.reasons;
 
           this.vaultStore.addCorpusDocument(doc);
+
+          const curCorpus = this.vaultStore.getCorpus();
+          const uniqueDomains = new Set(curCorpus.map(d => d.domain).filter(Boolean));
+          inv.metrics.uniqueUsableSources = uniqueDomains.size;
 
           // Add to recent findings
           if (entities.length > 0 || citations.length > 0) {
@@ -633,6 +702,7 @@ export class ResearchAgent {
 
             for (const cand of scoredCandidates) {
               if (cand.decision === 'REJECTED') {
+                inv.metrics.rejectedUrls++;
                 this.recordIgnoredItem({
                   url: cand.url,
                   title: '',
@@ -664,9 +734,16 @@ export class ResearchAgent {
           this.emit('investigation_updated', inv);
           this.emit('graph_updated', this.vaultStore.getGraph());
 
-          // Early conclusion if evidence is highly sufficient
-          if (sufficiency.verdict === 'SUFFICIENT' && inv.metrics.pagesCrawled >= 5) {
-            this.log('Evidence Sufficiency achieved! Concluding crawl early to synthesize deliverable.', 'info');
+          // Stopping decision: Based on relevant accessible evidence, source diversity,
+          // unresolved research questions, and remaining discovery opportunities
+          const remainingOpportunities = frontier.size();
+          if (sufficiency.verdict === 'SUFFICIENT') {
+            if (sufficiency.unresolvedQuestions.length === 0 || remainingOpportunities === 0) {
+              this.log(`Evidence sufficiency achieved (Score: ${sufficiency.sufficiencyScore}%, Usable Sources: ${sufficiency.uniqueUsableSources}, Evidence Items: ${sufficiency.evidenceCount}). Concluding crawl.`, 'info');
+              break;
+            }
+          } else if (remainingOpportunities === 0) {
+            this.log(`Discovery opportunities exhausted with sufficiency score ${sufficiency.sufficiencyScore}%. Unresolved aspects: ${sufficiency.unresolvedQuestions.join(', ') || 'None'}. Synthesizing deliverable with stated limitations.`, 'warn');
             break;
           }
         }
