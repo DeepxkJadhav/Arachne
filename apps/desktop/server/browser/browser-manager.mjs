@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import fs from 'node:fs';
 import { BrowserDetector } from './browser-detector.mjs';
 import { CdpClient } from './cdp-client.mjs';
 
@@ -176,6 +177,28 @@ export class BrowserManager {
     this.currentCdpSession = session;
 
     return session;
+  }
+
+  async navigateAndScreenshot(url, outputPath = null) {
+    this.status = 'navigating';
+    const session = await this.prepareTabForUrl(url);
+    await session.navigate(url);
+    this.status = 'extracting';
+    const content = await session.extractContent();
+    const screenshotBase64 = await session.captureScreenshot(85);
+    let savedPath = outputPath;
+    if (screenshotBase64 && savedPath) {
+      fs.mkdirSync(path.dirname(savedPath), { recursive: true });
+      fs.writeFileSync(savedPath, Buffer.from(screenshotBase64, 'base64'));
+    }
+    this.status = 'ready';
+    return {
+      url,
+      title: content?.title || url,
+      wordCount: content?.wordCount || 0,
+      screenshotBase64,
+      savedPath
+    };
   }
 
   async closePreviousTaskTab() {

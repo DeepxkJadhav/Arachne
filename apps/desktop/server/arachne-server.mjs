@@ -529,6 +529,18 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: testRes.connected, data: testRes });
       }
 
+      if (pathname === '/api/browser/screenshot' && req.method === 'POST') {
+        const body = await readBody();
+        const url = body.url || researchAgent.browserManager.activeUrl || 'https://export.arxiv.org/abs/2301.00234';
+        const outputPath = body.outputPath || path.join(process.cwd(), 'screenshots', `screenshot_${Date.now()}.jpg`);
+        try {
+          const resData = await researchAgent.browserManager.navigateAndScreenshot(url, outputPath);
+          return sendJson({ success: true, data: resData });
+        } catch (err) {
+          return sendJson({ success: false, error: err.message }, 500);
+        }
+      }
+
       if (pathname === '/api/browser/tabs/close' && req.method === 'POST') {
         await researchAgent.browserManager.closeAllTaskTabs();
         return sendJson({ success: true, message: 'All ARACHNE task tabs closed.' });
