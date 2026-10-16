@@ -12,7 +12,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { classifyIntent, INTENTS } from '../apps/desktop/server/agent/intent-classifier.mjs';
+import { classifyIntent, INTENTS } from '../server/agent/intent-classifier.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -135,7 +135,7 @@ async function ensureServerOnline(quiet = false) {
     process.stdout.write(`${C.gray}Starting ARACHNE background engine daemon... ${C.reset}`);
   }
 
-  const startScript = path.resolve(__dirname, '../apps/desktop/start.mjs');
+  const startScript = path.resolve(__dirname, '../server/start.mjs');
   if (!fs.existsSync(startScript)) {
     return false;
   }
@@ -450,7 +450,7 @@ async function cmdStatus(options = {}) {
 
   if (!statusRes.ok) {
     console.log(`${C.crimson}[ERR] ARACHNE server is unreachable at ${BASE_URL}.${C.reset}`);
-    console.log(`${C.gray}Start server using: node apps/desktop/start.mjs --server-only${C.reset}\n`);
+    console.log(`${C.gray}Start server using: node server/start.mjs${C.reset}\n`);
     return;
   }
 

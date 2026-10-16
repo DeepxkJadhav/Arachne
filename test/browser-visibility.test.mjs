@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
 
-import { BrowserManager } from '../apps/desktop/server/browser/browser-manager.mjs';
+import { BrowserManager } from '../server/browser/browser-manager.mjs';
 
 test('browser launch args default to visible Chrome', () => {
   const args = BrowserManager.buildLaunchArgs({

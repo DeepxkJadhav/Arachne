@@ -245,8 +245,8 @@ await runAsyncTest('Local Deterministic Web Inspection & SSRF Guard Fixture', as
     assert.ok(crawlData.error.toLowerCase().includes('ssrf blocked'), `Expected SSRF error, got: ${crawlData.error}`);
 
     // 6b: Test direct ContentExtractor deterministic markdown & metadata
-    const { ContentExtractor } = await import('../apps/desktop/server/crawler/extractor.mjs');
-    const { CrawlerFetcher } = await import('../apps/desktop/server/crawler/fetcher.mjs');
+    const { ContentExtractor } = await import('../server/crawler/extractor.mjs');
+    const { CrawlerFetcher } = await import('../server/crawler/fetcher.mjs');
 
     const testHtml = `
       <html>

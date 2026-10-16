@@ -9,7 +9,7 @@ import path from 'node:path';
 import os from 'node:os';
 import assert from 'node:assert';
 import { execSync } from 'node:child_process';
-import { classifyIntent, INTENTS } from '../apps/desktop/server/agent/intent-classifier.mjs';
+import { classifyIntent, INTENTS } from '../server/agent/intent-classifier.mjs';
 
 const BASE_URL = 'http://localhost:3003';
 

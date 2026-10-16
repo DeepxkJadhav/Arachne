@@ -19,12 +19,12 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert';
-import { classifyIntent, INTENTS } from '../apps/desktop/server/agent/intent-classifier.mjs';
-import { UrlFrontier } from '../apps/desktop/server/crawler/frontier.mjs';
-import { ModelRouter } from '../apps/desktop/server/models/model-router.mjs';
-import { ReportEngine } from '../apps/desktop/server/reports/report-engine.mjs';
-import { SqliteStore } from '../apps/desktop/server/vault/sqlite-store.mjs';
-import { VaultStore } from '../apps/desktop/server/vault/vault-store.mjs';
+import { classifyIntent, INTENTS } from '../server/agent/intent-classifier.mjs';
+import { UrlFrontier } from '../server/crawler/frontier.mjs';
+import { ModelRouter } from '../server/models/model-router.mjs';
+import { ReportEngine } from '../server/reports/report-engine.mjs';
+import { SqliteStore } from '../server/vault/sqlite-store.mjs';
+import { VaultStore } from '../server/vault/vault-store.mjs';
 
 const BASE_URL = 'http://localhost:3003';
 const SENDER_ID = '123456789'; // Authorized operator ID

@@ -1,8 +1,9 @@
 {
   "name": "arachne",
   "version": "2.0.0",
-  "description": "ARACHNE — Autonomous Web Intelligence & Research System",
-  "private": true,
+  "description": "ARACHNE — Autonomous Web Intelligence & Deep Research CLI",
+  "type": "module",
+  "main": "bin/arachne.mjs",
   "bin": {
     "arachne": "./bin/arachne.mjs"
   },
@@ -10,11 +11,10 @@
     "start": "node bin/arachne.mjs",
     "cli": "node bin/arachne.mjs",
     "arachne": "node bin/arachne.mjs",
-    "desktop": "node apps/desktop/start.mjs",
-    "desktop:web": "node apps/desktop/start.mjs --web",
-    "test:desktop": "node examples/arachne-desktop-test.mjs",
-    "demo": "node examples/arachne-demo.mjs",
-    "harness": "node apps/api/src/harness.ts"
+    "server": "node server/start.mjs",
+    "test": "node test/e2e-master-verification.mjs",
+    "test:regression": "node test/regression-intent-reports-suite.mjs",
+    "test:all": "node test/e2e-master-verification.mjs && node test/regression-intent-reports-suite.mjs"
   },
   "author": "Deepak Jadhav <https://github.com/DeepxkJadhav>",
   "license": "AGPL-3.0",
