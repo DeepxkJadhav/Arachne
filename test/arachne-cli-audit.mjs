@@ -219,7 +219,7 @@ await runAsyncTest('Local Deterministic Web Inspection & SSRF Guard Fixture', as
               <ul>
                 <li>High-speed headless browser automation</li>
                 <li>Transactional SQLite persistence</li>
-                <li>Zero Firecrawl runtime footprint</li>
+                <li>Zero external scraper runtime footprint</li>
               </ul>
             </main>
           </body>
@@ -269,7 +269,7 @@ await runAsyncTest('Local Deterministic Web Inspection & SSRF Guard Fixture', as
     assert.strictEqual(fetched.success, true);
     const md = localFetcher.htmlToCleanMarkdown(fetched.html, 'http://127.0.0.1:44991/test-article');
     assert.ok(md.includes('Autonomous Intelligence Capabilities'));
-    assert.ok(md.includes('Zero Firecrawl runtime footprint'));
+    assert.ok(md.includes('Zero external scraper runtime footprint'));
   } finally {
     server.close();
   }
