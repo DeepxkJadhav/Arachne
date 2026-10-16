@@ -84,6 +84,15 @@ export class CdpClient {
     }
   }
 
+  async activateTab(targetId) {
+    try {
+      await CdpClient.httpJson('PUT', this.host, this.port, `/json/activate/${targetId}`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   createSession(webSocketUrl) {
     let wsUrl = webSocketUrl;
     if (wsUrl && !wsUrl.includes(`:${this.port}`)) {
@@ -183,6 +192,9 @@ export class CdpSession {
     await this.send('Page.enable');
     await this.send('DOM.enable');
     await this.send('Runtime.enable');
+    try {
+      await this.send('Page.bringToFront');
+    } catch {}
     try {
       await this.send('Accessibility.enable');
     } catch {}

@@ -70,16 +70,16 @@ export class BrowserManager {
       `--user-data-dir=${profileDir}`,
       '--no-first-run',
       '--no-default-browser-check',
-      '--disable-background-networking',
       '--disable-sync',
       '--disable-features=Translate',
-      '--disable-default-apps',
       '--window-size=1280,800',
       '--disable-blink-features=AutomationControlled'
     ];
 
     if (headless) {
       args.push('--headless=new');
+    } else {
+      args.push('--new-window', '--start-maximized', 'about:blank');
     }
 
     return args;
@@ -113,9 +113,13 @@ export class BrowserManager {
 
     try {
       this.browserProcess = spawn(browserInfo.executablePath, args, {
-        detached: false,
+        detached: true,
+        windowsHide: false,
         stdio: 'ignore'
       });
+      if (typeof this.browserProcess.unref === 'function') {
+        this.browserProcess.unref();
+      }
 
       this.browserProcess.on('exit', () => {
         this.status = 'disconnected';
@@ -151,8 +155,11 @@ export class BrowserManager {
   }
 
   async prepareTabForUrl(targetUrl) {
-    // 1. Close previously open task tab to avoid leaking tabs
-    await this.closePreviousTaskTab();
+    // 1. Close previously open task session
+    if (this.currentCdpSession) {
+      this.currentCdpSession.close();
+      this.currentCdpSession = null;
+    }
 
     // 2. Check if CDP is reachable; if not, launch a dedicated visible browser session.
     const conn = await this.testCdpConnection();
@@ -160,11 +167,26 @@ export class BrowserManager {
       await this.launchDedicatedBrowser({ headless: false });
     }
 
-    // 3. Create fresh task tab
-    const tabInfo = await this.cdpClient.createTab(targetUrl);
+    // 3. Reuse blank/initial tab if available, otherwise create a new tab
+    let tabInfo = null;
+    try {
+      const existingTabs = await this.cdpClient.listTabs();
+      const blankTab = existingTabs.find(t => t.url === 'about:blank' || t.url === 'chrome://newtab/');
+      if (blankTab) {
+        tabInfo = blankTab;
+      }
+    } catch {}
+
+    if (!tabInfo) {
+      tabInfo = await this.cdpClient.createTab(targetUrl);
+    }
+
     if (!tabInfo || !tabInfo.id || !tabInfo.webSocketDebuggerUrl) {
       throw new Error(`Failed to create task tab for: ${targetUrl}`);
     }
+
+    // Bring tab to the foreground on the user's desktop
+    await this.cdpClient.activateTab(tabInfo.id);
 
     this.currentTaskTabId = tabInfo.id;
     this.activeTaskTabs.add(tabInfo.id);
@@ -177,6 +199,41 @@ export class BrowserManager {
     this.currentCdpSession = session;
 
     return session;
+  }
+
+  async openReportTab(reportUrl) {
+    try {
+      const conn = await this.testCdpConnection();
+      if (!conn.connected) {
+        await this.launchDedicatedBrowser({ headless: false });
+      }
+
+      let tabInfo = null;
+      try {
+        const existingTabs = await this.cdpClient.listTabs();
+        tabInfo = existingTabs.find(t => t.id === this.currentTaskTabId) ||
+                  existingTabs.find(t => t.url === 'about:blank' || t.url === 'chrome://newtab/') ||
+                  existingTabs[0];
+      } catch {}
+
+      if (!tabInfo) {
+        tabInfo = await this.cdpClient.createTab(reportUrl);
+      }
+
+      if (tabInfo && tabInfo.webSocketDebuggerUrl) {
+        const session = this.cdpClient.createSession(tabInfo.webSocketDebuggerUrl);
+        await session.connect();
+        await session.initializePage();
+        await session.navigate(reportUrl);
+        await this.cdpClient.activateTab(tabInfo.id);
+        this.currentTaskTabId = tabInfo.id;
+        this.activeUrl = reportUrl;
+        return true;
+      }
+    } catch (err) {
+      // Browser navigation fallback
+    }
+    return false;
   }
 
   async navigateAndScreenshot(url, outputPath = null) {

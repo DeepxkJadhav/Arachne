@@ -417,14 +417,21 @@ export class ResearchAgent {
           let screenshotBase64 = null;
 
           try {
-            // Attempt opening tab via BrowserManager (closes previous tab automatically)
+            // Open and focus tab via BrowserManager
             browserSession = await this.browserManager.prepareTabForUrl(target.url);
             if (browserSession) {
-              const navRes = await browserSession.navigate(target.url, 15000);
-              screenshotBase64 = await browserSession.captureScreenshot(65);
+              await browserSession.navigate(target.url, 15000);
+              screenshotBase64 = await browserSession.captureScreenshot(75);
+              if (screenshotBase64) {
+                try {
+                  const ssDir = path.join(this.vaultStore.vaultDir, 'screenshots');
+                  fs.mkdirSync(ssDir, { recursive: true });
+                  fs.writeFileSync(path.join(ssDir, `live_crawl_step_${(inv.metrics.pagesCrawled || 0) + 1}.jpg`), Buffer.from(screenshotBase64, 'base64'));
+                } catch {}
+              }
             }
           } catch (bErr) {
-            // If browser is not running or headless launch failed, continue with resilient fetcher
+            // If browser is not running or launch failed, continue with resilient fetcher
           }
 
           // Fetch page content
@@ -751,9 +758,6 @@ export class ResearchAgent {
         phase.status = 'completed';
       }
 
-      // Close browser tabs on completion
-      await this.browserManager.closeAllTaskTabs();
-
       // 4. ANALYZING & VERIFYING
       if (!this.isStopped) {
         this.setLifecycleState('ANALYZING', 'Cross-referencing evidence and detecting contradictions');
@@ -778,11 +782,24 @@ export class ResearchAgent {
 
         this.setLifecycleState('COMPLETED', `Investigation finalized. Report ${report.id} generated.`);
         this.log(`Research dossier generated successfully! Report ID: ${report.id}`, 'info');
+
+        // Open generated HTML report in browser for instant operator viewing
+        try {
+          const reportsDir = path.join(this.vaultStore.vaultDir, 'reports');
+          const htmlReportPath = path.join(reportsDir, `${report.id}.html`);
+          if (fs.existsSync(htmlReportPath)) {
+            await this.browserManager.openReportTab(`file:///${htmlReportPath.replace(/\\/g, '/')}`);
+            this.log(`Opened research report in Chrome: file:///${htmlReportPath.replace(/\\/g, '/')}`, 'info');
+          }
+        } catch {}
+
         this.emit('investigation_completed', { investigation: inv, report });
       }
     } finally {
       clearInterval(timerInterval);
-      await this.browserManager.closeAllTaskTabs();
+      if (this.isStopped) {
+        await this.browserManager.closeAllTaskTabs();
+      }
       if (this.telegramGateway && typeof this.telegramGateway.flushIgnoredBatch === 'function') {
         try {
           await this.telegramGateway.flushIgnoredBatch();
