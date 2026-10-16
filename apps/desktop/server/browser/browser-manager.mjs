@@ -61,28 +61,12 @@ export class BrowserManager {
     return await this.cdpClient.testConnection();
   }
 
-  async launchDedicatedBrowser({ headless = true } = {}) {
-    if (this.browserProcess && !this.browserProcess.killed) {
-      const conn = await this.testCdpConnection();
-      if (conn.connected) {
-        this.status = 'ready';
-        return { success: true, message: 'Browser already active and connected', port: this.remoteDebuggingPort };
-      }
-    }
-
-    this.detected = BrowserDetector.detectInstalledBrowsers();
-    const browserInfo = this.detected[this.selectedBrowser];
-
-    if (!browserInfo?.installed || !browserInfo?.executablePath) {
-      throw new Error(`Selected browser [${this.selectedBrowser}] is not installed on this system.`);
-    }
-
-    const dedicatedDir = BrowserDetector.getDedicatedProfileDir(this.vaultDir, this.selectedBrowser);
+  static buildLaunchArgs({ browserType = 'chrome', profileDir, port = 9222, headless = false } = {}) {
     const args = [
-      `--remote-debugging-port=${this.remoteDebuggingPort}`,
+      `--remote-debugging-port=${port}`,
       '--remote-debugging-address=127.0.0.1',
       '--remote-allow-origins=*',
-      `--user-data-dir=${dedicatedDir}`,
+      `--user-data-dir=${profileDir}`,
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-background-networking',
@@ -96,6 +80,33 @@ export class BrowserManager {
     if (headless) {
       args.push('--headless=new');
     }
+
+    return args;
+  }
+
+  async launchDedicatedBrowser({ headless = false } = {}) {
+    if (this.browserProcess && !this.browserProcess.killed) {
+      const conn = await this.testCdpConnection();
+      if (conn.connected) {
+        this.status = 'ready';
+        return { success: true, message: 'Browser already active and connected', port: this.remoteDebuggingPort, headless: !!headless };
+      }
+    }
+
+    this.detected = BrowserDetector.detectInstalledBrowsers();
+    const browserInfo = this.detected[this.selectedBrowser];
+
+    if (!browserInfo?.installed || !browserInfo?.executablePath) {
+      throw new Error(`Selected browser [${this.selectedBrowser}] is not installed on this system.`);
+    }
+
+    const dedicatedDir = BrowserDetector.getDedicatedProfileDir(this.vaultDir, this.selectedBrowser);
+    const args = BrowserManager.buildLaunchArgs({
+      browserType: this.selectedBrowser,
+      profileDir: dedicatedDir,
+      port: this.remoteDebuggingPort,
+      headless
+    });
 
     this.status = 'connecting';
 
@@ -124,6 +135,7 @@ export class BrowserManager {
             executable: browserInfo.executablePath,
             profileDir: dedicatedDir,
             port: this.remoteDebuggingPort,
+            headless: !!headless,
             latencyMs: testRes.latencyMs
           };
         }
@@ -141,10 +153,10 @@ export class BrowserManager {
     // 1. Close previously open task tab to avoid leaking tabs
     await this.closePreviousTaskTab();
 
-    // 2. Check if CDP is reachable; if not, try launching dedicated headless browser
+    // 2. Check if CDP is reachable; if not, launch a dedicated visible browser session.
     const conn = await this.testCdpConnection();
     if (!conn.connected) {
-      await this.launchDedicatedBrowser({ headless: true });
+      await this.launchDedicatedBrowser({ headless: false });
     }
 
     // 3. Create fresh task tab

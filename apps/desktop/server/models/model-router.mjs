@@ -590,6 +590,53 @@ export class ModelRouter {
     });
   }
 
+  async callGroqText(prompt, apiKey, model = 'qwen/qwen3.8-27b') {
+    return new Promise((resolve, reject) => {
+      const payload = JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are the ARACHNE Autonomous Research Synthesizer. You write clear, detailed, factual technical reports and comparisons based strictly on the verified evidence provided. Use markdown headings and structured bullet points.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.5,
+        max_tokens: 2500
+      });
+
+      const req = https.request('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload)
+        },
+        timeout: 20000
+      }, (res) => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`Groq HTTP ${res.statusCode}: ${data.slice(0, 100)}`));
+          }
+          try {
+            const json = JSON.parse(data);
+            const content = json.choices?.[0]?.message?.content || '';
+            resolve(content);
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+
+      req.on('error', reject);
+      req.on('timeout', () => req.destroy(new Error('Groq request timed out')));
+      req.write(payload);
+      req.end();
+    });
+  }
+
   async callOpenRouter(objective, apiKey, model = 'openrouter/free') {
     return new Promise((resolve, reject) => {
       const payload = JSON.stringify({

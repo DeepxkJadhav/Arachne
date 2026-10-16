@@ -379,12 +379,40 @@ export function createArachneServer(port = 3003) {
         return sendJson({ success: true, data: latest });
       }
 
+      if (pathname === '/api/reports/refine' && req.method === 'POST') {
+        const body = await readBody();
+        const { investigationId, instruction } = body;
+        if (!instruction) {
+          return sendJson({ success: false, error: 'instruction is required for refinement' }, 400);
+        }
+        try {
+          const refineRes = await researchAgent.refineInvestigation(investigationId, instruction);
+          return sendJson(refineRes);
+        } catch (err) {
+          return sendJson({ success: false, error: err.message }, 500);
+        }
+      }
+
+      if (pathname === '/api/investigation/ask' && req.method === 'POST') {
+        const body = await readBody();
+        const { question, investigationId } = body;
+        if (!question) {
+          return sendJson({ success: false, error: 'question is required' }, 400);
+        }
+        try {
+          const answerRes = await researchAgent.answerQuestion(question, investigationId);
+          return sendJson({ success: true, data: answerRes });
+        } catch (err) {
+          return sendJson({ success: false, error: err.message }, 500);
+        }
+      }
+
       if (pathname === '/api/reports/export' && req.method === 'POST') {
         const body = await readBody();
         const { reportId, format, destinationPath, overwrite } = body;
         const targetReportId = reportId || 'latest';
-        if (!format || !destinationPath) {
-          return sendJson({ success: false, error: 'format and destinationPath are required' }, 400);
+        if (!format) {
+          return sendJson({ success: false, error: 'format is required' }, 400);
         }
         try {
           const exportRes = reportEngine.exportToFile(targetReportId, format, destinationPath, { overwrite });
@@ -488,7 +516,8 @@ export function createArachneServer(port = 3003) {
       if (pathname === '/api/browser/launch' && req.method === 'POST') {
         const body = await readBody();
         try {
-          const launchRes = await researchAgent.browserManager.launchDedicatedBrowser({ headless: body.headless !== false });
+          const shouldRunHeadless = body.headless === true;
+          const launchRes = await researchAgent.browserManager.launchDedicatedBrowser({ headless: shouldRunHeadless });
           return sendJson({ success: true, data: launchRes });
         } catch (err) {
           return sendJson({ success: false, error: err.message }, 500);
@@ -548,7 +577,7 @@ export function createArachneServer(port = 3003) {
       if (pathname === '/api/telegram/exec' && req.method === 'POST') {
         const body = await readBody();
         const text = body.text || body.command || '/status';
-        const senderId = body.senderId || body.sender || 'Operator';
+        const senderId = body.senderId || body.userId || body.sender || 'Operator';
         const chatId = body.chatId || null;
         const log = await telegramGateway.processIncomingMessage({ text, senderId, chatId });
         const isAuthorized = log?.messageType !== 'unauthorized';
@@ -622,6 +651,8 @@ export function createArachneServer(port = 3003) {
 
         const fetchRes = await researchAgent.fetcher.fetchUrl(url);
         const md = researchAgent.fetcher.htmlToCleanMarkdown(fetchRes.html, url);
+        let domain = '';
+        try { domain = new URL(url).hostname; } catch {}
         return sendJson({
           success: fetchRes.success,
           error: fetchRes.error || null,
@@ -629,7 +660,7 @@ export function createArachneServer(port = 3003) {
             markdown: md,
             html: fetchRes.html,
             contentHash: fetchRes.contentHash,
-            metadata: { title: url, sourceURL: url, statusCode: fetchRes.status }
+            metadata: { title: url, sourceURL: url, domain, statusCode: fetchRes.status }
           }
         });
       }

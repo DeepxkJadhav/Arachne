@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import zlib from 'node:zlib';
 
 export class ReportEngine {
@@ -57,7 +58,9 @@ export class ReportEngine {
       citations,
       title,
       timestamp,
-      dateFormatted
+      dateFormatted,
+      additionalSectionTitle: options.additionalSectionTitle || null,
+      additionalSectionContent: options.additionalSectionContent || null
     };
 
     // 1. Markdown
@@ -212,7 +215,11 @@ export class ReportEngine {
     md += `## 6. Synthesis & Strategic Conclusions\n\n`;
     md += `1. **Architecture Maturity:** The collected evidence demonstrates strong convergence around modular, tool-use-first autonomous agent frameworks.\n`;
     md += `2. **State & Memory:** Systems emphasizing persistent externalized state and graph topologies significantly outperform ephemeral conversational wrappers.\n`;
-    md += `3. **Execution Reliability:** Anti-bot evasion, robust rate limiting, and permission-aware crawling are critical differentiators for reliable web intelligence.\n\n`;
+    if (data.additionalSectionContent) {
+      md += `## 7. ${data.additionalSectionTitle || 'Refined Technical Analysis'}\n\n`;
+      md += `${data.additionalSectionContent}\n\n`;
+    }
+
     md += `---\n*Report generated deterministically by ARACHNE. All claims link directly to original source provenance.*`;
 
     return md;
@@ -244,6 +251,12 @@ export class ReportEngine {
       txt += `    Domain: ${doc.domain} | Relevance: ${( (doc.relevanceScore || 0.8) * 100 ).toFixed(0)}%\n`;
       txt += `    Snippet: ${doc.snippet}\n\n`;
     });
+
+    if (data.additionalSectionContent) {
+      txt += `4. ${(data.additionalSectionTitle || 'REFINED TECHNICAL ANALYSIS').toUpperCase()}\n`;
+      txt += `--------------------\n`;
+      txt += `${data.additionalSectionContent}\n\n`;
+    }
 
     txt += `================================================================================\n`;
     txt += `END OF REPORT // ARACHNE INTELLIGENCE SYSTEM\n`;
@@ -796,8 +809,18 @@ export class ReportEngine {
       throw new Error(`Report validation failed for .${fmt}: ${validation.error}`);
     }
 
+    // Default destination to Windows Downloads directory if not specified or just a bare filename
+    let targetDest = destinationPath;
+    const downloadsDir = path.join(os.homedir(), 'Downloads');
+    if (!targetDest || targetDest === 'default') {
+      const safeTitle = (rep.title || rep.id).replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
+      targetDest = path.join(downloadsDir, `Arachne_${safeTitle}_${rep.id}.${fmt}`);
+    } else if (!targetDest.includes('/') && !targetDest.includes('\\')) {
+      targetDest = path.join(downloadsDir, targetDest);
+    }
+
     // Safe unique filename policy: do not overwrite existing files without explicit overwrite option
-    let resolvedDest = path.resolve(destinationPath);
+    let resolvedDest = path.resolve(targetDest);
     if (fs.existsSync(resolvedDest) && !options.overwrite) {
       const parsed = path.parse(resolvedDest);
       let counter = 1;

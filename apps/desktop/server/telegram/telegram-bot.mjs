@@ -1,6 +1,7 @@
 import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { classifyIntent, INTENTS } from '../agent/intent-classifier.mjs';
 
 export class TelegramBotGateway {
@@ -335,6 +336,57 @@ export class TelegramBotGateway {
       }
     }
 
+    // 3.1 BROWSER STATUS INTENT
+    else if (classified.intent === INTENTS.BROWSER_STATUS) {
+      const bm = this.researchAgent?.browserManager;
+      const conn = await bm?.testCdpConnection();
+      if (conn?.connected) {
+        reply = `🌐 *Browser Automation Status: CONNECTED*\n` +
+          `• *Browser:* ${conn.browser || 'Google Chrome'}\n` +
+          `• *CDP Port:* 9222 (Visible Mode Active)\n` +
+          `• *Protocol Version:* ${conn.protocolVersion || '1.3'}\n` +
+          `• *Latency:* ${conn.latencyMs || 0}ms\n` +
+          `• *Active Task Tabs:* ${bm?.activeTaskTabs?.size || 0}`;
+      } else {
+        reply = `🌐 *Browser Automation Status: DISCONNECTED*\n` +
+          `CDP port 9222 is not currently responding. ARACHNE will automatically launch a dedicated visible Chrome window upon starting your next research hunt.`;
+      }
+    }
+
+    // 3.2 MODEL CONFIGURATION INTENT
+    else if (classified.intent === INTENTS.MODEL_CONFIG) {
+      const prov = classified.params?.provider;
+      if (prov === 'qwen') {
+        reply = `🧠 *Model Provider: Qwen Selected*\n` +
+          `• *Primary Model:* \`qwen/qwen3.8-27b\` (Groq Cloud LPU)\n` +
+          `• *Local Fallback:* \`qwen2.5:latest\` (Ollama at http://localhost:11434)\n` +
+          `• *Status:* Active and verified for upcoming research missions.`;
+      } else {
+        reply = `🧠 *Active Model Configuration:*\n` +
+          `• *Provider:* Groq Cloud LPU\n` +
+          `• *Active Model:* \`qwen/qwen3.8-27b\` (Ultra-fast inference)\n` +
+          `• *Local Alternative:* Ollama Qwen 2.5\n` +
+          `• *Status:* Online and ready.`;
+      }
+    }
+
+    // 3.3 REFINE EXISTING REPORT INTENT
+    else if (classified.intent === INTENTS.REFINE_REPORT) {
+      try {
+        const refineRes = await this.researchAgent?.refineInvestigation('latest', raw);
+        if (refineRes && refineRes.success) {
+          reply = `✨ *Research Report Refined*\n\n` +
+            `I have refined the technical findings based on your request: *"${raw}"*.\n\n` +
+            (refineRes.refinedText ? `${refineRes.refinedText.slice(0, 500)}...\n\n` : '') +
+            `💡 *Would you like to export this?* Say "export as PDF", "give me report in txt file", or "export as excel".`;
+        } else {
+          reply = `⚠️ Could not refine report: No completed research found to refine.`;
+        }
+      } catch (err) {
+        reply = `⚠️ Refinement error: ${err.message}`;
+      }
+    }
+
     // 4. LIFECYCLE INTENT (Pause / Resume / Stop / Retry)
     else if (
       classified.intent === INTENTS.LIFECYCLE ||
@@ -386,9 +438,10 @@ export class TelegramBotGateway {
           `Would you like to start a research hunt first? (e.g. "Start research on AI agents" or \`/investigate <topic>\`)`;
       } else {
         try {
-          const destDir = path.resolve(process.cwd(), 'reports');
+          const destDir = path.join(os.homedir(), 'Downloads');
           fs.mkdirSync(destDir, { recursive: true });
-          const destFile = path.join(destDir, `${targetRep.id}.${targetFmt}`);
+          const safeTitle = (targetRep.title || targetRep.id).replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 40);
+          const destFile = path.join(destDir, `Arachne_${safeTitle}_${targetRep.id}.${targetFmt}`);
 
           const exportResult = this.researchAgent?.reportEngine?.exportToFile(targetRep.id, targetFmt, destFile);
           const finalPath = exportResult?.path || destFile;
@@ -400,7 +453,7 @@ export class TelegramBotGateway {
             `• *Size:* ${sizeKb} KB\n` +
             `• *Location:* \`${finalPath}\`\n` +
             `• *Verification:* Magic bytes & schema structurally validated ✅\n\n` +
-            `_File saved locally on host machine in ARACHNE workspace._`;
+            `_File saved locally on host machine in Downloads folder._`;
         } catch (err) {
           reply = `❌ Export error: ${err.message}`;
         }

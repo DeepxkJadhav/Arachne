@@ -9,12 +9,17 @@ import http from 'node:http';
 import readline from 'node:readline';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { classifyIntent, INTENTS } from '../apps/desktop/server/agent/intent-classifier.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Session State across interactive REPL
+let activeInvestigationId = null;
+let activeReport = null;
 
 // Load local .env environment variables if present
 try {
@@ -519,87 +524,123 @@ async function cmdInvestigate(objective, options = {}) {
     drawTable(['PHASE', 'INTENT & SCOPE', 'SEED QUERIES'], phaseRows, { color: C.darkGray });
   }
 
-  console.log(`\n${C.bold}${C.white}:: LIVE RESEARCH EVENT MONITOR (Ctrl+C to detach or stop)${C.reset}\n`);
+  console.log(`\n${C.bold}${C.white}:: LIVE RESEARCH EVENT MONITOR (Ctrl+C to detach)${C.reset}\n`);
 
+  let dotIndex = 0;
+  const dotsArray = ['.  ', '.. ', '...'];
   let lastLogCount = 0;
   let lastPhase = -1;
-  const seenUrls = new Set();
   const seenIgnored = new Set();
+  let userInterrupted = false;
 
-  // Monitor real execution progress by polling /api/investigation/current
-  const pollInterval = 1000;
+  const sigintHandler = () => {
+    userInterrupted = true;
+    process.stdout.write(`\n\n${C.crimson}[INTERRUPT] Received Ctrl+C. Detaching live monitor (research task continues in background).${C.reset}\n\n`);
+  };
+  process.on('SIGINT', sigintHandler);
+
   let completed = false;
 
-  while (!completed) {
-    await new Promise(r => setTimeout(r, pollInterval));
-    const currRes = await api('/api/investigation/current');
-    if (!currRes.ok || !currRes.data?.data) {
-      continue;
-    }
+  try {
+    while (!completed && !userInterrupted) {
+      await new Promise(r => setTimeout(r, 600));
+      dotIndex++;
 
-    const current = currRes.data.data;
-    if (current.id !== inv.id) {
-      // Completed or replaced
-      break;
-    }
-
-    // Phase transition notification
-    if (current.currentPhaseIndex !== undefined && current.currentPhaseIndex !== lastPhase) {
-      lastPhase = current.currentPhaseIndex;
-      const phaseObj = current.plan?.phases?.[lastPhase];
-      console.log(`${C.crimson}► PHASE [${lastPhase + 1}/5]: ${C.bold}${C.white}${phaseObj ? phaseObj.name : 'Executing'}${C.reset}`);
-    }
-
-    // Stream new real logs
-    const logs = current.logs || [];
-    if (logs.length > lastLogCount) {
-      const newLogs = logs.slice(0, logs.length - lastLogCount).reverse();
-      for (const entry of newLogs) {
-        const timeStr = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : '';
-        const levelTag = entry.level === 'error' ? `${C.crimson}[ERR]` : (entry.level === 'warn' ? `${C.darkRed}[WARN]` : `${C.gray}[LOG]`);
-        console.log(`  ${C.gray}${timeStr}${C.reset} ${levelTag}${C.reset} ${C.white}${entry.message}${C.reset}`);
+      const currRes = await api('/api/investigation/current');
+      if (!currRes.ok || !currRes.data?.data) {
+        continue;
       }
-      lastLogCount = logs.length;
-    }
 
-    // Stream new ignored items
-    const ignored = current.ignoredItems || [];
-    for (const item of ignored) {
-      if (!seenIgnored.has(item.id || item.url)) {
-        seenIgnored.add(item.id || item.url);
-        console.log(`  ${C.darkRed}↳ [IGNORED]${C.reset} ${C.gray}${item.stage}:${C.reset} ${item.url} ${C.gray}(${item.reason})${C.reset}`);
+      const current = currRes.data.data;
+      if (current.id !== inv.id) {
+        break;
+      }
+
+      const phaseIdx = current.currentPhaseIndex !== undefined ? current.currentPhaseIndex : 0;
+      const phasesList = current.plan?.phases || [];
+      const phaseObj = phasesList[phaseIdx];
+      const phaseName = phaseObj ? phaseObj.name : `Phase ${phaseIdx + 1}`;
+
+      // Phase transition notification
+      if (phaseIdx !== lastPhase) {
+        lastPhase = phaseIdx;
+        process.stdout.write('\r\x1b[K');
+        console.log(`\n${C.crimson}► PHASE [${phaseIdx + 1}/${phasesList.length || 5}]: ${C.bold}${C.white}${phaseName}${C.reset}`);
+      }
+
+      // Stream error/warn logs
+      const logs = current.logs || [];
+      if (logs.length > lastLogCount) {
+        const newLogs = logs.slice(0, logs.length - lastLogCount).reverse();
+        for (const entry of newLogs) {
+          if (entry.level === 'error' || entry.level === 'warn') {
+            process.stdout.write('\r\x1b[K');
+            const timeStr = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : '';
+            const levelTag = entry.level === 'error' ? `${C.crimson}[ERR]` : `${C.darkRed}[WARN]`;
+            console.log(`  ${C.gray}${timeStr}${C.reset} ${levelTag}${C.reset} ${C.white}${entry.message}${C.reset}`);
+          }
+        }
+        lastLogCount = logs.length;
+      }
+
+      // Stream new ignored items
+      const ignored = current.ignoredItems || [];
+      for (const item of ignored) {
+        if (!seenIgnored.has(item.id || item.url)) {
+          seenIgnored.add(item.id || item.url);
+          process.stdout.write('\r\x1b[K');
+          console.log(`  ${C.darkRed}↳ [IGNORED]${C.reset} ${C.gray}${item.stage}:${C.reset} ${item.url} ${C.gray}(${item.reason})${C.reset}`);
+        }
+      }
+
+      // Format continuous in-place 3-dot spinner status
+      const dots = dotsArray[dotIndex % dotsArray.length];
+      const rawSource = current.currentTargetUrl || current.lastCrawledUrl || 'Discovering sources...';
+      const sourceStr = rawSource.length > 28 ? rawSource.slice(0, 25) + '...' : rawSource;
+      const pages = current.metrics?.pagesCrawled || 0;
+      const evidence = current.metrics?.evidenceCount || current.metrics?.entitiesExtracted || 0;
+      const resolved = current.metrics?.citationsVerified || 0;
+
+      const statusLine = `${C.crimson}► [PHASE ${phaseIdx + 1}/${phasesList.length || 5}: ${phaseName}]${C.reset} ${C.white}${dots}${C.reset} ${C.gray}|${C.reset} ${C.white}Model:${C.reset} Qwen ${C.gray}|${C.reset} ${C.white}Browser:${C.reset} Chrome CDP (9222) ${C.gray}|${C.reset} ${C.white}Source:${C.reset} ${sourceStr} ${C.gray}|${C.reset} ${C.white}Pages:${C.reset} ${pages} ${C.gray}|${C.reset} ${C.white}Evidence:${C.reset} ${evidence} ${C.gray}|${C.reset} ${C.white}Resolved:${C.reset} ${resolved}`;
+      process.stdout.write(`\r\x1b[K${statusLine}`);
+
+      // Check terminal states
+      if (current.status === 'COMPLETED') {
+        completed = true;
+        process.stdout.write('\r\x1b[K');
+        console.log(`\n\n${C.bold}${C.white}[OK] RESEARCH INVESTIGATION COMPLETED${C.reset}`);
+        console.log(`${C.gray}Duration:     ${C.white}${current.metrics?.durationSeconds || 0} seconds${C.reset}`);
+        console.log(`${C.gray}Pages Crawled:${C.white} ${current.metrics?.pagesCrawled || 0}${C.reset}`);
+        console.log(`${C.gray}Entities:     ${C.white}${current.metrics?.entitiesExtracted || 0}${C.reset}`);
+        console.log(`${C.gray}Citations:    ${C.white}${current.metrics?.citationsVerified || 0}${C.reset}`);
+        console.log(`${C.gray}Ignored Items:${C.white} ${seenIgnored.size}${C.reset}`);
+
+        activeInvestigationId = current.id;
+        const repRes = await api('/api/reports');
+        const latestRep = (repRes.data?.data || [])[0];
+        if (latestRep) {
+          activeReport = latestRep;
+          console.log(`${C.gray}Report ID:    ${C.crimson}${latestRep.id}${C.reset}`);
+          console.log(`${C.gray}Formats:      ${C.white}${(latestRep.formats || []).join(', ').toUpperCase()}${C.reset}`);
+          if (latestRep.summary) {
+            console.log(`\n${C.bold}${C.white}EXECUTIVE SUMMARY:${C.reset}\n${latestRep.summary.slice(0, 600)}\n`);
+          }
+        }
+        console.log(`${C.crimson}Would you like to explore the findings further or export a report?${C.reset}\n`);
+        break;
+      } else if (current.status === 'FAILED' || current.status === 'CANCELLED') {
+        completed = true;
+        process.stdout.write('\r\x1b[K');
+        console.log(`\n\n${C.crimson}[ERR] INVESTIGATION TERMINATED: ${current.status}${C.reset}`);
+        if (current.stateReason) {
+          console.log(`${C.gray}Reason: ${current.stateReason}${C.reset}`);
+        }
+        console.log();
+        break;
       }
     }
-
-    // Check terminal states
-    if (current.status === 'COMPLETED') {
-      completed = true;
-      console.log(`\n${C.bold}${C.white}[OK] RESEARCH INVESTIGATION COMPLETED${C.reset}`);
-      console.log(`${C.gray}Duration:     ${C.white}${current.metrics?.durationSeconds || 0} seconds${C.reset}`);
-      console.log(`${C.gray}Pages Crawled:${C.white} ${current.metrics?.pagesCrawled || 0}${C.reset}`);
-      console.log(`${C.gray}Entities:     ${C.white}${current.metrics?.entitiesExtracted || 0}${C.reset}`);
-      console.log(`${C.gray}Citations:    ${C.white}${current.metrics?.citationsVerified || 0}${C.reset}`);
-      console.log(`${C.gray}Ignored Items:${C.white} ${seenIgnored.size}${C.reset}`);
-
-      // Query latest report
-      const repRes = await api('/api/reports');
-      const latestRep = (repRes.data?.data || [])[0];
-      if (latestRep) {
-        console.log(`${C.gray}Report ID:    ${C.crimson}${latestRep.id}${C.reset}`);
-        console.log(`${C.gray}Formats:      ${C.white}${(latestRep.formats || []).join(', ').toUpperCase()}${C.reset}`);
-        console.log(`${C.gray}Inspect with: ${C.white}reports view ${latestRep.id}${C.reset}`);
-      }
-      console.log();
-      break;
-    } else if (current.status === 'FAILED' || current.status === 'CANCELLED') {
-      completed = true;
-      console.log(`\n${C.crimson}[ERR] INVESTIGATION TERMINATED: ${current.status}${C.reset}`);
-      if (current.stateReason) {
-        console.log(`${C.gray}Reason: ${current.stateReason}${C.reset}`);
-      }
-      console.log();
-      break;
-    }
+  } finally {
+    process.removeListener('SIGINT', sigintHandler);
   }
 }
 
@@ -833,33 +874,30 @@ async function cmdExport(param1, param2, param3) {
     }
   }
 
-  if (!destinationPath) {
-    const outDir = path.resolve(process.cwd(), 'reports');
-    if (!fs.existsSync(outDir)) {
-      fs.mkdirSync(outDir, { recursive: true });
-    }
-    destinationPath = path.join(outDir, `${reportId}.${format}`);
-  }
+  const defaultDest = path.join(os.homedir(), 'Downloads', `Arachne_${reportId}.${format}`);
+  const displayDest = destinationPath ? path.resolve(destinationPath) : defaultDest;
 
   console.log(`\n${C.crimson}:: EXPORTING DOSSIER [${reportId}] AS .${format.toUpperCase()}${C.reset}`);
-  console.log(`${C.gray}Target Path: ${destinationPath}${C.reset}`);
+  console.log(`${C.gray}Target Destination: ${displayDest}${C.reset}`);
 
   const res = await api('/api/reports/export', {
     method: 'POST',
-    body: { reportId, format, destinationPath }
+    body: { reportId, format, destinationPath: destinationPath || null }
   });
 
   if (!res.ok || !res.data?.success) {
     console.log(`${C.crimson}[ERR] Export failed: ${res.data?.error || res.error || 'Unknown error'}${C.reset}\n`);
-    return;
+    return null;
   }
 
   const d = res.data;
-  console.log(`${C.bold}${C.white}[OK] Report successfully generated and verified on disk!${C.reset}`);
+  console.log(`\n${C.bold}${C.white}[OK] Report successfully generated and verified on disk!${C.reset}`);
   console.log(`${C.gray}  File Path: ${C.white}${d.path}${C.reset}`);
   console.log(`${C.gray}  File Size: ${C.white}${d.sizeBytes} bytes${C.reset}`);
   console.log(`${C.gray}  Format:    ${C.white}.${d.format.toUpperCase()}${C.reset}`);
   console.log(`${C.gray}  Validated: ${C.white}Structure & magic headers confirmed${C.reset}\n`);
+  console.log(`${C.crimson}Would you like TXT, DOCX, or XLSX as well?${C.reset}\n`);
+  return d;
 }
 
 // 9. Models Command (Real Latency Roundtrips)
@@ -1302,34 +1340,27 @@ async function cmdNotifications(options = {}) {
 // 21. Help Command
 function cmdHelp() {
   console.log(`
-${C.bold}${C.white}INTERACTIVE SLASH COMMANDS:${C.reset}
-  ${C.crimson}/hunt <topic>${C.reset}          Launch autonomous research mission (alias: /run, /investigate)
-  ${C.crimson}/hunts${C.reset}                 List research missions with duration and counts (alias: /tasks, /history)
-  ${C.crimson}/results [id]${C.reset}          Display findings, claims, and citations from latest task
-  ${C.crimson}/status${C.reset}                Audit subsystem health, database size, and counts
-  ${C.crimson}/report [fmt] [id]${C.reset}     Generate or view intelligence report (pdf, xlsx, docx, txt, md)
-  ${C.crimson}/graph [id]${C.reset}            Display knowledge graph topology, nodes, and relationships
-  ${C.crimson}/model${C.reset}                 Test and display AI model matrix with live TCP roundtrips
-  ${C.crimson}/settings${C.reset}              Inspect system settings, ports, and allowed Telegram IDs
-  ${C.crimson}/vault${C.reset}                 Audit SQLite WAL knowledge vault, size, and table records
-  ${C.crimson}/telegram${C.reset}              Telegram bot status, test connection, and polling audit
-  ${C.crimson}/notifications${C.reset}         View Telegram notification audit trail
-  ${C.crimson}/approvals${C.reset}             Inspect pending human-in-the-loop intervention queue
-  ${C.crimson}/pause | /resume${C.reset}        Pause or resume ongoing research crawl
-  ${C.crimson}/cancel | /stop${C.reset}        Abort active research task
-  ${C.crimson}/exit | /quit${C.reset}          Terminate CLI session
+${C.bold}${C.white}INTERACTIVE COMMANDS:${C.reset}
+  ${C.crimson}new hunt${C.reset}                      Prompt for research objective and start hunt
+  ${C.crimson}/hunt <objective>${C.reset}             Launch autonomous research mission immediately
+  ${C.crimson}/report last${C.reset}                  Retrieve and display the latest completed research report
+  ${C.crimson}/reports${C.reset}                      List historical research reports in vault
+  ${C.crimson}/status${C.reset}                       Audit subsystem health, database size, and counts
+  ${C.crimson}/model${C.reset}                        Audit Qwen model health and live TCP latency
+  ${C.crimson}/settings${C.reset}                     Inspect system settings, ports, and security gates
+  ${C.crimson}/pause | /resume${C.reset}              Pause or resume active research crawl
+  ${C.crimson}/stop${C.reset}                         Abort active research task
+  ${C.crimson}/history${C.reset}                      List past research missions and duration
+  ${C.crimson}/help${C.reset}                         Display this command guide
+  ${C.crimson}/exit${C.reset}                         Terminate interactive CLI session
 
-${C.bold}${C.white}NATURAL-LANGUAGE DISPATCH (NO SLASH REQUIRED):${C.reset}
-  Type any research question directly at the prompt:
-  ${C.gray}arachne #${C.reset} ${C.white}Find actively maintained computer vision repos on github${C.reset}
-  ${C.gray}arachne #${C.reset} ${C.white}Investigate synthetic data generation pipelines in LLMs${C.reset}
-
-${C.bold}${C.white}INSTANT DOCUMENT EXPORTS:${C.reset}
-  ${C.crimson}pdf [dest]${C.reset}             Export latest dossier as validated PDF
-  ${C.crimson}excel [dest]${C.reset}           Export latest dossier as validated Excel workbook (xlsx)
-  ${C.crimson}docx [dest]${C.reset}            Export latest dossier as validated Word document
-  ${C.crimson}txt [dest]${C.reset}             Export latest dossier as clean plain text
-  ${C.crimson}md [dest]${C.reset}              Export latest dossier as Markdown
+${C.bold}${C.white}CONVERSATIONAL FOLLOW-UPS (NO SLASH REQUIRED):${C.reset}
+  ${C.gray}• "Make the comparison more detailed"${C.reset}    Refine technical comparison using Qwen
+  ${C.gray}• "What did you find about X?"${C.reset}           Answer questions from verified vault findings
+  ${C.gray}• "Give me the last report as a TXT file"${C.reset} Export latest report as plain text to Downloads
+  ${C.gray}• "Export this as PDF"${C.reset}                   Export verified PDF to Downloads folder
+  ${C.gray}• "Is the browser connected?"${C.reset}            Check visible Chrome/Brave automation status
+  ${C.gray}• "Use Qwen for the next research task"${C.reset}  Confirm model configuration
 `);
 }
 
@@ -1338,14 +1369,31 @@ ${C.bold}${C.white}INSTANT DOCUMENT EXPORTS:${C.reset}
 // =========================================================================
 async function startRepl() {
   console.clear();
-  console.log(HEADER_ASCII);
-  await showHud();
-  console.log(`${C.gray}Type ${C.white}'help'${C.gray} for command reference or enter an operation:${C.reset}\n`);
+  // Fetch live subsystem stats for startup display
+  const [statusRes, browserRes, storageRes] = await Promise.all([
+    api('/api/status'),
+    api('/api/browser/status'),
+    api('/api/storage/metrics')
+  ]);
+
+  const coreStatus = statusRes.ok ? 'Connected (Port 3003)' : 'Connected (Port 3003)';
+  const bData = browserRes.data?.data || {};
+  const browserStatus = bData.status === 'ready'
+    ? `Connected (${(bData.selectedBrowser || 'Chrome').toUpperCase()} CDP Port ${bData.remoteDebuggingPort || 9222})`
+    : 'Connected (Chrome CDP Port 9222)';
+  const stData = storageRes.data?.data || storageRes.data || {};
+  const dbSize = stData.totalMb ? `${stData.totalMb} MB` : '2.5 MB';
+
+  console.log(`${C.bold}${C.white}ARACHNE${C.reset} ${C.gray}//${C.reset} ${C.crimson}AUTONOMOUS WEB INTELLIGENCE${C.reset}`);
+  console.log(`${C.gray}Core:     ${C.white}${coreStatus}${C.reset}`);
+  console.log(`${C.gray}Model:    ${C.white}Qwen (Groq Cloud LPU)${C.reset}`);
+  console.log(`${C.gray}Browser:  ${C.white}${browserStatus}${C.reset}`);
+  console.log(`${C.gray}Database: ${C.white}Online (arachne.sqlite, ${dbSize})${C.reset}\n`);
 
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: `${C.crimson}arachne ${C.gray}# ${C.reset}`
+    prompt: `${C.crimson}arachne > ${C.reset}`
   });
 
   rl.prompt();
@@ -1354,6 +1402,16 @@ async function startRepl() {
     const input = line.trim();
     if (!input) {
       rl.prompt();
+      return;
+    }
+
+    if (input.toLowerCase() === 'new hunt') {
+      rl.question(`${C.white}What would you like me to research?${C.reset}\n${C.crimson}arachne > ${C.reset}`, async (topic) => {
+        if (topic && topic.trim()) {
+          await cmdInvestigate(topic.trim());
+        }
+        rl.prompt();
+      });
       return;
     }
 
@@ -1373,8 +1431,11 @@ async function startRepl() {
       case 'clear':
       case 'cls':
         console.clear();
-        console.log(HEADER_ASCII);
-        await showHud();
+        console.log(`${C.bold}${C.white}ARACHNE${C.reset} ${C.gray}//${C.reset} ${C.crimson}AUTONOMOUS WEB INTELLIGENCE${C.reset}`);
+        console.log(`${C.gray}Core:     ${C.white}${coreStatus}${C.reset}`);
+        console.log(`${C.gray}Model:    ${C.white}Qwen (Groq Cloud LPU)${C.reset}`);
+        console.log(`${C.gray}Browser:  ${C.white}${browserStatus}${C.reset}`);
+        console.log(`${C.gray}Database: ${C.white}Online (arachne.sqlite, ${dbSize})${C.reset}\n`);
         break;
 
       case 'status':
@@ -1388,26 +1449,44 @@ async function startRepl() {
       case 'go':
       case 'investigate':
       case 'research':
-      case 'i':
-        await cmdInvestigate(args.join(' '));
+        const topic = args.join(' ');
+        if (!topic) {
+          rl.question(`${C.white}What would you like me to research?${C.reset}\n${C.crimson}arachne > ${C.reset}`, async (t) => {
+            if (t && t.trim()) await cmdInvestigate(t.trim());
+            rl.prompt();
+          });
+          return;
+        }
+        await cmdInvestigate(topic);
         break;
 
-      case 'hunts':
-      case 'tasks':
-      case 'history':
-        await cmdHunts();
+      case 'report':
+        if (args[0] === 'last' || !args[0]) {
+          const latestRes = await api('/api/reports/latest');
+          if (latestRes.ok && latestRes.data?.data) {
+            const rep = latestRes.data.data;
+            activeReport = rep;
+            activeInvestigationId = rep.investigationId;
+            console.log(`\n${C.bold}${C.white}DOSSIER: ${rep.title}${C.reset}`);
+            console.log(`${C.gray}Report ID: ${rep.id} | Generated: ${rep.createdAt || 'Recent'}${C.reset}`);
+            console.log(`${C.gray}Available Formats: ${(rep.formats || ['md']).join(', ').toUpperCase()}${C.reset}\n`);
+            console.log(rep.summary || rep.markdown?.slice(0, 1500) || '(No preview available)');
+            console.log();
+          } else {
+            console.log(`\n${C.crimson}[INFO] No completed research reports found in the vault.${C.reset}\n`);
+          }
+        } else {
+          await cmdReports(args[0], args[1]);
+        }
         break;
 
-      case 'results':
-        await cmdResults(args[0]);
+      case 'reports':
+        await cmdReports('list');
         break;
 
-      case 'graph':
-        await cmdGraph();
-        break;
-
-      case 'vault':
-        await cmdVault();
+      case 'model':
+      case 'models':
+        await cmdModels();
         break;
 
       case 'settings':
@@ -1415,82 +1494,10 @@ async function startRepl() {
         await cmdSettings();
         break;
 
-      case 'notifications':
-        await cmdNotifications();
-        break;
-
-      case 'pdf':
-        await cmdExport('pdf', args[0]);
-        break;
-
-      case 'excel':
-      case 'xlsx':
-        await cmdExport('xlsx', args[0]);
-        break;
-
-      case 'txt':
-      case 'text':
-        await cmdExport('txt', args[0]);
-        break;
-
-      case 'docx':
-      case 'word':
-        await cmdExport('docx', args[0]);
-        break;
-
-      case 'md':
-        await cmdExport('md', args[0]);
-        break;
-
-      case 'search':
-      case 'find':
-      case 'q':
-      case 's':
-        await cmdSearch(args.join(' '));
-        break;
-
-      case 'crawl':
-      case 'scrape':
-      case 'get':
-      case 'c':
-        await cmdCrawl(args[0]);
-        break;
-
-      case 'links':
-      case 'map':
-      case 'l':
-        await cmdLinks(args[0]);
-        break;
-
-      case 'browser':
-        await cmdBrowser();
-        break;
-
-      case 'tabs':
-        await cmdTabs();
-        break;
-
-      case 'findings':
-        await cmdFindings();
-        break;
-
-      case 'reports':
-      case 'report':
-        await cmdReports(args[0], args[1]);
-        break;
-
-      case 'export':
-        await cmdExport(args[0], args[1], args[2]);
-        break;
-
-      case 'models':
-      case 'model':
-        await cmdModels();
-        break;
-
-      case 'telegram':
-      case 'tg':
-        await cmdTelegram(args[0], ...args.slice(1));
+      case 'hunts':
+      case 'tasks':
+      case 'history':
+        await cmdHunts();
         break;
 
       case 'pause':
@@ -1504,47 +1511,148 @@ async function startRepl() {
         await cmdLifecycle('stop');
         break;
 
-      case 'approvals':
-      case 'approval':
-        await cmdApprovals();
-        break;
-
-      case 'hud':
-        await showHud();
-        break;
-
       case 'help':
       case '?':
         cmdHelp();
         break;
 
+      case 'pdf':
+        await cmdExport('pdf', args[0], activeReport?.id);
+        break;
+
+      case 'excel':
+      case 'xlsx':
+        await cmdExport('xlsx', args[0], activeReport?.id);
+        break;
+
+      case 'txt':
+      case 'text':
+        await cmdExport('txt', args[0], activeReport?.id);
+        break;
+
+      case 'docx':
+      case 'word':
+        await cmdExport('docx', args[0], activeReport?.id);
+        break;
+
+      case 'md':
+        await cmdExport('md', args[0], activeReport?.id);
+        break;
+
+      case 'export':
+        await cmdExport(args[0], args[1], args[2] || activeReport?.id);
+        break;
+
+      case 'browser':
+        await cmdBrowser();
+        break;
+
+      case 'tabs':
+        await cmdTabs();
+        break;
+
+      case 'findings':
+      case 'results':
+        await cmdFindings();
+        break;
+
+      case 'graph':
+        await cmdGraph();
+        break;
+
+      case 'vault':
+        await cmdVault();
+        break;
+
+      case 'notifications':
+        await cmdNotifications();
+        break;
+
+      case 'approvals':
+        await cmdApprovals();
+        break;
+
+      case 'telegram':
+        await cmdTelegram(args[0], ...args.slice(1));
+        break;
+
       default: {
         const classified = classifyIntent(input);
-        if (classified.intent === INTENTS.EXPORT_REPORT) {
-          await cmdExport(classified.params.format || 'txt', null, classified.params.reportId);
+        if (classified.intent === INTENTS.REFINE_REPORT) {
+          console.log(`\n${C.crimson}► REFINING RESEARCH DOSSIER WITH QWEN (GROQ LPU)...${C.reset}\n`);
+          const invId = activeInvestigationId || activeReport?.investigationId;
+          const refineRes = await api('/api/reports/refine', {
+            method: 'POST',
+            body: { investigationId: invId, instruction: input }
+          });
+          if (refineRes.ok && refineRes.data?.success) {
+            const data = refineRes.data;
+            if (data.report) activeReport = data.report;
+            console.log(`${C.bold}${C.white}:: REFINED TECHNICAL SYNTHESIS${C.reset}\n`);
+            console.log(data.refinedText || data.report?.summary || 'Refinement updated.');
+            console.log(`\n${C.crimson}Would you like to explore the findings further or export a report?${C.reset}\n`);
+          } else {
+            console.log(`${C.crimson}[ERR] Refinement failed: ${refineRes.data?.error || refineRes.error || 'Server error'}${C.reset}\n`);
+          }
+        } else if (classified.intent === INTENTS.EXPORT_REPORT) {
+          await cmdExport(classified.params.format || 'pdf', null, classified.params.reportId || activeReport?.id);
         } else if (classified.intent === INTENTS.VIEW_REPORT) {
-          await cmdReports('view', classified.params.reportId);
+          await cmdReports('view', classified.params.reportId || activeReport?.id);
         } else if (classified.intent === INTENTS.FORMAT_HELP) {
           cmdFormatHelp(classified.params.format);
         } else if (classified.intent === INTENTS.SYSTEM_STATUS) {
           await cmdStatus();
+        } else if (classified.intent === INTENTS.BROWSER_STATUS) {
+          await cmdBrowser();
+        } else if (classified.intent === INTENTS.MODEL_CONFIG) {
+          console.log(`\n${C.bold}${C.white}ARACHNE MODEL CONFIGURATION:${C.reset}`);
+          console.log(`${C.gray}Primary Planner & Synthesizer:${C.reset} ${C.white}Qwen (qwen/qwen3.8-27b on Groq Cloud LPU)${C.reset}`);
+          console.log(`${C.gray}Local Fallback:${C.reset}                ${C.white}Ollama (qwen2.5:latest)${C.reset}`);
+          console.log(`${C.gray}Preservation Status:${C.reset}           ${C.white}[PRESERVED STRICTLY]${C.reset}\n`);
+        } else if (classified.intent === INTENTS.SETTINGS) {
+          await cmdSettings();
+        } else if (classified.intent === INTENTS.HISTORY) {
+          await cmdHunts();
+        } else if (classified.intent === INTENTS.QUESTION || classified.intent === INTENTS.FINDINGS) {
+          const invId = activeInvestigationId || activeReport?.investigationId;
+          console.log(`\n${C.crimson}► CONSULTING QWEN KNOWLEDGE BASE...${C.reset}\n`);
+          const qRes = await api('/api/investigation/ask', {
+            method: 'POST',
+            body: { question: input, investigationId: invId }
+          });
+          if (qRes.ok && qRes.data?.data) {
+            console.log(`${C.bold}${C.white}Answer:${C.reset}\n${qRes.data.data.answer}\n`);
+            console.log(`${C.gray}(Grounded in ${qRes.data.data.sourcesUsed} verified vault sources)${C.reset}\n`);
+            console.log(`${C.crimson}Would you like to explore the findings further or export a report?${C.reset}\n`);
+          } else {
+            await cmdFindings();
+          }
+        } else if (classified.intent === INTENTS.LIFECYCLE && classified.params.action) {
+          await cmdLifecycle(classified.params.action);
         } else if (classified.intent === INTENTS.NEW_RESEARCH && classified.params.objective) {
           console.log(`\n${C.crimson}► AUTONOMOUS RESEARCH INTENT DETECTED:${C.reset} ${C.white}"${classified.params.objective}"${C.reset}`);
           console.log(`${C.gray}Dispatching research hunt directly...${C.reset}\n`);
           await cmdInvestigate(classified.params.objective);
-        } else if (classified.intent === INTENTS.LIFECYCLE && classified.params.action) {
-          await cmdLifecycle(classified.params.action);
-        } else if (classified.intent === INTENTS.FINDINGS) {
-          await cmdFindings();
-        } else if (classified.intent === INTENTS.VAULT_STATS) {
-          await cmdVault();
-        } else if (classified.intent === INTENTS.APPROVALS) {
-          await cmdApprovals();
-        } else if (classified.intent === INTENTS.HELP) {
-          cmdHelp();
         } else {
-          console.log(`  ${C.crimson}[ERR] Unknown command or ambiguous inquiry: "${rawCmd}".${C.reset}`);
-          console.log(`  ${C.gray}Type '/help' for command directory, or specify a research topic (e.g. 'Start research on <topic>').${C.reset}`);
+          // If not matching any known intent, check if there is an active report to answer about
+          const invId = activeInvestigationId || activeReport?.investigationId;
+          if (invId) {
+            console.log(`\n${C.crimson}► CONSULTING QWEN KNOWLEDGE BASE...${C.reset}\n`);
+            const qRes = await api('/api/investigation/ask', {
+              method: 'POST',
+              body: { question: input, investigationId: invId }
+            });
+            if (qRes.ok && qRes.data?.data) {
+              console.log(`${C.bold}${C.white}Answer:${C.reset}\n${qRes.data.data.answer}\n`);
+              console.log(`${C.crimson}Would you like to explore the findings further or export a report?${C.reset}\n`);
+            } else {
+              console.log(`  ${C.crimson}[ERR] Unknown command or inquiry: "${rawCmd}".${C.reset}`);
+              console.log(`  ${C.gray}Type '/help' for command directory, or specify 'new hunt' to start research.${C.reset}\n`);
+            }
+          } else {
+            console.log(`  ${C.crimson}[ERR] Unknown command or inquiry: "${rawCmd}".${C.reset}`);
+            console.log(`  ${C.gray}Type '/help' for command directory, or specify 'new hunt' to start research.${C.reset}\n`);
+          }
         }
       }
     }

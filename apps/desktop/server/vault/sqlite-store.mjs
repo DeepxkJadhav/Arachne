@@ -767,8 +767,15 @@ export class SqliteStore {
       } catch {}
     }
 
+    let journalMode = 'WAL';
+    try {
+      const modeRow = this.db.prepare('PRAGMA journal_mode').get();
+      if (modeRow?.journal_mode) journalMode = modeRow.journal_mode.toUpperCase();
+    } catch {}
+
     return {
       dbPath: this.dbPath,
+      journalMode,
       dbSizeBytes,
       dbSizeMb: (dbSizeBytes / (1024 * 1024)).toFixed(2),
       counts,

@@ -22,8 +22,14 @@
 export const INTENTS = {
   EXPORT_REPORT: 'EXPORT_REPORT',
   VIEW_REPORT: 'VIEW_REPORT',
+  REFINE_REPORT: 'REFINE_REPORT',
+  QUESTION: 'QUESTION',
   FORMAT_HELP: 'FORMAT_HELP',
   SYSTEM_STATUS: 'SYSTEM_STATUS',
+  BROWSER_STATUS: 'BROWSER_STATUS',
+  MODEL_CONFIG: 'MODEL_CONFIG',
+  SETTINGS: 'SETTINGS',
+  HISTORY: 'HISTORY',
   NEW_RESEARCH: 'NEW_RESEARCH',
   LIFECYCLE: 'LIFECYCLE',
   FINDINGS: 'FINDINGS',
@@ -283,7 +289,91 @@ export function classifyIntent(rawInput) {
     };
   }
 
-  // 10. NEW RESEARCH INTENT
+  // 10. BROWSER STATUS INTENT
+  if (
+    /^\/(?:browser|tabs)\b/i.test(raw) ||
+    /\b(?:is\s+(?:the\s+)?browser\s+connected|check\s+browser(?:\s+status)?|browser\s+connection\s+state|is\s+chrome\s+connected|is\s+brave\s+connected|browser\s+status)\b/i.test(lower)
+  ) {
+    return {
+      intent: INTENTS.BROWSER_STATUS,
+      confidence: 0.95,
+      params: {},
+      raw
+    };
+  }
+
+  // 11. MODEL CONFIGURATION INTENT
+  if (
+    /^\/models?\b/i.test(raw) ||
+    /\b(?:use\s+qwen|switch\s+to\s+qwen|which\s+model|what\s+model|show\s+model|current\s+model|model\s+settings)\b/i.test(lower)
+  ) {
+    return {
+      intent: INTENTS.MODEL_CONFIG,
+      confidence: 0.95,
+      params: { provider: lower.includes('qwen') ? 'qwen' : null },
+      raw
+    };
+  }
+
+  // 12. SETTINGS INTENT
+  if (
+    /^\/(?:settings|config)\b/i.test(raw) ||
+    /^(?:settings|configure|configuration|preferences)$/i.test(lower)
+  ) {
+    return {
+      intent: INTENTS.SETTINGS,
+      confidence: 0.95,
+      params: {},
+      raw
+    };
+  }
+
+  // 13. HISTORY INTENT
+  if (
+    /^\/(?:history|hunts|tasks)\b/i.test(raw) ||
+    /^(?:history|previous hunts|previous investigations|past research|list tasks)$/i.test(lower)
+  ) {
+    return {
+      intent: INTENTS.HISTORY,
+      confidence: 0.95,
+      params: {},
+      raw
+    };
+  }
+
+  // 14. REFINE EXISTING REPORT INTENT (MUST NOT start a new research task)
+  // "Make the comparison more detailed", "Make the report more detailed", "Elaborate on the findings"
+  const isRefineReport =
+    /\b(?:make\s+(?:the\s+)?(?:report|comparison|summary|dossier|analysis|findings)|elaborate|expand|deepen|add\s+more\s+detail)\b/i.test(lower) ||
+    /^(?:make\s+(?:it\s+)?more\s+detailed|more\s+details?|elaborate|expand|go\s+deeper)\b/i.test(lower);
+
+  if (isRefineReport) {
+    return {
+      intent: INTENTS.REFINE_REPORT,
+      confidence: 0.95,
+      params: {
+        instruction: raw
+      },
+      raw
+    };
+  }
+
+  // 15. QUESTION / FOLLOW-UP INQUIRY INTENT
+  // Follow-up queries inquiring about findings or content: "What did you find about X?", "Explain...", "Tell me about..."
+  const isQuestion =
+    /^(?:what|why|how|who|when|where|which|tell me|explain|can you explain|summarize)\b/i.test(lower) &&
+    !isHelpQuestion && !isStatusInquiry && !isViewReport && !hasExportVerb;
+
+  if (isQuestion) {
+    return {
+      intent: INTENTS.QUESTION,
+      confidence: 0.9,
+      params: { question: raw },
+      raw
+    };
+  }
+
+  // 16. NEW RESEARCH INTENT
   // Explicit commands: /hunt, /investigate, /research, hunt, investigate, research
   const explicitResearchMatch = raw.match(/^\/(?:hunt|investigate|research|run|go)\s+(.+)$/i) ||
     raw.match(/^(?:hunt|investigate|research)\s+(.+)$/i);

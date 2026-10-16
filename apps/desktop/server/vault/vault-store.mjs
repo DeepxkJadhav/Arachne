@@ -454,6 +454,7 @@ export class VaultStore {
     return {
       vaultPath: this.vaultDir,
       sqlitePath: sqliteMetrics.dbPath,
+      mode: sqliteMetrics.journalMode || 'WAL',
       totalBytes: sqliteMetrics.dbSizeBytes,
       totalMb: sqliteMetrics.dbSizeMb,
       totalDocuments: (this.state.corpus || []).length,
