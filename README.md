@@ -21,6 +21,12 @@
 
 ---
 
+<div align="center">
+  <img src="docs/assets/arachne-cli-terminal.png" alt="ARACHNE Autonomous Web Intelligence CLI Preview" width="900">
+</div>
+
+---
+
 ```
   / _ \   ARACHNE // AUTONOMOUS WEB INTELLIGENCE [v2.0.0]
  \_\(_)/_/ MOTOR: CHROME/BRAVE CDP | VAULT: SQLITE WAL | SHIELD: SSRF GUARD
