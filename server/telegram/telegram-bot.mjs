@@ -234,7 +234,7 @@ export class TelegramBotGateway {
     const auth = this.isSenderAuthorized(senderId);
 
     if (!auth.authorized) {
-      const deniedMsg = `⛔ *ARACHNE Access Denied*\n\n${auth.reason}\n\nYour numeric ID is: \`${senderId}\`.\nPlease configure this ID in the ARACHNE Settings dashboard.`;
+      const deniedMsg = `⛔ *ARACHNE Access Denied*\n\n${auth.reason}\n\nYour numeric ID is: \`${senderId}\`.\nPlease configure this ID in TELEGRAM_ALLOWED_USERS in your .env or CLI settings.`;
       if (chatId) {
         await this.sendMessage(chatId, deniedMsg);
       }
@@ -581,7 +581,7 @@ export class TelegramBotGateway {
 
     // 15. UNKNOWN / AMBIGUOUS NATURAL LANGUAGE (DO NOT ACCIDENTALLY HUNT)
     else {
-      reply = `🕷️ *ARACHNE Web Intelligence Command Center*\n\n` +
+      reply = `🕷️ *ARACHNE Web Intelligence CLI Engine*\n\n` +
         `I didn't recognize that request. Here is what I can do:\n` +
         `• *Research:* "Start research on <topic>" or \`/investigate <topic>\`\n` +
         `• *Export Report:* "Give me report in txt file" or "Export report as pdf"\n` +

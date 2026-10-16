@@ -8,9 +8,9 @@ This document tracks the verified implementation status of all ARACHNE subsystem
 
 | Subsystem / Feature | Implementation Category | Verification Status | Location / Implementation Details |
 |---|---|---|---|
-| **Core Intelligence Server** | Native Engine | ✅ Verified (Port 3003) | `apps/desktop/start.mjs`, `apps/desktop/server/arachne-server.mjs` |
+| **Core Intelligence Server** | Native Engine | ✅ Verified (Port 3003) | `server/start.mjs`, `server/arachne-server.mjs` |
 | **Complete Firecrawl Purge** | Architectural Refactor | ✅ Complete & Verified | Zero Firecrawl imports, SDKs, or services in active application; replaced with ARACHNE-owned modules |
-| **Browser Automation: Chrome & Brave** | Dedicated Subsystem | ✅ Verified | `apps/desktop/server/browser/`: cross-platform detection, dedicated profiles (`.arachne-vault/browser-profiles/`), CDP client |
+| **Browser Automation: Chrome & Brave** | Dedicated Subsystem | ✅ Verified | `server/browser/`: cross-platform detection, dedicated profiles (`.arachne-vault/browser-profiles/`), CDP client |
 | **Task Tab Isolation Lifecycle** | Dedicated Subsystem | ✅ Verified | `BrowserManager.activeTaskTabs`: closes ARACHNE preview tabs via `/json/close/{targetId}` without touching user tabs |
 | **Live Crawl Research Deck** | Full-Stack UI/SSE | ✅ Verified | Screen 1: Viewport stream (`Page.captureScreenshot`), DOM inspection, Link Decision Matrix |
 | **Evidence-Sufficiency Evaluator** | Agent AI Metric | ✅ Verified | Evaluates Question Coverage, Domain Diversity, Corroboration Score before terminating crawl |
@@ -86,7 +86,7 @@ Execution runtime: **Node.js v24 (Native SQLite & WebSocket)**
 
 1. **Firecrawl Purge:** Complete. All endpoints, SDKs, and services in active ARACHNE application operate independently without Firecrawl.
 2. **Browser Automation for Chrome + Brave:** Detected and integrated via CDP. Dedicated isolated profile prevents polluting user history and tabs.
-3. **Live Crawl Research Deck:** Real-time viewport stream, DOM inspection, candidate link matrix, and Evidence Sufficiency Evaluator visible on Dashboard.
+3. **Live Research Swarm:** Real-time multi-agent research loop (Scout, Analyst, Verifier, Synthesizer), DOM inspection, candidate link matrix, and Evidence Sufficiency Evaluator in terminal CLI.
 4. **Centralized Settings:** Standalone Telegram view removed and embedded into 6-section Settings. Zero synthetic latencies.
 5. **Telegram Bot Integration:** Bot `@arachnewi_bot` verified via live API handshake (442ms measured roundtrip). Strict numeric fail-closed authorization.
 6. **Security & Transactional SQLite:** SSRF protection actively blocks private subnets and metadata. SQLite WAL mode provides transactional reliability with automated crash recovery.

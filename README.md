@@ -1,7 +1,7 @@
 <div align="center">
   <a name="readme-top"></a>
   <h1>🕷️ ARACHNE</h1>
-  <p><b>Autonomous Web Intelligence, Browser Automation & Deep Research Command Center</b></p>
+  <p><b>Terminal-First Autonomous Web Intelligence & Deep Research CLI Engine</b></p>
 
   <a href="https://github.com/DeepxkJadhav/Arachne/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/DeepxkJadhav/Arachne" alt="License">
@@ -17,119 +17,137 @@
 ---
 
 > [!NOTE]
-> **ARACHNE** is an independent, permission-aware web intelligence and autonomous research platform maintained by [Deepak Jadhav (@DeepxkJadhav)](https://github.com/DeepxkJadhav). Built as a local-first, modular command center combining native Chrome/Brave browser automation, live knowledge graph synthesis, transactional SQLite storage, and deep multi-agent research orchestration.
+> **ARACHNE** is a terminal-first, autonomous web intelligence and deep research CLI maintained by [Deepak Jadhav (@DeepxkJadhav)](https://github.com/DeepxkJadhav). Designed with a restrained cyberpunk black, white, and crimson aesthetic, ARACHNE drives native Chrome/Brave automation via CDP, constructs SQLite WAL knowledge graphs, and compiles multi-format dossiers directly from your terminal.
 
 ---
 
-## 🌟 Core Architectural Pillars
+```
+  / _ \   ARACHNE // AUTONOMOUS WEB INTELLIGENCE [v2.0.0]
+ \_\(_)/_/ MOTOR: CHROME/BRAVE CDP | VAULT: SQLITE WAL | SHIELD: SSRF GUARD
+  _// \\_  NODE: v24.19.0 | OPERATOR: TELEGRAM FAIL-CLOSED | NET: http://localhost:3003
+```
 
-### 1. Native Browser Automation: Google Chrome & Brave
-- **Zero Third-Party Scraping APIs:** Controls local Chrome and Brave browsers directly via the Chrome DevTools Protocol (CDP) over WebSocket.
-- **Dedicated Profile Isolation:** Creates isolated automation profiles in `.arachne-vault/browser-profiles/{chrome,brave}`, ensuring user personal history, cookies, and active sessions remain completely untouched.
-- **Task Tab Lifecycle:** Tracks tabs opened specifically for ARACHNE research tasks in `BrowserManager.activeTaskTabs`. Previous task preview tabs are closed cleanly before opening new URLs, preventing tab explosion and preserving personal tabs.
+---
 
-### 2. Live Research Loop & Evidence-Sufficiency Evaluator
-- **8-Stage Iterative Loop:**
-  $$\text{OBSERVE} \longrightarrow \text{INSPECT} \longrightarrow \text{EXTRACT} \longrightarrow \text{EVALUATE} \longrightarrow \text{SELECT NEXT} \longrightarrow \text{NAVIGATE} \longrightarrow \text{VERIFY} \longrightarrow \text{REPEAT}$$
-- **Real-Time Screencasting:** Streams viewport screencast frames (`Page.captureScreenshot` Base64) to the live inspection deck on the main dashboard.
-- **Evidence-Sufficiency Evaluator:** Evaluates accumulated evidence against the research objective:
-  - **Question Coverage:** Quantifies what percentage of research questions are answered.
-  - **Domain Diversity:** Prevents bias by scoring provenance across diverse independent domains.
-  - **Corroboration Score:** Cross-validates claims across multiple sources before concluding investigations with high confidence.
+## 🌟 Architectural Features
 
-### 3. Centralized System Settings (6 Integrated Sections)
-- **Section A: System Status:** Real-time server uptime, Node.js v24 runtime status, SQLite WAL mode, database size, and total records.
-- **Section B: Browser & Automation:** Chrome/Brave selector, profile discovery, CDP port configuration (9222), dedicated browser launch, and task tab cleanup.
-- **Section C: Telegram Integration:** Live connection to `@arachnewi_bot`, masked token display (`8732••••••••••••••••••••••••71Wo`), numeric chat ID whitelist, background long-polling toggle, and live audit event log.
-- **Section D: AI Models & Real Latency Testing:** Connects local Qwen via Ollama, LM Studio, OpenAI, or Anthropic. Tests perform **actual TCP/HTTP roundtrips** (zero synthetic or random numbers).
-- **Section E: Storage & Retention:** Breakdown of all 11 relational tables, WAL integrity, SHA-256 content deduplication, and one-click SQLite database export.
-- **Section F: Crawler & Safety Controls:** Enforces strict SSRF defense (blocking private subnets, loopbacks, and cloud metadata `169.254.169.254`), hop-by-hop redirect destination re-validation, 10MB response caps, and robots.txt compliance.
+### 1. Terminal-First Cyberpunk Aesthetic
+- **Restrained Color Palette:** Strict black terminal background, crisp white primary text, crimson/red highlights, and dark gray metadata. Zero fluorescent distractions.
+- **Interactive REPL & Direct Commands:** Seamlessly switch between interactive terminal exploration and single-line shell commands.
+- **Deterministic Intent Classification:** Distinguishes between new research missions, report view/export requests, and status queries without accidental crawls.
 
-### 4. Natural-Language Telegram Integration
-- **Direct Bot Control:** Fully wired to `@arachnewi_bot` (`8732300173:AAGj-fOkujR5PktCNVt3E2OQkr3vyDy71Wo`).
-- **Strict Fail-Closed Authorization:** Enforces numeric user ID verification (`message.from.id`). String usernames are rejected to prevent impersonation. An empty allowlist fails closed.
-- **Mission Intake:** Dispatches autonomous research missions directly from Telegram chat commands.
+### 2. Autonomous Swarm Pipeline
+- **Scout Specialist:** Evaluates query variations, navigates link frontiers, and checks `robots.txt` compliance.
+- **Technical Analyst:** Extracts DOM structures, technical papers, markdown prose, theorems, and code blocks.
+- **Verifier & Gatekeeper:** Scores source credibility, filters hallucinations, and evaluates cross-source corroboration.
+- **Dossier Synthesizer:** Compiles findings into natural-language briefings and delivers structured files.
+
+### 3. Native Chrome & Brave CDP Automation
+- **Zero Third-Party Scraping APIs:** Directly controls local Chrome or Brave instances via Chrome DevTools Protocol (CDP port 9222).
+- **Dedicated Profile Isolation:** Creates isolated automation user-data directories in `.arachne-vault/browser-profiles/chrome`, preserving your personal browsing history, cookies, and active tabs.
+- **Automatic Tab Lifecycle:** Dynamically cleans up research task preview tabs without tab explosion.
+
+### 4. Zero-Dependency 9-Format Dossier Compilation
+Exports research dossiers without external office suites or bloated wrappers:
+- **PDF-1.4:** Native binary serializer with page catalogs, fonts, and clean layout streams.
+- **Spreadsheet (`.xlsx`, `.csv`):** Multi-tab OpenXML workbooks mapping entities, sources, and claims.
+- **Document (`.docx`, `.pptx`):** Styled Word documents and presentation slides.
+- **Text & Web (`.txt`, `.md`, `.html`):** Plain-text and GitHub-flavored markdown briefings.
+- **Structured Graph (`.json`):** Full relational knowledge graph AST with provenance tracking.
+- **Automatic Downloads Delivery:** Automatically saves exported reports into `C:\Users\<user>\Downloads\`.
 
 ### 5. Transactional SQLite Persistence
 - **ACID Transactions:** Powered by Node.js built-in `node:sqlite` (`DatabaseSync`) in Write-Ahead Logging (WAL) mode.
-- **Automatic Crash Recovery:** Auto-detects interrupted investigations or unfinished checkpoints on reboot and safely restores state.
-- **SHA-256 Deduplication:** Scraped documents are hashed and stored in `.arachne-vault/content/` to prevent redundant storage.
-
-### 6. Zero-Dependency Report Studio (9 Formats)
-Generates publication-quality intelligence dossiers across 9 standard formats without external heavy wrappers:
-- **PDF-1.4:** Native binary serializer with page catalogs, fonts, and layout streams.
-- **OpenXML (`.docx`, `.xlsx`, `.pptx`):** Packages zipped via native Node.js `node:zlib` with tables and charts.
-- **Web & Plaintext (`.md`, `.html`, `.txt`):** Cybernetic-styled dossiers with citation tables.
-- **Structured Data (`.json`, `.csv`):** Machine-readable records with relevance scores.
+- **SHA-256 Deduplication:** Scraped documents are hashed to eliminate redundant storage.
+- **Audit Logging:** Logs all ignored items, rejected URLs, and policy boundaries for full transparency.
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Launch ARACHNE Command Center
-```bash
+### 1. Installation
+
+```powershell
 # Clone the repository
 git clone https://github.com/DeepxkJadhav/Arachne.git
 cd Arachne
 
-# Start the ARACHNE application
-node apps/desktop/start.mjs
+# Register the global 'arachne' command in your Windows user PATH
+.\scripts\install-command.ps1
 ```
 
-Open your browser and navigate to:
-👉 **`http://localhost:3003/`**
+Once installed, you can execute `arachne` from any terminal or folder.
 
-### 2. Run the Verification Suite (32 Tests)
-```bash
-node test/arachne-full-verification.mjs
-```
-Expected output:
-```
-================================================================
-🕷️  ARACHNE FULL SUBSYSTEM VERIFICATION SUITE
-================================================================
-...
-🏁 VERIFICATION COMPLETE: 32 Passed, 0 Failed (100% Success)
-================================================================
+---
+
+### 2. Basic CLI Commands
+
+```powershell
+# Display system health, SQLite storage metrics, and hardware state
+arachne status
+
+# Launch an autonomous research hunt directly
+arachne hunt "Quantum Computing Cryptographic Proofs" --depth deep --save-all
+
+# Check AI model latency and routing table
+arachne models
+
+# Export the latest completed research report to PDF or TXT
+arachne export latest pdf
+arachne export latest txt
+
+# Inspect research history
+arachne history
+
+# View rejected/ignored sources and security audit log
+arachne logs
+
+# Start interactive hacker REPL
+arachne
 ```
 
 ---
 
-## 💻 Interactive CLI Utility
+### 3. Interactive Terminal REPL
 
-ARACHNE includes a terminal CLI utility for inspecting intelligence without opening a browser:
+When launched without arguments (`arachne`), an interactive prompt opens with command completion and intent routing:
 
-```bash
-# View system info & active investigation
-node examples/arachne-cli.mjs info
+```
+ARACHNE [hunt] > /hunt Post-quantum lattice cryptography bounds
+ARACHNE [hunt] > Give me the last report in TXT format
+ARACHNE [hunt] > /models
+ARACHNE [hunt] > /status
+ARACHNE [hunt] > /exit
+```
 
-# Inspect 4-agent swarm state (Scout, Analyst, Verifier, Synthesizer)
-node examples/arachne-cli.mjs swarm
+---
 
-# Hybrid RAG search (BM25 + 3-gram cosine + RRF)
-node examples/arachne-cli.mjs rag "autonomous agent architectures"
+## 🧪 Testing & Verification
 
-# Cross-source claim contradiction analysis
-node examples/arachne-cli.mjs contradictions
+ARACHNE includes comprehensive end-to-end acceptance tests:
 
-# Architecture self-introspection graph
-node examples/arachne-cli.mjs architecture
+```powershell
+# Run the Master E2E Acceptance Test Suite (Tests A through K)
+npm test
+
+# Run the Intent Routing & Report Regression Suite
+npm run test:regression
+
+# Run all test suites
+npm run test:all
 ```
 
 ---
 
 ## 🛡️ Security Architecture
 
-1. **SSRF Protection:** Built-in network guardrails reject connections to:
-   - Loopback addresses (`127.0.0.0/8`, `::1`)
-   - RFC 1918 private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
-   - Cloud metadata endpoints (`169.254.169.254`, `fe80::/10`)
-2. **DNS Pre-Resolution:** Validates target IPs before socket creation, mitigating DNS rebinding attacks.
-3. **Hop-by-Hop Redirect Revalidation:** Each redirect destination (up to 5 hops) is independently re-validated.
-4. **Path Traversal Protection:** File exports sanitize filenames using `path.basename`.
+1. **SSRF Guard:** Proactively blocks private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopbacks (`127.0.0.1`, `::1`), and cloud metadata (`169.254.169.254`).
+2. **Hop-by-Hop Redirect Re-Validation:** Validates every HTTP redirect hop against SSRF rules before following.
+3. **Fail-Closed Telegram Gateway:** Verifies numeric sender IDs (`message.from.id`). String usernames are rejected to prevent impersonation.
+4. **Path Traversal Protection:** All file outputs sanitize paths using `path.basename` and enforce restricted download boundaries.
 
 ---
 
 ## 📄 License
 
-Distributed under the **AGPL-3.0 License**. See [LICENSE](file:///c:/Users/deepa/Documents/antigravity/sharp-mendeleev/LICENSE) for more information.
+Distributed under the **AGPL-3.0 License**. Maintained by **Deepak Jadhav (@DeepxkJadhav)**.

@@ -69,32 +69,36 @@ node examples/arachne-desktop-test.mjs
 - Telegram `/status` response
 - Autonomous research loop plan decomposition
 
-### 1.3 Interactive CLI Verification
+### 1.3 CLI Command Verification
 ```powershell
-# Server health and active investigation check
-node examples/arachne-cli.mjs info
+# Display system health, SQLite storage metrics, and hardware state
+arachne status
 
-# Inspect 4-agent swarm state (Scout, Analyst, Verifier, Synthesizer)
-node examples/arachne-cli.mjs swarm
+# Launch an autonomous research hunt directly
+arachne hunt "Post-Quantum Cryptography Lattice Bounds" --depth deep --save-all
 
-# Hybrid RAG search (BM25 + 3-gram cosine + RRF)
-node examples/arachne-cli.mjs rag "autonomous agent computer use"
+# Check AI model latency and routing table
+arachne models
 
-# Audit cross-source claim contradictions
-node examples/arachne-cli.mjs contradictions
+# Export report in specified format
+arachne export latest pdf
+arachne export latest txt
 
-# Architecture self-introspection graph
-node examples/arachne-cli.mjs architecture
+# Start interactive hacker REPL
+arachne
 ```
 
 ---
 
-## 2. Starting the ARACHNE Application
-
-To run the ARACHNE Command Center on port 3003:
+## 2. Running Test Suites
 
 ```powershell
-node apps/desktop/start.mjs
+# Run the Master E2E Acceptance Test Suite (Tests A through K)
+npm test
+
+# Run the Intent Routing & Report Regression Suite
+npm run test:regression
+
+# Run all test suites
+npm run test:all
 ```
-Then navigate your browser to:
-`http://localhost:3003/`

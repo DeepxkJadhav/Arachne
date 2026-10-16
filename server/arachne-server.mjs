@@ -13,7 +13,6 @@ import { ContentExtractor } from './crawler/extractor.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const UI_DIR = path.resolve(__dirname, '../ui');
 
 // Load root .env environment variables if present
 try {
@@ -692,34 +691,12 @@ export function createArachneServer(port = 3003) {
         });
       }
 
-      // Static UI Asset Serving or Headless CLI Info
-      let filePath = path.join(UI_DIR, pathname === '/' ? 'index.html' : pathname);
-      if (!fs.existsSync(filePath)) {
-        filePath = path.join(UI_DIR, 'index.html');
-      }
-
-      if (fs.existsSync(filePath)) {
-        const ext = path.extname(filePath).toLowerCase();
-        const mimeTypes = {
-          '.html': 'text/html; charset=utf-8',
-          '.js': 'application/javascript; charset=utf-8',
-          '.css': 'text/css; charset=utf-8',
-          '.json': 'application/json; charset=utf-8',
-          '.png': 'image/png',
-          '.jpg': 'image/jpeg',
-          '.svg': 'image/svg+xml',
-          '.woff2': 'font/woff2'
-        };
-
-        const contentType = mimeTypes[ext] || 'text/plain';
-        const fileData = fs.readFileSync(filePath);
-        res.writeHead(200, { 'Content-Type': contentType });
-        res.end(fileData);
-      } else {
+      // CLI Daemon Root & Fallback Handler (Pure Headless Terminal Engine)
+      if (pathname === '/' || pathname === '/status') {
         sendJson({
-          service: 'ARACHNE Web Intelligence Core',
+          service: 'ARACHNE Autonomous Web Intelligence CLI Core',
           status: 'online',
-          mode: 'cli-first',
+          mode: 'terminal-cli',
           version: '2.0.0',
           endpoints: [
             '/api/status',
@@ -731,7 +708,10 @@ export function createArachneServer(port = 3003) {
             '/api/browser/screenshot'
           ]
         }, 200);
+        return;
       }
+
+      sendJson({ error: 'Endpoint not found', path: pathname }, 404);
 
     } catch (err) {
       console.error('[ArachneServer] Error handling request:', err);

@@ -14,30 +14,29 @@
 
 ```mermaid
 flowchart TD
-    subgraph UI ["ARACHNE Desktop Command Center (Port 3003)"]
-        CC["Screen 1: Command Center & Live Crawl Workspace\n- Live Viewport Screencast (CDP)\n- Research Loop Status Ribbon\n- Evidence Sufficiency Evaluator\n- DOM Semantics & Link Decision Matrix"]
-        WG["Screen 2: Interactive Web Graph (BFS Path Tracing)"]
-        RS["Screen 3: Results & Search (Relevance Ranking & Autopsy)"]
-        RStudio["Screen 4: Report Studio (9 Modular Exporters)"]
-        MS["Screen 5: Model Studio (Qwen / Llama / GPT-4o / Claude)"]
-        ST["Screen 6: Centralized System Settings (6 Sub-Tabs)\n- System Status\n- Browser & Automation (Chrome/Brave CDP)\n- Telegram Integration (@arachnewi_bot)\n- AI Models (Real Latency Measurement)\n- Storage & Retention (SQLite WAL)\n- Crawler & Safety (SSRF & Robots)"]
-        KV["Screen 7: Knowledge Vault (Revisions, Collections, Citations)"]
+    subgraph CLI ["ARACHNE Terminal CLI (bin/arachne.mjs)"]
+        CLI_HUNT["CLI Hunt Command (`arachne hunt <query>`)"]
+        CLI_REPL["Interactive Terminal REPL (`arachne`)"]
+        CLI_STATUS["Subsystem Health & Status (`arachne status`)"]
+        CLI_MODELS["AI Model Latency Benchmark (`arachne models`)"]
+        CLI_EXPORT["Dossier Exporter (`arachne export <id> <format>`)"]
+        CLI_LOGS["Security Audit & Policy Logs (`arachne logs`)"]
     end
 
     subgraph Core ["ARACHNE Intelligence Core (Node.js Standalone Engine)"]
-        Server["ARACHNE HTTP / SSE Gateway (`apps/desktop/server/arachne-server.mjs`)"]
-        Agent["Research Agent & 8-Step Research Loop (`apps/desktop/server/agent/research-agent.mjs`)"]
-        BrowserMgr["Browser Manager (`apps/desktop/server/browser/browser-manager.mjs`)\n- Cross-Platform Chrome & Brave Discovery\n- Isolated Dedicated Profiles\n- Native WebSocket CDP Client\n- Task-Isolated Tab Cleanup"]
-        ModelRouter["Model Router (`apps/desktop/server/models/model-router.mjs`)\n- Real Network Latency Measurements\n- Zero Synthetic/Random Latencies"]
+        Server["ARACHNE HTTP / SSE Gateway (`server/arachne-server.mjs`)"]
+        Agent["Research Agent & 8-Step Research Loop (`server/agent/research-agent.mjs`)"]
+        BrowserMgr["Browser Manager (`server/browser/browser-manager.mjs`)\n- Cross-Platform Chrome & Brave Discovery\n- Isolated Dedicated Profiles\n- Native WebSocket CDP Client\n- Task-Isolated Tab Cleanup"]
+        ModelRouter["Model Router (`server/models/model-router.mjs`)\n- Real Network Latency Measurements\n- Zero Synthetic/Random Latencies"]
         Recovery["3-Level Recovery Controller (L1 Retry, L2 Proposal, L3 Human Approval)"]
         ReportEngine["Report Engine (Zero-Dependency OpenXML/PKZIP & PDF Serializer)"]
-        Telegram["Telegram Bot Gateway (`apps/desktop/server/telegram/telegram-bot.mjs`)\n- Real Long-Polling (`getUpdates`)\n- Strict Numeric Fail-Closed Auth\n- Natural-Language Task Intake"]
+        Telegram["Telegram Bot Gateway (`server/telegram/telegram-bot.mjs`)\n- Real Long-Polling (`getUpdates`)\n- Strict Numeric Fail-Closed Auth\n- Natural-Language Task Intake"]
     end
 
     subgraph CrawlerEngine ["Crawling & Ingestion Pipeline"]
-        Frontier["URL Frontier (`apps/desktop/server/crawler/frontier.mjs`)\n- Canonicalization\n- Robots.txt Cache & Rules\n- Per-Domain Rate Limiter & Jitter\n- Exponential Backoff Queue\n- Scope & Allowlist Validator"]
-        Fetcher["Hardened HTTP Fetcher (`apps/desktop/server/crawler/fetcher.mjs`)\n- Strict SSRF Defense (Private Subnets, Loopback, Cloud Metadata)\n- Hop-by-Hop Redirect Revalidation\n- 10MB Response Cap\n- SHA-256 Tamper-Proof Deduplication"]
-        Extractor["Content Extractor (`apps/desktop/server/crawler/extractor.mjs`)\n- Content Classifier (Paper, Repo, Dataset, Web)\n- Entity Extraction (Models, Technologies, Authors)\n- arXiv / DOI Citations & Deduplication"]
+        Frontier["URL Frontier (`server/crawler/frontier.mjs`)\n- Canonicalization\n- Robots.txt Cache & Rules\n- Per-Domain Rate Limiter & Jitter\n- Exponential Backoff Queue\n- Scope & Allowlist Validator"]
+        Fetcher["Hardened HTTP Fetcher (`server/crawler/fetcher.mjs`)\n- Strict SSRF Defense (Private Subnets, Loopback, Cloud Metadata)\n- Hop-by-Hop Redirect Revalidation\n- 10MB Response Cap\n- SHA-256 Tamper-Proof Deduplication"]
+        Extractor["Content Extractor (`server/crawler/extractor.mjs`)\n- Content Classifier (Paper, Repo, Dataset, Web)\n- Entity Extraction (Models, Technologies, Authors)\n- arXiv / DOI Citations & Deduplication"]
     end
 
     subgraph StorageTier ["Persistence & Vault Tier (`.arachne-vault/`)"]
@@ -46,13 +45,12 @@ flowchart TD
         ReportsDir["Artifact Storage (`.arachne-vault/reports/`)\n- .pdf, .docx, .xlsx, .pptx, .md, .html, .csv, .json, .txt"]
     end
 
-    CC --> Server
-    WG --> Server
-    RS --> Server
-    RStudio --> Server
-    MS --> Server
-    ST --> Server
-    KV --> Server
+    CLI_HUNT --> Server
+    CLI_REPL --> Server
+    CLI_STATUS --> Server
+    CLI_MODELS --> Server
+    CLI_EXPORT --> Server
+    CLI_LOGS --> Server
 
     Server --> Agent
     Server --> BrowserMgr
