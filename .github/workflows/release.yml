@@ -1,0 +1,59 @@
+name: Release Arachne
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Release Arachne Executable
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run Intent & Report Export Regression Suite
+        run: node test/regression-intent-reports-suite.mjs
+
+      - name: Run Master Acceptance Suite
+        run: node test/e2e-master-verification.mjs
+
+      - name: Build Windows Standalone Executables
+        run: node scripts/build-exe.mjs
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/arachne.exe
+            dist/arachne-windows-x64.exe
+          name: ARACHNE ${{ github.ref_name }} — Autonomous Web Intelligence CLI
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## 🕷️ ARACHNE Autonomous Web Intelligence & Deep Research CLI
+
+            ### Release Highlights:
+            - **Standalone Windows Executable (`arachne.exe` / `arachne-windows-x64.exe`):** Single self-contained binary powered by Node.js Single Executable Application (SEA) — run ARACHNE directly with zero external node dependencies.
+            - **Native Visible Chrome & Brave CDP Automation:** Real-time desktop automation with dedicated isolated user profile (`.arachne-vault/browser-profiles/chrome`).
+            - **Zero Third-Party Scraping Dependencies:** Pure native node networking, AST content extraction, and SQLite WAL knowledge graph persistence.
+            - **9-Format Research Dossiers:** Native compilers for `.PDF`, `.TXT`, `.HTML`, `.DOCX`, `.XLSX`, `.PPTX`, `.CSV`, `.JSON`, and `.MD`.
+            - **Fail-Closed Telegram Remote Gateway:** Authorized chat control with PIN/numeric authorization.
+
+            ### Quick Start (Windows):
+            1. Download `arachne.exe` from the Assets below.
+            2. Run from your terminal:
+               ```powershell
+               .\arachne.exe hunt "DeepSeek R1 and Qwen Reasoning Models Architecture"
+               ```

@@ -28,7 +28,7 @@
 ---
 
 ```
-  / _ \   ARACHNE // AUTONOMOUS WEB INTELLIGENCE [v2.0.0]
+  / _ \   ARACHNE // AUTONOMOUS WEB INTELLIGENCE [v2.1.0]
  \_\(_)/_/ MOTOR: CHROME/BRAVE CDP | VAULT: SQLITE WAL | SHIELD: SSRF GUARD
   _// \\_  NODE: v24.19.0 | OPERATOR: TELEGRAM FAIL-CLOSED | NET: http://localhost:3003
 ```
@@ -71,7 +71,19 @@ Exports research dossiers without external office suites or bloated wrappers:
 
 ## 🚀 Quick Start
 
-### 1. Installation
+### 0. Standalone Windows Executable (.EXE)
+
+You can download the precompiled standalone binary (`arachne.exe` / `arachne-windows-x64.exe`) directly from [GitHub Releases](https://github.com/DeepxkJadhav/Arachne/releases). No Node.js installation or package manager required.
+
+To build the standalone `.exe` locally:
+```powershell
+npm run build:exe
+```
+This generates `dist/arachne.exe` and `dist/arachne-windows-x64.exe` using Node.js Single Executable Application (SEA).
+
+---
+
+### 1. Source Installation (Node.js)
 
 ```powershell
 # Clone the repository

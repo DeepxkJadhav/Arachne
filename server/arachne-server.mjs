@@ -132,7 +132,7 @@ export function createArachneServer(port = 3003) {
           return sendJson({
             name: 'ARACHNE Web Intelligence Core',
             message: 'Arachne API',
-            version: '2.0.0',
+            version: '2.1.0',
             repository: 'https://github.com/DeepxkJadhav/Arachne',
             documentation_url: 'https://github.com/DeepxkJadhav/Arachne#readme',
             status: 'online',
@@ -152,7 +152,7 @@ export function createArachneServer(port = 3003) {
         return sendJson({
           success: true,
           system: 'ARACHNE Web Intelligence Command Center',
-          version: '2.0.0',
+          version: '2.1.0',
           uptime: process.uptime(),
           activeInvestigation: inv,
           metrics: {
@@ -308,7 +308,7 @@ export function createArachneServer(port = 3003) {
 
         const architectureGraph = {
           system: 'ARACHNE Web Intelligence System',
-          version: '2.0.0',
+          version: '2.1.0',
           topology: 'Decoupled Event-Driven Microkernel + Hierarchical Evaluator-Optimizer Swarm',
           components: [
             { id: 'core-server', name: 'Arachne Server', type: 'Microkernel', status: 'active', port: port, protocol: 'HTTP/SSE' },
@@ -697,7 +697,7 @@ export function createArachneServer(port = 3003) {
           service: 'ARACHNE Autonomous Web Intelligence CLI Core',
           status: 'online',
           mode: 'terminal-cli',
-          version: '2.0.0',
+          version: '2.1.0',
           endpoints: [
             '/api/status',
             '/api/models',

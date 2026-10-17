@@ -14,8 +14,12 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { classifyIntent, INTENTS } from '../server/agent/intent-classifier.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const _currentFile = (typeof import.meta !== 'undefined' && import.meta?.url)
+  ? fileURLToPath(import.meta.url)
+  : (typeof __filename !== 'undefined' ? __filename : process.argv[1]);
+const _currentDir = path.dirname(_currentFile);
+const __filename = _currentFile;
+const __dirname = _currentDir;
 
 // Session State across interactive REPL
 let activeInvestigationId = null;
@@ -81,7 +85,7 @@ const C = isColorSupported ? {
 
 // Compact Restrained Mechanical Spider Artwork & Wordmark
 const HEADER_ASCII = `
-${C.crimson}  / _ \\   ${C.bold}${C.white}ARACHNE${C.reset} ${C.gray}//${C.reset} ${C.crimson}AUTONOMOUS WEB INTELLIGENCE${C.reset} ${C.gray}[v2.0.0]${C.reset}
+${C.crimson}  / _ \\   ${C.bold}${C.white}ARACHNE${C.reset} ${C.gray}//${C.reset} ${C.crimson}AUTONOMOUS WEB INTELLIGENCE${C.reset} ${C.gray}[v2.1.0]${C.reset}
 ${C.crimson} \\_\\(_)/_/ ${C.gray}MOTOR: ${C.white}CHROME/BRAVE CDP ${C.gray}| VAULT: ${C.white}SQLITE WAL ${C.gray}| SHIELD: ${C.white}SSRF GUARD${C.reset}
 ${C.crimson}  _// \\\\_  ${C.gray}NODE: ${C.white}${process.version} ${C.gray}| OPERATOR: ${C.white}TELEGRAM FAIL-CLOSED ${C.gray}| NET: ${C.white}${BASE_URL}${C.reset}
 `;
@@ -135,27 +139,31 @@ async function ensureServerOnline(quiet = false) {
     process.stdout.write(`${C.gray}Starting ARACHNE background engine daemon... ${C.reset}`);
   }
 
-  const startScript = path.resolve(__dirname, '../server/start.mjs');
-  if (!fs.existsSync(startScript)) {
-    return false;
-  }
+  const candidatePaths = [
+    path.resolve(__dirname, '../server/start.mjs'),
+    path.resolve(__dirname, 'server/start.mjs'),
+    path.resolve(process.cwd(), 'server/start.mjs')
+  ];
+  const startScript = candidatePaths.find(p => fs.existsSync(p));
 
-  try {
-    const serverProc = spawn(process.execPath, [startScript, '--server-only'], {
-      detached: true,
-      stdio: 'ignore'
-    });
-    serverProc.unref();
+  if (startScript) {
+    try {
+      const serverProc = spawn(process.execPath, [startScript, '--server-only'], {
+        detached: true,
+        stdio: 'ignore'
+      });
+      serverProc.unref();
 
-    for (let i = 0; i < 20; i++) {
-      await new Promise(r => setTimeout(r, 250));
-      const recheck = await api('/api/status');
-      if (recheck.ok) {
-        if (!quiet) console.log(`${C.white}[ONLINE]${C.reset}\n`);
-        return true;
+      for (let i = 0; i < 20; i++) {
+        await new Promise(r => setTimeout(r, 250));
+        const recheck = await api('/api/status');
+        if (recheck.ok) {
+          if (!quiet) console.log(`${C.white}[ONLINE]${C.reset}\n`);
+          return true;
+        }
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
   if (!quiet) console.log(`${C.crimson}[FAILED]${C.reset}\n`);
   return false;

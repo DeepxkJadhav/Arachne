@@ -1,6 +1,6 @@
 {
   "name": "arachne",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "ARACHNE — Autonomous Web Intelligence & Deep Research CLI",
   "type": "module",
   "main": "bin/arachne.mjs",
@@ -14,7 +14,8 @@
     "server": "node server/start.mjs",
     "test": "node test/e2e-master-verification.mjs",
     "test:regression": "node test/regression-intent-reports-suite.mjs",
-    "test:all": "node test/e2e-master-verification.mjs && node test/regression-intent-reports-suite.mjs"
+    "test:all": "node test/e2e-master-verification.mjs && node test/regression-intent-reports-suite.mjs",
+    "build:exe": "node scripts/build-exe.mjs"
   },
   "author": "Deepak Jadhav <https://github.com/DeepxkJadhav>",
   "license": "AGPL-3.0",
