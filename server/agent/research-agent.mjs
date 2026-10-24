@@ -1,3 +1,6 @@
+import crypto from 'node:crypto';
+import path from 'node:path';
+import fs from 'node:fs';
 import { CrawlerFetcher } from '../crawler/fetcher.mjs';
 import { ContentExtractor } from '../crawler/extractor.mjs';
 import { UrlFrontier } from '../crawler/frontier.mjs';
@@ -810,13 +813,66 @@ export class ResearchAgent {
 
   async discoverSeedUrls(queries) {
     const urls = new Set();
-    const cleanQueries = queries.map(q => q.replace(/[^a-zA-Z0-9\s]/g, '').trim()).filter(Boolean);
+
+    // 0. Extract Direct URLs in user objective or queries
+    for (const q of queries) {
+      if (typeof q === 'string') {
+        const directUrlMatches = q.match(/https?:\/\/[^\s"'<>]+/gi);
+        if (directUrlMatches) {
+          for (const u of directUrlMatches) {
+            try {
+              const parsed = new URL(u);
+              if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                urls.add(parsed.toString());
+              }
+            } catch {}
+          }
+        }
+      }
+    }
+
+    const cleanQueries = queries.map(q => q.replace(/https?:\/\/[^\s]+/g, '').replace(/[^a-zA-Z0-9\s]/g, ' ').trim()).filter(Boolean);
     if (cleanQueries.length === 0) cleanQueries.push('AI autonomous agent');
 
     for (const q of cleanQueries) {
       const qEncoded = encodeURIComponent(q);
 
-      // 1. Live Wikipedia Search
+      // 1. Live Google News & Global Web RSS Index
+      try {
+        const newsRes = await this.fetcher.fetchUrl(`https://news.google.com/rss/search?q=${qEncoded}&hl=en-US&gl=US&ceid=US:en`);
+        if (newsRes.success && newsRes.html) {
+          const links = newsRes.html.match(/<link>([^<]+)<\/link>/g) || [];
+          for (const l of links) {
+            const cleanUrl = l.replace(/<\/?link>/g, '').trim();
+            if (cleanUrl && cleanUrl.startsWith('http') && !cleanUrl.includes('news.google.com')) {
+              urls.add(cleanUrl);
+              if (urls.size >= 16) break;
+            }
+          }
+        }
+      } catch {}
+
+      // 2. Live DuckDuckGo Instant Answer & Related Topics API
+      try {
+        const ddgRes = await this.fetcher.fetchUrl(`https://api.duckduckgo.com/?q=${qEncoded}&format=json&no_html=1`);
+        if (ddgRes.success && ddgRes.html) {
+          try {
+            const ddgJson = JSON.parse(ddgRes.html);
+            if (ddgJson.AbstractURL && ddgJson.AbstractURL.startsWith('http')) {
+              urls.add(ddgJson.AbstractURL);
+            }
+            if (Array.isArray(ddgJson.RelatedTopics)) {
+              for (const topic of ddgJson.RelatedTopics) {
+                if (topic.FirstURL && topic.FirstURL.startsWith('http')) {
+                  urls.add(topic.FirstURL);
+                }
+              }
+            }
+          } catch {}
+        }
+      } catch {}
+
+      // 3. Live Wikipedia OpenSearch API
       try {
         const wikiRes = await this.fetcher.fetchUrl(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${qEncoded}&limit=4&namespace=0&format=json`);
         if (wikiRes.success && wikiRes.html) {
@@ -827,43 +883,25 @@ export class ResearchAgent {
         }
       } catch {}
 
-      // 2. Live GitHub Search API
+      // 4. Live OpenAlex Global Academic Literature API (250M+ open scientific works)
       try {
-        const ghRes = await this.fetcher.fetchUrl(`https://api.github.com/search/repositories?q=${qEncoded}&sort=stars&order=desc&per_page=4`);
-        if (ghRes.success && ghRes.html) {
-          const ghJson = JSON.parse(ghRes.html);
-          if (Array.isArray(ghJson.items)) {
-            ghJson.items.forEach(item => { if (item.html_url) urls.add(item.html_url); });
-          }
+        const openAlexRes = await this.fetcher.fetchUrl(`https://api.openalex.org/works?search=${qEncoded}&per_page=4`);
+        if (openAlexRes.success && openAlexRes.html) {
+          try {
+            const alexJson = JSON.parse(openAlexRes.html);
+            if (Array.isArray(alexJson.results)) {
+              for (const item of alexJson.results) {
+                const landing = item.primary_location?.landing_page_url || item.doi;
+                if (landing && landing.startsWith('http')) {
+                  urls.add(landing);
+                }
+              }
+            }
+          } catch {}
         }
       } catch {}
 
-      // 3. Live Hacker News Index
-      try {
-        const hnRes = await this.fetcher.fetchUrl(`https://hn.algolia.com/api/v1/search?query=${qEncoded}&tags=story&hitsPerPage=4`);
-        if (hnRes.success && hnRes.html) {
-          const hnJson = JSON.parse(hnRes.html);
-          if (Array.isArray(hnJson.hits)) {
-            hnJson.hits.forEach(hit => {
-              const u = hit.url || (hit.objectID ? `https://news.ycombinator.com/item?id=${hit.objectID}` : null);
-              if (u && u.startsWith('http')) urls.add(u);
-            });
-          }
-        }
-      } catch {}
-
-      // 4. Live DuckDuckGo Lite
-      try {
-        const ddgRes = await this.fetcher.fetchUrl(`https://lite.duckduckgo.com/lite/?q=${qEncoded}`);
-        if (ddgRes.success && ddgRes.html) {
-          const ddgLinks = ContentExtractor.extractLinks(ddgRes.html, 'https://lite.duckduckgo.com');
-          ddgLinks.forEach(l => {
-            if (!l.includes('duckduckgo.com') && l.startsWith('http')) urls.add(l);
-          });
-        }
-      } catch {}
-
-      // 5. Live arXiv Open Search API for papers & academic research
+      // 5. Live arXiv Open Search API for papers & academic preprints
       try {
         const arxivRes = await this.fetcher.fetchUrl(`https://export.arxiv.org/api/query?search_query=all:${qEncoded}&start=0&max_results=4`);
         if (arxivRes.success && arxivRes.html) {
@@ -877,7 +915,32 @@ export class ResearchAgent {
         }
       } catch {}
 
-      if (urls.size >= 12) break;
+      // 6. Live GitHub Search API for code repositories
+      try {
+        const ghRes = await this.fetcher.fetchUrl(`https://api.github.com/search/repositories?q=${qEncoded}&sort=stars&order=desc&per_page=4`);
+        if (ghRes.success && ghRes.html) {
+          const ghJson = JSON.parse(ghRes.html);
+          if (Array.isArray(ghJson.items)) {
+            ghJson.items.forEach(item => { if (item.html_url) urls.add(item.html_url); });
+          }
+        }
+      } catch {}
+
+      // 7. Live Hacker News Index for engineering & tech discussion
+      try {
+        const hnRes = await this.fetcher.fetchUrl(`https://hn.algolia.com/api/v1/search?query=${qEncoded}&tags=story&hitsPerPage=4`);
+        if (hnRes.success && hnRes.html) {
+          const hnJson = JSON.parse(hnRes.html);
+          if (Array.isArray(hnJson.hits)) {
+            hnJson.hits.forEach(hit => {
+              const u = hit.url || (hit.objectID ? `https://news.ycombinator.com/item?id=${hit.objectID}` : null);
+              if (u && u.startsWith('http')) urls.add(u);
+            });
+          }
+        }
+      } catch {}
+
+      if (urls.size >= 16) break;
     }
 
     if (urls.size === 0) {

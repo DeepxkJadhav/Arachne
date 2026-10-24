@@ -86,12 +86,18 @@ export class BrowserManager {
   }
 
   async launchDedicatedBrowser({ headless = false } = {}) {
-    if (this.browserProcess && !this.browserProcess.killed) {
-      const conn = await this.testCdpConnection();
-      if (conn.connected) {
-        this.status = 'ready';
-        return { success: true, message: 'Browser already active and connected', port: this.remoteDebuggingPort, headless: !!headless };
-      }
+    // 1. First verify if CDP is already reachable on the target port
+    const existingConn = await this.testCdpConnection();
+    if (existingConn.connected) {
+      this.status = 'ready';
+      return {
+        success: true,
+        message: 'Browser already active and connected',
+        port: this.remoteDebuggingPort,
+        headless: !!headless,
+        browser: this.selectedBrowser,
+        latencyMs: existingConn.latencyMs
+      };
     }
 
     this.detected = BrowserDetector.detectInstalledBrowsers();
@@ -127,8 +133,8 @@ export class BrowserManager {
         this.currentCdpSession = null;
       });
 
-      // Poll for CDP readiness up to 10 seconds
-      const maxRetries = 20;
+      // Poll for CDP readiness up to 12 seconds
+      const maxRetries = 24;
       for (let i = 0; i < maxRetries; i++) {
         await new Promise(r => setTimeout(r, 500));
         const testRes = await this.testCdpConnection();
@@ -146,7 +152,7 @@ export class BrowserManager {
         }
       }
 
-      throw new Error(`Browser launched but CDP port ${this.remoteDebuggingPort} was not reachable within 10 seconds.`);
+      throw new Error(`Browser launched but CDP port ${this.remoteDebuggingPort} was not reachable within 12 seconds.`);
     } catch (err) {
       this.status = 'disconnected';
       this.lastError = err.message;

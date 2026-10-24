@@ -67,6 +67,15 @@ async function run() {
   console.log('🕷️  ARACHNE REGRESSION SUITE: INTENTS, REPORTS & DISCOVERY');
   console.log('================================================================\n');
 
+    // Auto-start server if not running
+  try {
+    await requestJson('GET', '/api/status');
+  } catch {
+    const { createArachneServer } = await import('../server/arachne-server.mjs');
+    createArachneServer(3003);
+    await new Promise(r => setTimeout(r, 1200));
+  }
+
   let passed = 0;
   let failed = 0;
 

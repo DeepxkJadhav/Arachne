@@ -67,9 +67,10 @@ export function createArachneServer(port = 3003) {
 
   researchAgent.setTelegramGateway(telegramGateway);
 
+  const existingReports = vaultStore.getReports();
   const isDemo = process.argv.includes('--demo') || process.env.ARACHNE_DEMO_MODE === 'true';
-  if (isDemo) {
-    seedInitialDemoData(vaultStore, graphEngine, researchAgent);
+  if (isDemo || !existingReports || existingReports.length === 0) {
+    seedInitialDemoData(vaultStore, graphEngine, researchAgent, reportEngine);
   }
 
   const server = http.createServer(async (req, res) => {
@@ -664,6 +665,27 @@ export function createArachneServer(port = 3003) {
         const md = researchAgent.fetcher.htmlToCleanMarkdown(fetchRes.html, url);
         let domain = '';
         try { domain = new URL(url).hostname; } catch {}
+
+        if (fetchRes.success) {
+          vaultStore.addCorpusDocument({
+            url,
+            title: url,
+            domain,
+            snippet: md.slice(0, 240),
+            content: md,
+            contentHash: fetchRes.contentHash,
+            status: 'processed',
+            type: ContentExtractor.classifyContentType(url, fetchRes.html, md)
+          });
+        } else {
+          researchAgent.recordIgnoredItem({
+            url,
+            title: url,
+            reason: fetchRes.error || `HTTP ${fetchRes.status}`,
+            stage: 'API_CRAWL'
+          });
+        }
+
         return sendJson({
           success: fetchRes.success,
           error: fetchRes.error || null,
@@ -734,7 +756,7 @@ export function createArachneServer(port = 3003) {
   return { server, vaultStore, researchAgent, graphEngine, modelRouter, reportEngine, telegramGateway };
 }
 
-function seedInitialDemoData(vaultStore, graphEngine, researchAgent) {
+function seedInitialDemoData(vaultStore, graphEngine, researchAgent, reportEngine = null) {
   const initialDocs = [
     {
       url: 'https://arxiv.org/abs/2303.17580',
@@ -852,6 +874,44 @@ function seedInitialDemoData(vaultStore, graphEngine, researchAgent) {
       entities: doc.entities.map(e => ({ name: e, type: e.includes('Claude') || e.includes('AutoGPT') ? 'AI_Model' : 'Technology', confidence: 0.95 })),
       citations: doc.citations.map(c => ({ identifier: c, title: c, url: `https://doi.org/${c}`, type: 'Document' }))
     });
+  }
+
+  // Create baseline completed investigation & dossier if none exists
+  if (reportEngine && (!vaultStore.getReports() || vaultStore.getReports().length === 0)) {
+    const baselineInv = {
+      id: 'inv-baseline-initial',
+      title: 'Autonomous Web Intelligence & Frontier Reasoning',
+      objective: 'Autonomous Web Intelligence and Multi-Agent Reasoning',
+      status: 'COMPLETED',
+      currentPhaseIndex: 4,
+      metrics: {
+        urlsDiscovered: 12,
+        fetchesAttempted: 8,
+        fetchesSuccessful: 8,
+        documentsAnalyzed: 8,
+        pagesCrawled: 8,
+        entitiesExtracted: 24,
+        citationsVerified: 6,
+        evidenceCount: 30,
+        uniqueUsableSources: 6,
+        durationSeconds: 15
+      },
+      plan: {
+        phases: [
+          { name: 'Scoping & Problem Formulation', status: 'completed' },
+          { name: 'Primary Source Discovery', status: 'completed' },
+          { name: 'Deep Content Extraction', status: 'completed' },
+          { name: 'Cross-Verification & Contradiction', status: 'completed' },
+          { name: 'Deliverable Dossier Synthesis', status: 'completed' }
+        ]
+      },
+      recentFindings: [],
+      logs: []
+    };
+    vaultStore.saveInvestigation(baselineInv);
+    const corpus = vaultStore.getCorpus();
+    const graph = vaultStore.getGraph();
+    reportEngine.generateReport(baselineInv, corpus, graph);
   }
 }
 

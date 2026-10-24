@@ -14,7 +14,8 @@ Thumbs.db
 
 # ARACHNE Vault & Generated Artifacts
 .arachne-vault/
-reports/
+/reports/
+!server/reports/
 *.log
 
 # Editor & System Directories

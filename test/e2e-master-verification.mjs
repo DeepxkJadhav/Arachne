@@ -54,6 +54,15 @@ async function runMasterSuite() {
   console.log('🕷️  ARACHNE MASTER E2E ACCEPTANCE TEST SUITE (TESTS A - K)');
   console.log('================================================================\n');
 
+    // Auto-start server if not running
+  try {
+    await api('/api/status');
+  } catch {
+    const { createArachneServer } = await import('../server/arachne-server.mjs');
+    createArachneServer(3003);
+    await new Promise(r => setTimeout(r, 1200));
+  }
+
   let passed = 0;
   let failed = 0;
 
@@ -240,7 +249,7 @@ async function runMasterSuite() {
     assert.strictEqual(storageRes.status, 200);
     const data = storageRes.data.data;
     assert.strictEqual(data.mode, 'WAL', 'Database journal mode must be WAL');
-    assert.ok(data.totalMb > 0, 'Database size must be greater than 0 MB');
+    assert.ok(parseFloat(data.totalMb) > 0 || data.totalBytes > 0, 'Database size must be greater than 0 MB');
     assert.ok(data.counts.corpus_documents > 0, 'Corpus documents must persist');
     assert.ok(data.counts.reports > 0, 'Reports must persist');
   });

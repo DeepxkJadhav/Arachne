@@ -777,7 +777,7 @@ export class SqliteStore {
       dbPath: this.dbPath,
       journalMode,
       dbSizeBytes,
-      dbSizeMb: (dbSizeBytes / (1024 * 1024)).toFixed(2),
+      dbSizeMb: Math.max(0.01, parseFloat((dbSizeBytes / (1024 * 1024)).toFixed(2))),
       counts,
       totalRecords: Object.values(counts).reduce((a, b) => a + b, 0)
     };

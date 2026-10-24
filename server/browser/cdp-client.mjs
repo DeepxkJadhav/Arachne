@@ -3,39 +3,51 @@ import http from 'node:http';
 export class CdpClient {
   constructor(options = {}) {
     this.port = options.port || 9222;
-    this.host = options.host || '127.0.0.1';
+    this.host = options.host || 'localhost';
   }
 
   static async httpJson(method, host, port, path) {
-    return new Promise((resolve, reject) => {
-      const req = http.request({
-        host,
-        port,
-        path,
-        method,
-        headers: {
-          'Host': `${host}:${port}`
-        },
-        timeout: 4000
-      }, (res) => {
-        let raw = '';
-        res.on('data', c => raw += c);
-        res.on('end', () => {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            try {
-              resolve(JSON.parse(raw));
-            } catch {
-              resolve(raw);
-            }
-          } else {
-            reject(new Error(`CDP HTTP status ${res.statusCode}: ${raw}`));
-          }
+    const candidateHosts = ['localhost', '::1', '127.0.0.1'];
+    if (host && !candidateHosts.includes(host)) candidateHosts.unshift(host);
+
+    let lastErr = null;
+    for (const h of candidateHosts) {
+      try {
+        return await new Promise((resolve, reject) => {
+          const req = http.request({
+            host: h,
+            port,
+            path,
+            method,
+            headers: {
+              'Host': `localhost:${port}`,
+              'Origin': `http://localhost:${port}`
+            },
+            timeout: 3000
+          }, (res) => {
+            let raw = '';
+            res.on('data', c => raw += c);
+            res.on('end', () => {
+              if (res.statusCode >= 200 && res.statusCode < 300) {
+                try {
+                  resolve(JSON.parse(raw));
+                } catch {
+                  resolve(raw);
+                }
+              } else {
+                reject(new Error(`CDP HTTP status ${res.statusCode}: ${raw}`));
+              }
+            });
+          });
+          req.on('error', reject);
+          req.on('timeout', () => req.destroy(new Error('CDP connection timeout')));
+          req.end();
         });
-      });
-      req.on('error', reject);
-      req.on('timeout', () => req.destroy(new Error('CDP connection timeout')));
-      req.end();
-    });
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    throw lastErr || new Error(`Unable to connect to CDP on port ${port}`);
   }
 
   async testConnection() {
@@ -98,16 +110,14 @@ export class CdpClient {
     if (wsUrl && !wsUrl.includes(`:${this.port}`)) {
       wsUrl = wsUrl.replace(/^ws:\/\/([^/:]+)(\/.*)$/, `ws://$1:${this.port}$2`);
     }
-    if (wsUrl) {
-      wsUrl = wsUrl.replace(/^ws:\/\/localhost:/, 'ws://127.0.0.1:');
-    }
-    return new CdpSession(wsUrl);
+    return new CdpSession(wsUrl, this.port);
   }
 }
 
 export class CdpSession {
-  constructor(webSocketUrl) {
+  constructor(webSocketUrl, port = 9222) {
     this.wsUrl = webSocketUrl;
+    this.port = port;
     this.ws = null;
     this.nextId = 1;
     this.callbacks = new Map();
@@ -118,44 +128,66 @@ export class CdpSession {
   async connect() {
     if (this.connected && this.ws) return;
 
-    return new Promise((resolve, reject) => {
+    // Try primary wsUrl, and if that fails, try candidate loopbacks
+    const candidateUrls = [this.wsUrl];
+    if (this.wsUrl.includes('localhost')) {
+      candidateUrls.push(this.wsUrl.replace('localhost', '[::1]'));
+      candidateUrls.push(this.wsUrl.replace('localhost', '127.0.0.1'));
+    } else if (this.wsUrl.includes('127.0.0.1')) {
+      candidateUrls.push(this.wsUrl.replace('127.0.0.1', 'localhost'));
+      candidateUrls.push(this.wsUrl.replace('127.0.0.1', '[::1]'));
+    }
+
+    let lastErr = null;
+    for (const url of candidateUrls) {
       try {
-        this.ws = new WebSocket(this.wsUrl);
-      } catch (err) {
-        return reject(err);
-      }
-
-      this.ws.onopen = () => {
-        this.connected = true;
-        resolve();
-      };
-
-      this.ws.onerror = (err) => {
-        if (!this.connected) reject(err);
-      };
-
-      this.ws.onclose = () => {
-        this.connected = false;
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.id && this.callbacks.has(msg.id)) {
-            const { resolve: resCb, reject: rejCb } = this.callbacks.get(msg.id);
-            this.callbacks.delete(msg.id);
-            if (msg.error) {
-              rejCb(new Error(msg.error.message || 'CDP Error'));
-            } else {
-              resCb(msg.result);
-            }
-          } else if (msg.method) {
-            const listeners = this.eventListeners.get(msg.method) || [];
-            for (const l of listeners) l(msg.params);
+        await new Promise((resolve, reject) => {
+          let socket;
+          try {
+            socket = new WebSocket(url);
+          } catch (e) {
+            return reject(e);
           }
-        } catch {}
-      };
-    });
+
+          socket.onopen = () => {
+            this.ws = socket;
+            this.wsUrl = url;
+            this.connected = true;
+            resolve();
+          };
+
+          socket.onerror = (err) => {
+            if (!this.connected) reject(err);
+          };
+
+          socket.onclose = () => {
+            this.connected = false;
+          };
+
+          socket.onmessage = (event) => {
+            try {
+              const msg = JSON.parse(event.data);
+              if (msg.id && this.callbacks.has(msg.id)) {
+                const { resolve: resCb, reject: rejCb } = this.callbacks.get(msg.id);
+                this.callbacks.delete(msg.id);
+                if (msg.error) {
+                  rejCb(new Error(msg.error.message || 'CDP Error'));
+                } else {
+                  resCb(msg.result);
+                }
+              } else if (msg.method) {
+                const listeners = this.eventListeners.get(msg.method) || [];
+                for (const l of listeners) l(msg.params);
+              }
+            } catch {}
+          };
+        });
+        return;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('WebSocket connection failed to all loopback targets');
   }
 
   send(method, params = {}) {
@@ -288,11 +320,13 @@ export class CdpSession {
         });
 
         // Main readable text body
-        const bodyClone = document.body.cloneNode(true);
-        ['script', 'style', 'svg', 'noscript', 'canvas', 'iframe'].forEach(tag => {
-          bodyClone.querySelectorAll(tag).forEach(el => el.remove());
-        });
-        const textContent = (bodyClone.innerText || bodyClone.textContent || '').replace(/\\s+/g, ' ').trim();
+        const bodyClone = document.body ? document.body.cloneNode(true) : null;
+        if (bodyClone) {
+          ['script', 'style', 'svg', 'noscript', 'canvas', 'iframe', 'nav', 'footer'].forEach(tag => {
+            bodyClone.querySelectorAll(tag).forEach(el => el.remove());
+          });
+        }
+        const textContent = bodyClone ? (bodyClone.innerText || bodyClone.textContent || '').replace(/\\s+/g, ' ').trim() : '';
 
         return {
           title,

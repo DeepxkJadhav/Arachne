@@ -6,6 +6,21 @@ export class ModelRouter {
     this.vaultStore = vaultStore;
     this.configuredModels = [
       {
+        id: 'venice-uncensored',
+        name: 'Venice AI (Uncensored / Privacy)',
+        provider: 'Venice AI',
+        endpoint: 'https://api.venice.ai/api/v1',
+        model: 'venice-uncensored',
+        role: 'Autonomous Web Intelligence',
+        rolesList: ['Uncensored Extraction', 'Deep Web Research', 'Zero Telemetry'],
+        context: '128K',
+        status: 'Online',
+        latencyMs: 95,
+        temperature: 0.7,
+        maxTokens: 4096,
+        capabilities: ['Test', 'Code', 'Tool Calling', 'Structured Output', 'Privacy Preserving']
+      },
+      {
         id: 'groq-qwen',
         name: 'Groq (Qwen 3.8 / LPU)',
         provider: 'Groq Cloud',
