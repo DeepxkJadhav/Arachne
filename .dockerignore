@@ -1,0 +1,8 @@
+node_modules/
+.git/
+.github/
+.arachne-vault/
+*.exe
+*.cmd
+test/
+*.log

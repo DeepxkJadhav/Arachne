@@ -1,0 +1,17 @@
+services:
+  arachne:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arachne-engine
+    restart: unless-stopped
+    ports:
+      - "9333:9333"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - arachne-data:/app/.arachne-vault
+
+volumes:
+  arachne-data:
+    driver: local
