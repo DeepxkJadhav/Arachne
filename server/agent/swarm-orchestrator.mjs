@@ -84,9 +84,10 @@ export class SwarmOrchestrator extends EventEmitter {
     for (const q of queries) {
       if (!q || !q.trim()) continue;
       const formattedQ = encodeURIComponent(q.trim());
+      discoveredUrls.push(`https://en.wikipedia.org/wiki/Special:Search?search=${formattedQ}`);
+      discoveredUrls.push(`https://duckduckgo.com/?q=${formattedQ}`);
       discoveredUrls.push(`https://arxiv.org/search/?query=${formattedQ}&searchtype=all`);
       discoveredUrls.push(`https://github.com/search?q=${formattedQ}&type=repositories`);
-      discoveredUrls.push(`https://paperswithcode.com/search?q_meta=&q_type=&q=${formattedQ}`);
     }
 
     this.setSubagentStatus('scout', 'completed', `${discoveredUrls.length} seeds`);

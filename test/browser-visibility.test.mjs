@@ -1,11 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert';
+import path from 'node:path';
+import os from 'node:os';
 
 import { BrowserManager } from '../server/browser/browser-manager.mjs';
 
+const tempProfileDir = path.join(os.tmpdir(), 'arachne-profile');
+
 test('browser launch args default to visible Chrome', () => {
   const args = BrowserManager.buildLaunchArgs({
-    profileDir: 'C:\\tmp\\arachne-profile',
+    profileDir: tempProfileDir,
     port: 9222
   });
 
@@ -17,7 +21,7 @@ test('browser launch args default to visible Chrome', () => {
 
 test('browser launch can still run in headless mode when explicitly requested', () => {
   const args = BrowserManager.buildLaunchArgs({
-    profileDir: 'C:\\tmp\\arachne-profile',
+    profileDir: tempProfileDir,
     port: 9222,
     headless: true
   });

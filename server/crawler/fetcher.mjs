@@ -7,7 +7,7 @@ import net from 'node:net';
 export class CrawlerFetcher {
   constructor(options = {}) {
     this.timeoutMs = options.timeoutMs || 10000;
-    this.userAgent = options.userAgent || 'ArachneSpider/2.0 (+https://github.com/DeepxkJadhav/Arachne; web-intelligence-bot)';
+    this.userAgent = options.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 (compatible; Arachne/2.1; +https://github.com/DeepxkJadhav/Arachne)';
     this.maxRedirects = options.maxRedirects || 5;
     this.maxSizeBytes = options.maxSizeBytes || 10 * 1024 * 1024; // 10 MB cap
     this.allowLocalhost = options.allowLocalhost || false; // Only for local test server

@@ -447,29 +447,38 @@ export function createArachneServer(port = 3003) {
         const mime = mimeTypes[format] || 'application/octet-stream';
         const filename = `${reportId}.${format}`;
 
+        let fileBufferOrStr = null;
         if (fs.existsSync(diskFile)) {
-          const fileData = fs.readFileSync(diskFile);
-          res.writeHead(200, {
-            'Content-Type': mime,
-            'Content-Disposition': `attachment; filename="${filename}"`,
-            'Content-Length': fileData.length
-          });
-          res.end(fileData);
-          return;
+          fileBufferOrStr = fs.readFileSync(diskFile);
+        } else {
+          // In-memory generation fallback via reportEngine
+          const data = {
+            investigation: { id: rep.investigationId || rep.id, objective: rep.title, title: rep.title },
+            corpus: vaultStore.getCorpus().slice(0, 40),
+            graph: vaultStore.getGraph(),
+            keyEntities: (vaultStore.getGraph().nodes || []).slice(0, 20),
+            citations: (vaultStore.getGraph().nodes || []).filter(n => ['Citation', 'Document'].includes(n.type)).slice(0, 15),
+            title: rep.title,
+            dateFormatted: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+          };
+          if (format === 'pdf') fileBufferOrStr = reportEngine.exportPdf(data);
+          else if (format === 'docx') fileBufferOrStr = reportEngine.exportDocx(data);
+          else if (format === 'xlsx') fileBufferOrStr = reportEngine.exportXlsx(data);
+          else if (format === 'pptx') fileBufferOrStr = reportEngine.exportPptx(data);
+          else if (format === 'json') fileBufferOrStr = rep.json ? (typeof rep.json === 'string' ? rep.json : JSON.stringify(rep.json, null, 2)) : JSON.stringify({ title: rep.title, summary: rep.summary }, null, 2);
+          else if (format === 'csv') fileBufferOrStr = rep.csv || reportEngine.exportCsv(data);
+          else if (format === 'html') fileBufferOrStr = rep.html || reportEngine.exportHtml(data, rep.markdown || '');
+          else if (format === 'txt') fileBufferOrStr = rep.txt || reportEngine.exportPlainText(data);
+          else fileBufferOrStr = rep.markdown || reportEngine.exportMarkdown(data);
         }
 
-        // In-memory fallback
-        let content = rep.markdown || '';
-        if (format === 'html') content = rep.html || '';
-        else if (format === 'json') content = JSON.stringify(rep.json || {}, null, 2);
-        else if (format === 'csv') content = rep.csv || '';
-        else if (format === 'txt') content = rep.txt || rep.markdown || '';
-
+        const buf = Buffer.isBuffer(fileBufferOrStr) ? fileBufferOrStr : Buffer.from(String(fileBufferOrStr), 'utf8');
         res.writeHead(200, {
           'Content-Type': mime,
-          'Content-Disposition': `attachment; filename="${filename}"`
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Length': buf.length
         });
-        res.end(content);
+        res.end(buf);
         return;
       }
 

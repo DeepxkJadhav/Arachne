@@ -418,6 +418,7 @@ export class ResearchAgent {
           let fetchResult = null;
           let browserSession = null;
           let screenshotBase64 = null;
+          let cdpData = null;
 
           try {
             // Open and focus tab via BrowserManager
@@ -425,6 +426,9 @@ export class ResearchAgent {
             if (browserSession) {
               await browserSession.navigate(target.url, 15000);
               screenshotBase64 = await browserSession.captureScreenshot(75);
+              try {
+                cdpData = await browserSession.extractContent();
+              } catch {}
               if (screenshotBase64) {
                 try {
                   const ssDir = path.join(this.vaultStore.vaultDir, 'screenshots');
@@ -437,9 +441,28 @@ export class ResearchAgent {
             // If browser is not running or launch failed, continue with resilient fetcher
           }
 
-          // Fetch page content
+          // Fetch page content via HTTP client
           inv.metrics.fetchesAttempted++;
           fetchResult = await this.fetcher.fetchUrl(target.url);
+
+          // If raw HTTP fetch failed or was blocked by bot-detection, but the visible Chrome browser successfully rendered the page:
+          if ((!fetchResult.success || (fetchResult.html || '').length < 300) && cdpData && (cdpData.textContent || '').length > 80) {
+            this.log(`Bypassed scrape boundary via Chrome browser DOM extraction for: ${target.url} (${cdpData.wordCount || 0} words)`, 'info');
+            fetchResult = {
+              success: true,
+              status: 200,
+              url: target.url,
+              contentType: 'text/html; charset=utf-8',
+              format: 'html',
+              contentHash: crypto.createHash('sha256').update(cdpData.textContent).digest('hex'),
+              isCaptchaChallenge: false,
+              html: `<html><head><title>${cdpData.title || ''}</title></head><body><h1>${cdpData.title || ''}</h1>${(cdpData.headings || []).map(h => `<${h.tag}>${h.text}</${h.tag}>`).join('\n')}<p>${cdpData.textContent}</p>${(cdpData.links || []).map(l => `<a href="${l.href}">${l.text}</a>`).join('\n')}</body></html>`,
+              title: cdpData.title,
+              contentLength: cdpData.textContent.length,
+              latencyMs: 300,
+              headers: {}
+            };
+          }
 
           // === LOOP STEP: OBSERVE ===
           this.emit('live_loop_step', {
@@ -563,9 +586,12 @@ export class ResearchAgent {
 
           const markdown = this.fetcher.htmlToCleanMarkdown(fetchResult.html, target.url);
           const metadata = ContentExtractor.extractMetadata(fetchResult.html, target.url);
+          if (!metadata.title && cdpData?.title) metadata.title = cdpData.title;
           const entities = ContentExtractor.extractEntities(markdown, target.url);
           const citations = ContentExtractor.extractCitations(markdown, target.url);
-          const discoveredLinks = ContentExtractor.extractLinks(fetchResult.html, target.url);
+          const htmlLinks = ContentExtractor.extractLinks(fetchResult.html, target.url);
+          const cdpLinks = (cdpData?.links || []).map(l => l.href).filter(u => u && u.startsWith('http'));
+          const discoveredLinks = Array.from(new Set([...htmlLinks, ...cdpLinks]));
           const snippet = ContentExtractor.generateSnippet(markdown);
           const contentHash = fetchResult.contentHash || ContentExtractor.computeContentHash(markdown);
 
@@ -834,37 +860,79 @@ export class ResearchAgent {
     const cleanQueries = queries.map(q => q.replace(/https?:\/\/[^\s]+/g, '').replace(/[^a-zA-Z0-9\s]/g, ' ').trim()).filter(Boolean);
     if (cleanQueries.length === 0) cleanQueries.push('AI autonomous agent');
 
-    for (const q of cleanQueries) {
-      const qEncoded = encodeURIComponent(q);
-
-      // 1. Live Google News & Global Web RSS Index
+    // 1. Live Browser Search via Chrome CDP (DuckDuckGo & Bing) across the entire open web
+    if (this.browserManager) {
       try {
-        const newsRes = await this.fetcher.fetchUrl(`https://news.google.com/rss/search?q=${qEncoded}&hl=en-US&gl=US&ceid=US:en`);
-        if (newsRes.success && newsRes.html) {
-          const links = newsRes.html.match(/<link>([^<]+)<\/link>/g) || [];
-          for (const l of links) {
-            const cleanUrl = l.replace(/<\/?link>/g, '').trim();
-            if (cleanUrl && cleanUrl.startsWith('http') && !cleanUrl.includes('news.google.com')) {
-              urls.add(cleanUrl);
-              if (urls.size >= 16) break;
+        const primaryQuery = cleanQueries[0];
+        const ddgUrl = `https://duckduckgo.com/?q=${encodeURIComponent(primaryQuery)}`;
+        const browserSession = await this.browserManager.prepareTabForUrl(ddgUrl);
+        if (browserSession) {
+          await browserSession.navigate(ddgUrl, 8000);
+          await new Promise(r => setTimeout(r, 1200));
+          const pageData = await browserSession.extractContent();
+          if (pageData && Array.isArray(pageData.links)) {
+            for (const link of pageData.links) {
+              const href = link.href;
+              if (
+                href &&
+                href.startsWith('http') &&
+                !href.includes('duckduckgo.com') &&
+                !href.includes('spreadprivacy.com') &&
+                !href.includes('google.com/search') &&
+                !href.includes('apps.apple.com') &&
+                !href.includes('play.google.com') &&
+                !href.includes('microsoft.com/store')
+              ) {
+                urls.add(href);
+                if (urls.size >= 12) break;
+              }
             }
           }
         }
-      } catch {}
+      } catch (browserErr) {
+        this.log(`Live browser web search: ${browserErr.message}`, 'debug');
+      }
+    }
 
-      // 2. Live DuckDuckGo Instant Answer & Related Topics API
+    // 2. Multi-Surface Global Web APIs across the entire Internet
+    for (const q of cleanQueries) {
+      const qEncoded = encodeURIComponent(q);
+
+      // A. Wikipedia Full-Text Search and External Authoritative Sources
       try {
-        const ddgRes = await this.fetcher.fetchUrl(`https://api.duckduckgo.com/?q=${qEncoded}&format=json&no_html=1`);
-        if (ddgRes.success && ddgRes.html) {
+        const wikiFullRes = await this.fetcher.fetchUrl(
+          `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${qEncoded}&format=json&utf8=1&srlimit=4`
+        );
+        if (wikiFullRes.success && wikiFullRes.html) {
           try {
-            const ddgJson = JSON.parse(ddgRes.html);
-            if (ddgJson.AbstractURL && ddgJson.AbstractURL.startsWith('http')) {
-              urls.add(ddgJson.AbstractURL);
+            const wJson = JSON.parse(wikiFullRes.html);
+            const searchItems = wJson?.query?.search || [];
+            const titles = [];
+            for (const item of searchItems) {
+              if (item.title) {
+                titles.push(item.title);
+                urls.add(`https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/\s+/g, '_'))}`);
+              }
             }
-            if (Array.isArray(ddgJson.RelatedTopics)) {
-              for (const topic of ddgJson.RelatedTopics) {
-                if (topic.FirstURL && topic.FirstURL.startsWith('http')) {
-                  urls.add(topic.FirstURL);
+
+            // Extract primary source external links from top Wikipedia article
+            if (titles.length > 0) {
+              const topTitle = encodeURIComponent(titles[0].replace(/\s+/g, '_'));
+              const extRes = await this.fetcher.fetchUrl(
+                `https://en.wikipedia.org/w/api.php?action=query&prop=extlinks&titles=${topTitle}&ellimit=6&format=json`
+              );
+              if (extRes.success && extRes.html) {
+                const extJson = JSON.parse(extRes.html);
+                const pages = extJson?.query?.pages || {};
+                for (const pid in pages) {
+                  const extLinks = pages[pid].extlinks || [];
+                  for (const el of extLinks) {
+                    const rawEl = el['*'];
+                    const formattedEl = rawEl.startsWith('//') ? `https:${rawEl}` : rawEl;
+                    if (formattedEl.startsWith('http') && !formattedEl.includes('archive.org') && !formattedEl.includes('youtube.com')) {
+                      urls.add(formattedEl);
+                    }
+                  }
                 }
               }
             }
@@ -872,18 +940,80 @@ export class ResearchAgent {
         }
       } catch {}
 
-      // 3. Live Wikipedia OpenSearch API
+      // B. Live Google News RSS (Global journalism & verified publisher reporting)
       try {
-        const wikiRes = await this.fetcher.fetchUrl(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${qEncoded}&limit=4&namespace=0&format=json`);
-        if (wikiRes.success && wikiRes.html) {
-          const wikiJson = JSON.parse(wikiRes.html);
-          if (Array.isArray(wikiJson[3])) {
-            wikiJson[3].forEach(u => { if (u && u.startsWith('http')) urls.add(u); });
+        const newsRes = await this.fetcher.fetchUrl(`https://news.google.com/rss/search?q=${qEncoded}&hl=en-US&gl=US&ceid=US:en`);
+        if (newsRes.success && newsRes.html) {
+          // Extract publisher source URLs
+          const sourceMatches = [...newsRes.html.matchAll(/<source[^>]*url="([^"]+)"/gi)];
+          for (const s of sourceMatches) {
+            if (s[1] && s[1].startsWith('http')) urls.add(s[1]);
+          }
+          // Also extract article redirect links for Chrome traversal
+          const artMatches = [...newsRes.html.matchAll(/<link>(https:\/\/news\.google\.com\/rss\/articles\/[^<]+)<\/link>/gi)];
+          for (const a of artMatches) {
+            if (a[1]) urls.add(a[1]);
+            if (urls.size >= 22) break;
           }
         }
       } catch {}
 
-      // 4. Live OpenAlex Global Academic Literature API (250M+ open scientific works)
+      // C. CrossRef Global Academic & Industry Research Index (150M+ DOIs across all disciplines)
+      try {
+        const crRes = await this.fetcher.fetchUrl(`https://api.crossref.org/works?query=${qEncoded}&rows=4`);
+        if (crRes.success && crRes.html) {
+          try {
+            const crJson = JSON.parse(crRes.html);
+            const items = crJson?.message?.items || [];
+            for (const item of items) {
+              if (item.URL && item.URL.startsWith('http')) {
+                urls.add(item.URL);
+              }
+            }
+          } catch {}
+        }
+      } catch {}
+
+      // D. arXiv Open Search API for scientific papers & academic preprints
+      try {
+        const arxivRes = await this.fetcher.fetchUrl(`https://export.arxiv.org/api/query?search_query=all:${qEncoded}&start=0&max_results=4`);
+        if (arxivRes.success && arxivRes.html) {
+          const entryIds = arxivRes.html.match(/<id>(https?:\/\/arxiv\.org\/abs\/[^<]+)<\/id>/gi);
+          if (entryIds) {
+            entryIds.forEach(rawId => {
+              const u = rawId.replace(/<\/?id>/gi, '').trim();
+              if (u) urls.add(u);
+            });
+          }
+        }
+      } catch {}
+
+      // E. Live GitHub Search API for code repositories, tools & datasets
+      try {
+        const ghRes = await this.fetcher.fetchUrl(`https://api.github.com/search/repositories?q=${qEncoded}&sort=stars&order=desc&per_page=4`);
+        if (ghRes.success && ghRes.html) {
+          const ghJson = JSON.parse(ghRes.html);
+          if (Array.isArray(ghJson.items)) {
+            ghJson.items.forEach(item => { if (item.html_url) urls.add(item.html_url); });
+          }
+        }
+      } catch {}
+
+      // F. Hacker News Discussion Index for engineering & technology insights
+      try {
+        const hnRes = await this.fetcher.fetchUrl(`https://hn.algolia.com/api/v1/search?query=${qEncoded}&tags=story&hitsPerPage=4`);
+        if (hnRes.success && hnRes.html) {
+          const hnJson = JSON.parse(hnRes.html);
+          if (Array.isArray(hnJson.hits)) {
+            hnJson.hits.forEach(hit => {
+              const u = hit.url || (hit.objectID ? `https://news.ycombinator.com/item?id=${hit.objectID}` : null);
+              if (u && u.startsWith('http')) urls.add(u);
+            });
+          }
+        }
+      } catch {}
+
+      // G. OpenAlex Global Scholarly Works
       try {
         const openAlexRes = await this.fetcher.fetchUrl(`https://api.openalex.org/works?search=${qEncoded}&per_page=4`);
         if (openAlexRes.success && openAlexRes.html) {
@@ -901,46 +1031,7 @@ export class ResearchAgent {
         }
       } catch {}
 
-      // 5. Live arXiv Open Search API for papers & academic preprints
-      try {
-        const arxivRes = await this.fetcher.fetchUrl(`https://export.arxiv.org/api/query?search_query=all:${qEncoded}&start=0&max_results=4`);
-        if (arxivRes.success && arxivRes.html) {
-          const entryIds = arxivRes.html.match(/<id>(https?:\/\/arxiv\.org\/abs\/[^<]+)<\/id>/gi);
-          if (entryIds) {
-            entryIds.forEach(rawId => {
-              const u = rawId.replace(/<\/?id>/gi, '').trim();
-              if (u) urls.add(u);
-            });
-          }
-        }
-      } catch {}
-
-      // 6. Live GitHub Search API for code repositories
-      try {
-        const ghRes = await this.fetcher.fetchUrl(`https://api.github.com/search/repositories?q=${qEncoded}&sort=stars&order=desc&per_page=4`);
-        if (ghRes.success && ghRes.html) {
-          const ghJson = JSON.parse(ghRes.html);
-          if (Array.isArray(ghJson.items)) {
-            ghJson.items.forEach(item => { if (item.html_url) urls.add(item.html_url); });
-          }
-        }
-      } catch {}
-
-      // 7. Live Hacker News Index for engineering & tech discussion
-      try {
-        const hnRes = await this.fetcher.fetchUrl(`https://hn.algolia.com/api/v1/search?query=${qEncoded}&tags=story&hitsPerPage=4`);
-        if (hnRes.success && hnRes.html) {
-          const hnJson = JSON.parse(hnRes.html);
-          if (Array.isArray(hnJson.hits)) {
-            hnJson.hits.forEach(hit => {
-              const u = hit.url || (hit.objectID ? `https://news.ycombinator.com/item?id=${hit.objectID}` : null);
-              if (u && u.startsWith('http')) urls.add(u);
-            });
-          }
-        }
-      } catch {}
-
-      if (urls.size >= 16) break;
+      if (urls.size >= 24) break;
     }
 
     if (urls.size === 0) {

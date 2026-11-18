@@ -1,4 +1,4 @@
-# ARACHNE — Global Command Installer for Windows
+﻿# ARACHNE — Global Command Installer for Windows
 # Installs 'arachne' command into user PATH without requiring administrator privileges.
 
 [CmdletBinding()]
@@ -57,7 +57,18 @@ exec node "$CliEntryUnix" "`$@"
 Set-Content -Path $ShScript -Value $ShContent -Encoding ASCII
 Write-Host "  Created: $ShScript" -ForegroundColor Gray
 
-# 4. Update User PATH in Registry (Persistent across reboots and new shell sessions)
+# 4. Clean up any legacy or shadowed Arachne install paths (e.g. $env:LOCALAPPDATA\Arachne)
+$LegacyPath = Join-Path $env:LOCALAPPDATA "Arachne"
+if ($InstallPath -ne $LegacyPath) {
+  $UserPath = [System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::User)
+  if ($UserPath) {
+    $PathEntries = ($UserPath -split ';') | Where-Object { $_ -ne "" -and $_ -ne $LegacyPath -and $_ -ne (Join-Path $LegacyPath "bin") }
+    $CleanedPath = ($PathEntries -join ';')
+    [System.Environment]::SetEnvironmentVariable("Path", $CleanedPath, [System.EnvironmentVariableTarget]::User)
+  }
+}
+
+# 5. Update User PATH in Registry (Persistent across reboots and new shell sessions)
 $UserPath = [System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::User)
 $PathEntries = ($UserPath -split ';') | Where-Object { $_ -ne "" }
 

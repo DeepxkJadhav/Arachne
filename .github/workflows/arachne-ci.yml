@@ -21,6 +21,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Register Global CLI Link
+        run: npm link
+
       - name: Run Intent & Report Export Regression Suite
         run: node test/regression-intent-reports-suite.mjs
 

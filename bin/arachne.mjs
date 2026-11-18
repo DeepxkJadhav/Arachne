@@ -1692,7 +1692,7 @@ async function main() {
   const subArgs = cleanArgs.slice(1);
 
   if (cmd === '--version' || cmd === '-v' || cmd === 'version') {
-    console.log('arachne 2.0.0');
+    console.log('arachne 2.1.0');
     return;
   }
 

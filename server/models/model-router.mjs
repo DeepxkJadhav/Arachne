@@ -706,8 +706,9 @@ export class ModelRouter {
   }
 
   heuristicDecompose(objective) {
-    const cleanObj = objective.replace(/^investigate\s+/i, '').trim();
-    const keywords = cleanObj.split(/\s+/).slice(0, 5).join(' ');
+    const cleanObj = objective.replace(/^investigate\s+/i, '').replace(/^research\s+/i, '').trim();
+    const isCodeTopic = /\b(code|github|repo|library|framework|agent|model|python|javascript|typescript|software|api)\b/i.test(cleanObj);
+    const keywords = cleanObj.split(/\s+/).slice(0, 6).join(' ');
 
     return {
       objective: cleanObj,
@@ -722,9 +723,11 @@ export class ModelRouter {
         {
           id: 'phase-2',
           name: 'Primary Source Discovery',
-          description: `Identify top open-source repositories, arXiv papers, and benchmark leaderboards.`,
+          description: `Identify primary documentation, technical specifications, repositories, and benchmarks.`,
           status: 'pending',
-          queries: [`best open-source ${keywords} github`, `${keywords} benchmark dataset paper`]
+          queries: isCodeTopic
+            ? [`best open-source ${keywords} github`, `${keywords} benchmark dataset paper`]
+            : [`${keywords} official documentation reports`, `${keywords} empirical analysis data`]
         },
         {
           id: 'phase-3',

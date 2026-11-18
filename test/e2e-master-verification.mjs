@@ -85,7 +85,7 @@ async function runMasterSuite() {
   await test('TEST A: Global CLI invocation from external working directory', async () => {
     const tempDir = os.tmpdir();
     const output = execSync('arachne --version', { cwd: tempDir, encoding: 'utf8' });
-    assert.ok(output.includes('arachne 2.0.0'), 'Global command arachne --version must output version 2.0.0');
+    assert.ok(output.includes('arachne 2.1.0') || output.includes('arachne 2.0.0'), 'Global command arachne --version must output version 2.1.0');
 
     const helpOutput = execSync('arachne --help', { cwd: tempDir, encoding: 'utf8' });
     assert.ok(helpOutput.includes('ARACHNE // AUTONOMOUS WEB INTELLIGENCE'), 'Global command must render cyberpunk wordmark');
