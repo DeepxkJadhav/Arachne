@@ -1358,8 +1358,12 @@ async function cmdUi() {
   console.log(`  ${C.gray}Launching Command Center in browser...${C.reset}\n`);
 
   try {
-    const startCmd = process.platform === 'win32' ? 'start' : (process.platform === 'darwin' ? 'open' : 'xdg-open');
-    spawn(startCmd, [uiUrl], { shell: true, stdio: 'ignore' });
+    if (process.platform === 'win32') {
+      spawn('cmd.exe', ['/c', 'start', '""', uiUrl], { stdio: 'ignore', windowsHide: true });
+    } else {
+      const openCmd = process.platform === 'darwin' ? 'open' : 'xdg-open';
+      spawn(openCmd, [uiUrl], { stdio: 'ignore' });
+    }
   } catch {}
 }
 
