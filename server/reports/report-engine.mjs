@@ -869,22 +869,29 @@ export class ReportEngine {
         .filter(i => (i.status || '').toUpperCase() === 'COMPLETED')
         .map(i => i.id)
     );
+    const incompleteInvIds = new Set(
+      investigations
+        .filter(i => ['IN_PROGRESS', 'PENDING'].includes((i.status || '').toUpperCase()))
+        .map(i => i.id)
+    );
 
-    // Look for report matching a completed investigation
+    // 1. Look for report matching an explicitly completed investigation
     for (const rep of reports) {
-      if (rep.investigationId && completedInvIds.has(rep.investigationId)) {
+      const invId = rep.investigationId || rep.investigation_id;
+      if (invId && completedInvIds.has(invId)) {
         return rep;
       }
     }
 
-    // Secondary: If report itself has full dossier content
+    // 2. Secondary: If report itself has full dossier content and is not in-progress
     for (const rep of reports) {
-      if (rep.markdown || rep.summary) {
+      const invId = rep.investigationId || rep.investigation_id;
+      if (!incompleteInvIds.has(invId) && (rep.markdown || rep.summary)) {
         return rep;
       }
     }
 
-    return reports[0] || null;
+    return reports.find(r => !incompleteInvIds.has(r.investigationId || r.investigation_id)) || reports[0] || null;
   }
 
   exportToFile(reportId, format, destinationPath, options = {}) {
@@ -897,10 +904,11 @@ export class ReportEngine {
       if (!rep) throw new Error(`Report not found: ${reportId}`);
     }
 
-    // Verify task completion if investigation is known
-    if (rep.investigationId) {
-      const inv = this.vaultStore.getInvestigation?.(rep.investigationId);
-      if (inv && (inv.status || '').toUpperCase() !== 'COMPLETED') {
+    // Verify task is not actively running/incomplete
+    const invId = rep.investigationId || rep.investigation_id;
+    if (invId) {
+      const inv = this.vaultStore.getInvestigation?.(invId);
+      if (inv && ['IN_PROGRESS', 'PENDING'].includes((inv.status || '').toUpperCase())) {
         throw new Error(`Report ${rep.id} belongs to incomplete task ${inv.id} (${inv.status})`);
       }
     }

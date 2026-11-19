@@ -9,7 +9,7 @@ import { RagPipeline } from '../vault/rag-pipeline.mjs';
 import { BrowserManager } from '../browser/browser-manager.mjs';
 
 export class ResearchAgent {
-  constructor({ vaultStore, graphEngine, modelRouter, reportEngine, broadcaster = null }) {
+  constructor({ vaultStore, graphEngine, modelRouter, reportEngine, broadcaster = null, headlessMode = true }) {
     this.vaultStore = vaultStore;
     this.graphEngine = graphEngine;
     this.modelRouter = modelRouter;
@@ -21,8 +21,9 @@ export class ResearchAgent {
     this.isStopped = false;
     this.fetcher = new CrawlerFetcher();
     this.pendingApprovalPromise = null;
+    this.headlessMode = headlessMode;
 
-    // Dedicated Browser Manager (Chrome + Brave via CDP)
+    // Dedicated Browser Manager (Chrome + Brave via CDP - only active when headlessMode: false)
     this.browserManager = new BrowserManager({
       vaultStore: this.vaultStore,
       vaultDir: this.vaultStore?.vaultDir
@@ -420,25 +421,27 @@ export class ResearchAgent {
           let screenshotBase64 = null;
           let cdpData = null;
 
-          try {
-            // Open and focus tab via BrowserManager
-            browserSession = await this.browserManager.prepareTabForUrl(target.url);
-            if (browserSession) {
-              await browserSession.navigate(target.url, 15000);
-              screenshotBase64 = await browserSession.captureScreenshot(75);
-              try {
-                cdpData = await browserSession.extractContent();
-              } catch {}
-              if (screenshotBase64) {
+          if (!this.headlessMode && this.browserManager) {
+            try {
+              // Open and focus tab via BrowserManager (only when browser automation is explicitly enabled)
+              browserSession = await this.browserManager.prepareTabForUrl(target.url);
+              if (browserSession) {
+                await browserSession.navigate(target.url, 15000);
+                screenshotBase64 = await browserSession.captureScreenshot(75);
                 try {
-                  const ssDir = path.join(this.vaultStore.vaultDir, 'screenshots');
-                  fs.mkdirSync(ssDir, { recursive: true });
-                  fs.writeFileSync(path.join(ssDir, `live_crawl_step_${(inv.metrics.pagesCrawled || 0) + 1}.jpg`), Buffer.from(screenshotBase64, 'base64'));
+                  cdpData = await browserSession.extractContent();
                 } catch {}
+                if (screenshotBase64) {
+                  try {
+                    const ssDir = path.join(this.vaultStore.vaultDir, 'screenshots');
+                    fs.mkdirSync(ssDir, { recursive: true });
+                    fs.writeFileSync(path.join(ssDir, `live_crawl_step_${(inv.metrics.pagesCrawled || 0) + 1}.jpg`), Buffer.from(screenshotBase64, 'base64'));
+                  } catch {}
+                }
               }
+            } catch (bErr) {
+              // If browser is not running or launch failed, continue with resilient fetcher
             }
-          } catch (bErr) {
-            // If browser is not running or launch failed, continue with resilient fetcher
           }
 
           // Fetch page content via HTTP client
@@ -860,8 +863,8 @@ export class ResearchAgent {
     const cleanQueries = queries.map(q => q.replace(/https?:\/\/[^\s]+/g, '').replace(/[^a-zA-Z0-9\s]/g, ' ').trim()).filter(Boolean);
     if (cleanQueries.length === 0) cleanQueries.push('AI autonomous agent');
 
-    // 1. Live Browser Search via Chrome CDP (DuckDuckGo & Bing) across the entire open web
-    if (this.browserManager) {
+    // 1. Live Browser Search via Chrome CDP (only if browser automation explicitly enabled)
+    if (!this.headlessMode && this.browserManager) {
       try {
         const primaryQuery = cleanQueries[0];
         const ddgUrl = `https://duckduckgo.com/?q=${encodeURIComponent(primaryQuery)}`;

@@ -3,6 +3,7 @@ import https from 'node:https';
 import crypto from 'node:crypto';
 import dns from 'node:dns/promises';
 import net from 'node:net';
+import zlib from 'node:zlib';
 
 export class CrawlerFetcher {
   constructor(options = {}) {
@@ -167,6 +168,7 @@ export class CrawlerFetcher {
               'User-Agent': this.userAgent,
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,application/json;q=0.8,text/plain;q=0.7,*/*;q=0.5',
               'Accept-Language': 'en-US,en;q=0.9',
+              'Accept-Encoding': 'gzip, deflate, br',
               'Connection': 'close'
             },
             timeout: this.timeoutMs
@@ -194,22 +196,29 @@ export class CrawlerFetcher {
             }
 
             const contentType = (res.headers['content-type'] || '').toLowerCase();
-            let rawData = '';
+            const chunks = [];
             let bytesReceived = 0;
             let truncated = false;
-            res.setEncoding('utf8');
 
             res.on('data', (chunk) => {
-              bytesReceived += Buffer.byteLength(chunk);
+              bytesReceived += chunk.length;
               if (bytesReceived > this.maxSizeBytes) {
                 truncated = true;
                 res.destroy();
               } else {
-                rawData += chunk;
+                chunks.push(chunk);
               }
             });
 
             res.on('end', () => {
+              let buffer = Buffer.concat(chunks);
+              const encoding = (res.headers['content-encoding'] || '').toLowerCase();
+              try {
+                if (encoding === 'gzip') buffer = zlib.gunzipSync(buffer);
+                else if (encoding === 'deflate') buffer = zlib.inflateSync(buffer);
+                else if (encoding === 'br') buffer = zlib.brotliDecompressSync(buffer);
+              } catch {}
+              const rawData = buffer.toString('utf8');
               const latencyMs = Date.now() - startTime;
               const contentHash = crypto.createHash('sha256').update(rawData).digest('hex');
 

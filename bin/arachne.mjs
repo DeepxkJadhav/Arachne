@@ -86,7 +86,7 @@ const C = isColorSupported ? {
 // Compact Restrained Mechanical Spider Artwork & Wordmark
 const HEADER_ASCII = `
 ${C.crimson}  / _ \\   ${C.bold}${C.white}ARACHNE${C.reset} ${C.gray}//${C.reset} ${C.crimson}AUTONOMOUS WEB INTELLIGENCE${C.reset} ${C.gray}[v2.1.0]${C.reset}
-${C.crimson} \\_\\(_)/_/ ${C.gray}MOTOR: ${C.white}CHROME/BRAVE CDP ${C.gray}| VAULT: ${C.white}SQLITE WAL ${C.gray}| SHIELD: ${C.white}SSRF GUARD${C.reset}
+${C.crimson} \\_\\(_)/_/ ${C.gray}MOTOR: ${C.white}HEADLESS NET ENGINE ${C.gray}| VAULT: ${C.white}SQLITE WAL ${C.gray}| SHIELD: ${C.white}SSRF GUARD${C.reset}
 ${C.crimson}  _// \\\\_  ${C.gray}NODE: ${C.white}${process.version} ${C.gray}| OPERATOR: ${C.white}TELEGRAM FAIL-CLOSED ${C.gray}| NET: ${C.white}${BASE_URL}${C.reset}
 `;
 
@@ -479,8 +479,8 @@ async function cmdStatus(options = {}) {
     ['Knowledge Edges', `${g.edges ? g.edges.length : 'N/A'} relationships`, `${C.white}[GRAPH]${C.reset}`],
     ['Evidence Claims', `${counts.evidence_records !== undefined ? counts.evidence_records : 'N/A'} claims`, `${C.white}[VERIFIED]${C.reset}`],
     ['Ignored Items', `${counts.ignored_items !== undefined ? counts.ignored_items : 0} items logged`, `${C.gray}[AUDITED]${C.reset}`],
-    ['Browser CDP', `Port ${b.remoteDebuggingPort || 9222} (${b.selectedBrowser || 'Chrome'})`, b.status === 'ready' ? `${C.white}[READY]${C.reset}` : `${C.gray}[${(b.status || 'IDLE').toUpperCase()}]${C.reset}`],
-    ['Active Task Tabs', `${b.activeTaskTabsCount !== undefined ? b.activeTaskTabsCount : 0} tabs owned`, `${C.white}[ISOLATED]${C.reset}`],
+    ['Headless Scanner', 'Autonomous Multi-Surface HTTP (SSRF Guard)', `${C.white}[ONLINE]${C.reset}`],
+    ['Browser Engine', 'Disabled (Pure Headless CLI Mode)', `${C.gray}[OFFLINE]${C.reset}`],
     ['Telegram Gateway', (t.botInfo?.username || t.botUsername) ? `@${t.botInfo?.username || t.botUsername}` : (t.configured ? 'Configured' : 'Not Configured'), t.isPolling ? `${C.white}[POLLING]${C.reset}` : (t.configured ? `${C.white}[ACTIVE]${C.reset}` : `${C.gray}[IDLE]${C.reset}`)],
     ['Active Investigation', s.activeInvestigation ? `${s.activeInvestigation.id} (${s.activeInvestigation.status})` : 'None active', s.activeInvestigation ? `${C.crimson}[ACTIVE]${C.reset}` : `${C.gray}[IDLE]${C.reset}`]
   ];
@@ -610,7 +610,7 @@ async function cmdInvestigate(objective, options = {}) {
       const evidence = current.metrics?.evidenceCount || current.metrics?.entitiesExtracted || 0;
       const resolved = current.metrics?.citationsVerified || 0;
 
-      const statusLine = `${C.crimson}► [PHASE ${phaseIdx + 1}/${phasesList.length || 5}: ${phaseName}]${C.reset} ${C.white}${dots}${C.reset} ${C.gray}|${C.reset} ${C.white}Model:${C.reset} Qwen ${C.gray}|${C.reset} ${C.white}Browser:${C.reset} Chrome CDP (9222) ${C.gray}|${C.reset} ${C.white}Source:${C.reset} ${sourceStr} ${C.gray}|${C.reset} ${C.white}Pages:${C.reset} ${pages} ${C.gray}|${C.reset} ${C.white}Evidence:${C.reset} ${evidence} ${C.gray}|${C.reset} ${C.white}Resolved:${C.reset} ${resolved}`;
+      const statusLine = `${C.crimson}► [PHASE ${phaseIdx + 1}/${phasesList.length || 5}: ${phaseName}]${C.reset} ${C.white}${dots}${C.reset} ${C.gray}|${C.reset} ${C.white}Model:${C.reset} Qwen ${C.gray}|${C.reset} ${C.white}Scanner:${C.reset} Headless Net ${C.gray}|${C.reset} ${C.white}Source:${C.reset} ${sourceStr} ${C.gray}|${C.reset} ${C.white}Pages:${C.reset} ${pages} ${C.gray}|${C.reset} ${C.white}Evidence:${C.reset} ${evidence} ${C.gray}|${C.reset} ${C.white}Resolved:${C.reset} ${resolved}`;
       process.stdout.write(`\r\x1b[K${statusLine}`);
 
       // Check terminal states
@@ -782,6 +782,33 @@ async function cmdFindings(options = {}) {
   console.log();
 }
 
+function formatMarkdownForTerminal(md) {
+  if (!md) return '';
+  return md
+    .split('\n')
+    .map(line => {
+      if (line.startsWith('# ')) {
+        return `\n${C.bold}${C.white}${line.slice(2).toUpperCase()}${C.reset}\n${C.darkRed}${'═'.repeat(Math.min(60, line.length + 4))}${C.reset}`;
+      }
+      if (line.startsWith('## ')) {
+        return `\n${C.crimson}► ${line.slice(3)}${C.reset}\n${C.gray}${'─'.repeat(Math.min(50, line.length + 4))}${C.reset}`;
+      }
+      if (line.startsWith('### ')) {
+        return `\n${C.bold}${C.white}• ${line.slice(4)}${C.reset}`;
+      }
+      if (line.startsWith('- ') || line.startsWith('* ')) {
+        return `  ${C.crimson}▪${C.reset} ${line.slice(2).replace(/\*\*([^*]+)\*\*/g, `${C.bold}${C.white}$1${C.reset}`)}`;
+      }
+      if (line.startsWith('> ')) {
+        return `  ${C.darkRed}│${C.reset} ${C.gray}${line.slice(2)}${C.reset}`;
+      }
+      return line
+        .replace(/\*\*([^*]+)\*\*/g, `${C.bold}${C.white}$1${C.reset}`)
+        .replace(/`([^`]+)`/g, `${C.crimson}$1${C.reset}`);
+    })
+    .join('\n');
+}
+
 // 7. Reports Command
 async function cmdReports(subcommand, reportId, options = {}) {
   const res = await api('/api/reports');
@@ -795,7 +822,7 @@ async function cmdReports(subcommand, reportId, options = {}) {
   if (!subcommand || subcommand === 'list') {
     console.log(`\n${C.crimson}:: INTELLIGENCE REPORT REPOSITORY (${reports.length} dossiers)${C.reset}\n`);
     if (reports.length === 0) {
-      console.log(`${C.gray}No research dossiers generated yet. Run: investigate "<objective>"${C.reset}\n`);
+      console.log(`${C.gray}No research dossiers generated yet. Run: hunt "<objective>"${C.reset}\n`);
       return;
     }
     const rows = reports.slice(0, 15).map((r, i) => [
@@ -806,17 +833,24 @@ async function cmdReports(subcommand, reportId, options = {}) {
       r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'Recent'
     ]);
     drawTable(['IDX', 'REPORT ID', 'DOSSIER TITLE', 'FORMATS', 'DATE'], rows, { color: C.darkGray });
-    console.log();
+    console.log(`\n${C.gray}To view a dossier in terminal: ${C.white}arachne report <id|last>${C.reset}`);
+    console.log(`${C.gray}To export a dossier to file:    ${C.white}arachne export <pdf|docx|txt|html|md|csv> [id]${C.reset}\n`);
   } else if (subcommand === 'view') {
-    const target = reports.find(r => r.id === reportId) || reports[0];
+    const target = (!reportId || reportId === 'last')
+      ? reports[0]
+      : (reports.find(r => r.id === reportId) || reports[0]);
     if (!target) {
       console.log(`${C.crimson}[ERR] Report not found: ${reportId}${C.reset}\n`);
       return;
     }
-    console.log(`\n${C.bold}${C.white}DOSSIER: ${target.title}${C.reset}`);
-    console.log(`${C.gray}Report ID: ${target.id} | Generated: ${target.createdAt}${C.reset}\n`);
-    console.log(target.summary || target.markdown?.slice(0, 1500) || '(No preview available)');
-    console.log();
+    console.log(`\n${C.bold}${C.white}================================================================${C.reset}`);
+    console.log(`${C.bold}${C.white}ARACHNE DOSSIER: ${target.title}${C.reset}`);
+    console.log(`${C.gray}Report ID: ${C.crimson}${target.id}${C.gray} | Generated: ${C.white}${target.createdAt || 'Recent'}${C.reset}`);
+    console.log(`${C.bold}${C.white}================================================================${C.reset}`);
+    const body = target.markdown || target.summary || '(No content available)';
+    console.log(formatMarkdownForTerminal(body));
+    console.log(`\n${C.gray}================================================================${C.reset}`);
+    console.log(`${C.gray}Available export commands: ${C.white}export pdf ${target.id} | export docx | export txt${C.reset}\n`);
   }
 }
 
@@ -1418,7 +1452,7 @@ async function startRepl() {
   console.log(`${C.bold}${C.white}ARACHNE${C.reset} ${C.gray}//${C.reset} ${C.crimson}AUTONOMOUS WEB INTELLIGENCE${C.reset}`);
   console.log(`${C.gray}Core:     ${C.white}${coreStatus}${C.reset}`);
   console.log(`${C.gray}Model:    ${C.white}Qwen (Groq Cloud LPU)${C.reset}`);
-  console.log(`${C.gray}Browser:  ${C.white}${browserStatus}${C.reset}`);
+  console.log(`${C.gray}Scanner:  ${C.white}Headless Network Engine (SSRF Guarded)${C.reset}`);
   console.log(`${C.gray}Database: ${C.white}Online (arachne.sqlite, ${dbSize})${C.reset}\n`);
 
   const rl = readline.createInterface({
@@ -1845,7 +1879,12 @@ async function main() {
 
     case 'reports':
     case 'report':
-      await cmdReports(subArgs[0], subArgs[1], { json: isJson });
+    case 'dossier':
+      if (subArgs[0] && subArgs[0] !== 'list') {
+        await cmdReports('view', subArgs[0], { json: isJson });
+      } else {
+        await cmdReports('list', null, { json: isJson });
+      }
       break;
 
     case 'export':

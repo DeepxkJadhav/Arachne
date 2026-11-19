@@ -644,14 +644,28 @@ export class SqliteStore {
 
   getReports() {
     const stmt = this.db.prepare('SELECT * FROM reports ORDER BY created_at DESC');
-    return stmt.all();
+    return stmt.all().map(r => ({
+      ...r,
+      investigationId: r.investigation_id || r.investigationId,
+      filePath: r.file_path || r.filePath,
+      sizeBytes: r.size_bytes || r.sizeBytes,
+      createdAt: r.created_at || r.createdAt
+    }));
   }
 
   getReport(id) {
     // Path traversal defense: sanitize id
     const cleanId = path.basename(id);
     const stmt = this.db.prepare('SELECT * FROM reports WHERE id = ?');
-    return stmt.get(cleanId);
+    const r = stmt.get(cleanId);
+    if (!r) return null;
+    return {
+      ...r,
+      investigationId: r.investigation_id || r.investigationId,
+      filePath: r.file_path || r.filePath,
+      sizeBytes: r.size_bytes || r.sizeBytes,
+      createdAt: r.created_at || r.createdAt
+    };
   }
 
   // --- Collections ---
