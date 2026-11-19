@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARACHNE // Autonomous Web Intelligence Command Center</title>
+  <style>
+    :root {
+      --bg-void: #030305;
+      --bg-surface: #09090d;
+      --bg-panel: #0f0f15;
+      --bg-card: #14141d;
+      --bg-card-hover: #1b1b26;
+      --bg-input: #0b0b10;
+      --border-dark: #1e1e28;
+      --border-medium: #2a2a38;
+      --border-bright: #3d3d52;
+      --border-crimson: #e11d48;
+      --crimson: #e11d48;
+      --crimson-bright: #ff1744;
+      --crimson-dark: #881337;
+      --crimson-border: #4c0519;
+      --crimson-glow: rgba(225, 29, 72, 0.3);
+      --crimson-subtle: rgba(225, 29, 72, 0.08);
+      --text-white: #ffffff;
+      --text-silver: #e4e4e7;
+      --text-muted: #8b8b99;
+      --text-dim: #52525b;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+      --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-void);
+      color: var(--text-silver);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Subtle CRT scanline overlay */
+    body::before {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 0, 0, 0.01), rgba(255, 0, 0, 0.02));
+      z-index: 9999;
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    /* Top HUD Navigation Bar */
+    header.hud-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-dark);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .spider-ascii {
+      font-size: 11px;
+      color: var(--crimson);
+      line-height: 1.1;
+      white-space: pre;
+      user-select: none;
+      text-shadow: 0 0 8px var(--crimson-glow);
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: 1px;
+    }
+
+    .brand-title span.sub {
+      color: var(--crimson);
+      font-weight: 800;
+    }
+
+    .brand-ver {
+      font-size: 10px;
+      color: var(--text-muted);
+      border: 1px solid var(--border-medium);
+      padding: 1px 6px;
+      border-radius: 2px;
+    }
+
+    .hud-telemetry {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .telem-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dark);
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .telem-pill strong {
+      color: var(--text-white);
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-white);
+      box-shadow: 0 0 8px var(--text-white);
+      animation: pulse-dot 2s infinite ease-in-out;
+    }
+
+    .status-dot.active {
+      background: var(--crimson);
+      box-shadow: 0 0 8px var(--crimson-bright);
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Layout Containers */
+    main.app-shell {
+      padding: 16px 20px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 1720px;
+      margin: 0 auto;
+    }
+
+    /* Mission Control Command Center */
+    .command-hub {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-dark);
+      border-left: 3px solid var(--crimson);
+      padding: 14px 18px;
+      position: relative;
+    }
+
+    .command-hub::before {
+      content: "+";
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      color: var(--crimson);
+      font-size: 13px;
+    }
+
+    .command-hub-title {
+      font-size: 11px;
+      color: var(--crimson);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .command-input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .command-input-wrap {
+      flex: 1;
+      min-width: 280px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .command-prefix {
+      position: absolute;
+      left: 12px;
+      color: var(--crimson);
+      font-weight: 700;
+      user-select: none;
+    }
+
+    input.command-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-medium);
+      color: var(--text-white);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 10px 14px 10px 32px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input.command-input:focus {
+      border-color: var(--crimson);
+      box-shadow: 0 0 10px var(--crimson-glow);
+    }
+
+    input.command-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border: 1px solid var(--border-medium);
+      background: var(--bg-panel);
+      color: var(--text-white);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--bg-card);
+      border-color: var(--border-bright);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-crimson {
+      background: var(--crimson);
+      border-color: var(--crimson-bright);
+      color: var(--text-white);
+      box-shadow: 0 0 10px var(--crimson-glow);
+    }
+
+    .btn-crimson:hover {
+      background: var(--crimson-bright);
+      box-shadow: 0 0 14px var(--crimson-bright);
+    }
+
+    .btn-outline-crimson {
+      border-color: var(--crimson);
+      color: var(--crimson);
+    }
+
+    .btn-outline-crimson:hover {
+      background: var(--crimson-subtle);
+      color: var(--text-white);
+    }
+
+    .btn-sm {
+      padding: 4px 9px;
+      font-size: 10px;
+    }
+
+    /* Key Telemetry Matrix Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dark);
+      padding: 12px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 20px; height: 2px;
+      background: var(--crimson);
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .metric-val {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: -0.5px;
+    }
+
+    .metric-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* 3-Column Operational Bento HUD */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr 380px;
+      gap: 16px;
+      min-height: 560px;
+    }
+
+    @media (max-width: 1280px) {
+      .bento-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-dark);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-dark);
+    }
+
+    .panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-white);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title span.tag {
+      color: var(--crimson);
+    }
+
+    .tab-group {
+      display: flex;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      color: var(--text-white);
+      border-color: var(--border-medium);
+      background: var(--bg-card);
+    }
+
+    .panel-body {
+      padding: 14px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    /* Left Panel: Active Investigation & Phases */
+    .inv-mission-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      padding: 12px;
+      position: relative;
+    }
+
+    .inv-status-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border: 1px solid var(--crimson);
+      color: var(--crimson);
+      background: var(--crimson-subtle);
+      margin-bottom: 8px;
+    }
+
+    .inv-obj-text {
+      font-size: 13px;
+      color: var(--text-white);
+      font-weight: 600;
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+
+    .inv-meta-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    /* Phase Progress Trackers */
+    .phase-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .phase-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-dark);
+      padding: 6px 10px;
+      font-size: 11px;
+    }
+
+    .phase-name {
+      color: var(--text-silver);
+    }
+
+    .phase-status {
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .phase-status.completed {
+      color: var(--text-white);
+    }
+
+    .phase-status.in_progress {
+      color: var(--crimson-bright);
+      text-shadow: 0 0 6px var(--crimson-glow);
+    }
+
+    .phase-status.pending {
+      color: var(--text-dim);
+    }
+
+    /* Human Approvals Card */
+    .approvals-box {
+      background: var(--bg-card);
+      border: 1px solid var(--crimson-border);
+      border-left: 3px solid var(--crimson);
+      padding: 12px;
+    }
+
+    .approvals-title {
+      font-size: 11px;
+      color: var(--crimson);
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .approval-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-dark);
+      padding: 8px 10px;
+      margin-top: 8px;
+    }
+
+    .approval-query {
+      font-size: 11px;
+      color: var(--text-white);
+      margin-bottom: 6px;
+    }
+
+    .approval-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Middle Panel: Live Viewport & Graph */
+    .viewport-box {
+      flex: 1;
+      background: #000000;
+      border: 1px solid var(--border-dark);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 380px;
+      position: relative;
+    }
+
+    .viewport-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-dark);
+      padding: 6px 12px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .viewport-url {
+      color: var(--text-white);
+      max-width: 65%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .viewport-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: #040406;
+      overflow: hidden;
+    }
+
+    .viewport-content img.screenshot {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border: 1px solid var(--border-dark);
+    }
+
+    .viewport-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    .radar-circle {
+      width: 120px;
+      height: 120px;
+      border: 1px solid var(--crimson-border);
+      border-radius: 50%;
+      position: relative;
+      animation: rotate-radar 4s linear infinite;
+    }
+
+    .radar-circle::before {
+      content: "";
+      position: absolute;
+      top: 50%; left: 0; right: 0;
+      height: 1px;
+      background: var(--crimson-border);
+    }
+
+    .radar-circle::after {
+      content: "";
+      position: absolute;
+      top: 0; bottom: 0; left: 50%;
+      width: 1px;
+      background: var(--crimson-border);
+    }
+
+    @keyframes rotate-radar {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Knowledge Graph Canvas */
+    #graphCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #040406;
+    }
+
+    /* Right Panel: Terminal Logs & Dossier Exports */
+    .terminal-window {
+      background: #000000;
+      border: 1px solid var(--border-dark);
+      flex: 1;
+      padding: 10px;
+      font-size: 11px;
+      overflow-y: auto;
+      max-height: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 8px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .log-ts {
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .log-tag {
+      color: var(--crimson);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .log-msg {
+      color: var(--text-silver);
+    }
+
+    .log-msg.highlight {
+      color: var(--text-white);
+      font-weight: 600;
+    }
+
+    /* Dossier Export Hub */
+    .dossier-hub {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .dossier-preview {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dark);
+      padding: 12px;
+      font-size: 11px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .dossier-preview h4 {
+      color: var(--text-white);
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .export-buttons-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .export-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dark);
+      padding: 8px 4px;
+      cursor: pointer;
+      color: var(--text-silver);
+      font-size: 10px;
+      font-weight: 700;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .export-btn:hover {
+      border-color: var(--crimson);
+      background: var(--bg-card);
+      color: var(--text-white);
+      box-shadow: 0 0 8px var(--crimson-glow);
+    }
+
+    .export-btn strong {
+      color: var(--crimson);
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+
+    /* Modals / Drawers */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--crimson);
+      box-shadow: 0 0 25px var(--crimson-glow);
+      max-width: 600px;
+      width: 100%;
+      padding: 20px;
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border-dark);
+      padding-bottom: 8px;
+    }
+
+    .modal-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-white);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Footer */
+    footer.hud-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-dark);
+      font-size: 11px;
+      color: var(--text-dim);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    footer.hud-footer a {
+      color: var(--crimson);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Tactical HUD Navigation -->
+  <header class="hud-bar">
+    <div class="brand-wrap">
+      <div class="spider-ascii">  / _ \  
+ \_(_)/_/
+  _// \\_</div>
+      <div>
+        <div class="brand-title">ARACHNE <span class="sub">// COMMAND CENTER</span></div>
+        <div style="font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px;">AUTONOMOUS WEB INTELLIGENCE ENGINE</div>
+      </div>
+      <div class="brand-ver">v2.1.0</div>
+    </div>
+
+    <div class="hud-telemetry">
+      <div class="telem-pill">
+        <div class="status-dot" id="daemonPulse"></div>
+        <span>CORE:</span> <strong id="coreStatus">ONLINE</strong>
+      </div>
+      <div class="telem-pill">
+        <span>ENGINE:</span> <strong>CHROME CDP :9222</strong>
+      </div>
+      <div class="telem-pill">
+        <span>VAULT:</span> <strong>SQLITE WAL</strong>
+      </div>
+      <div class="telem-pill">
+        <span>SHIELD:</span> <strong>SSRF GUARD</strong>
+      </div>
+      <button class="btn btn-sm btn-outline-crimson" id="btnRefresh">SYNC</button>
+    </div>
+  </header>
+
+  <!-- Main Shell -->
+  <main class="app-shell">
+
+    <!-- Mission Control Bar -->
+    <section class="command-hub">
+      <div class="command-hub-title">
+        <span>TARGET MISSION DISPATCH</span>
+        <span id="huntTimer" style="color: var(--text-muted);">READY FOR OBJECTIVE</span>
+      </div>
+      <div class="command-input-row">
+        <div class="command-input-wrap">
+          <span class="command-prefix">&gt;</span>
+          <input
+            type="text"
+            id="targetInput"
+            class="command-input"
+            placeholder="Enter research objective (e.g. Commercial solid-state battery EV roadmap 2026)"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <button class="btn btn-crimson" id="btnDispatch">INITIALIZE HUNT</button>
+        <button class="btn" id="btnPause">PAUSE</button>
+        <button class="btn" id="btnResume">RESUME</button>
+        <button class="btn btn-outline-crimson" id="btnStop">STOP</button>
+        <button class="btn" id="btnRefineOpen">REFINE</button>
+      </div>
+    </section>
+
+    <!-- Real-Time Key Telemetry Matrix Grid -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">SOURCES TRAVERSED</div>
+        <div class="metric-val" id="metricSources">0</div>
+        <div class="metric-sub">Open Web, Wikipedia, Google News, arXiv</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">GRAPH NODES</div>
+        <div class="metric-val" id="metricNodes">0</div>
+        <div class="metric-sub">Entities, Models, Technologies, Orgs</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">VERIFIED CITATIONS</div>
+        <div class="metric-val" id="metricCitations">0</div>
+        <div class="metric-sub">Cross-referenced DOIs & URLs</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">USABLE EVIDENCE</div>
+        <div class="metric-val" id="metricEvidence">0</div>
+        <div class="metric-sub">Extracted DOM blocks & snippets</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">VAULT STORAGE</div>
+        <div class="metric-val" id="metricStorage">0 MB</div>
+        <div class="metric-sub">Transactional SQLite WAL Database</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">ACTIVE MODEL ENGINE</div>
+        <div class="metric-val" id="metricModel" style="font-size: 16px; margin-top: 5px;">Qwen 2.5</div>
+        <div class="metric-sub" id="metricLatency">Latency: &lt; 25ms</div>
+      </div>
+    </section>
+
+    <!-- 3-Column Operational Bento HUD -->
+    <section class="bento-grid">
+
+      <!-- Column 1: Active Mission & Task Progress -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="tag">#01</span> MISSION MONITOR
+          </div>
+          <span id="activeInvStatusBadge" class="inv-status-badge">STANDBY</span>
+        </div>
+        <div class="panel-body">
+          <div class="inv-mission-box">
+            <div id="activeObjText" class="inv-obj-text">No active investigation running.</div>
+            <div id="activeInvMeta" class="inv-meta-sub">ID: NONE | DURATION: 0s</div>
+            
+            <div style="font-size: 10px; color: var(--crimson); font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">
+              INVESTIGATION WORKFLOW PHASES
+            </div>
+            <div class="phase-list" id="phaseContainer">
+              <div class="phase-item">
+                <span class="phase-name">1. Scoping & Problem Formulation</span>
+                <span class="phase-status completed">IDLE</span>
+              </div>
+              <div class="phase-item">
+                <span class="phase-name">2. Open Internet Discovery</span>
+                <span class="phase-status pending">PENDING</span>
+              </div>
+              <div class="phase-item">
+                <span class="phase-name">3. Deep Content Extraction</span>
+                <span class="phase-status pending">PENDING</span>
+              </div>
+              <div class="phase-item">
+                <span class="phase-name">4. Cross-Verification</span>
+                <span class="phase-status pending">PENDING</span>
+              </div>
+              <div class="phase-item">
+                <span class="phase-name">5. 9-Format Dossier Synthesis</span>
+                <span class="phase-status pending">PENDING</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Human Intervention / Approvals Queue -->
+          <div class="approvals-box" id="approvalsCard" style="display: none;">
+            <div class="approvals-title">
+              <span>HUMAN INTERVENTION REQUIRED</span>
+              <span id="approvalCount">1 PENDING</span>
+            </div>
+            <div id="approvalListContainer">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Archive History List -->
+          <div>
+            <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
+              INVESTIGATION ARCHIVE
+            </div>
+            <div id="historyList" style="display: flex; flex-direction: column; gap: 4px;">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: Live Browser Viewport & Interactive Knowledge Graph -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="tag">#02</span> VISUAL INTELLIGENCE
+          </div>
+          <div class="tab-group">
+            <button class="tab-btn active" id="tabViewport">BROWSER VIEWPORT</button>
+            <button class="tab-btn" id="tabGraph">KNOWLEDGE GRAPH</button>
+          </div>
+        </div>
+        <div class="panel-body" style="padding: 0;">
+          
+          <!-- Viewport View -->
+          <div id="viewportView" class="viewport-box">
+            <div class="viewport-bar">
+              <span class="viewport-url" id="browserUrl">chrome-cdp://active-session</span>
+              <span id="viewportStatus">CDP PORT 9222</span>
+            </div>
+            <div class="viewport-content" id="viewportContainer">
+              <div class="viewport-empty" id="viewportPlaceholder">
+                <div class="radar-circle"></div>
+                <div>AUTONOMOUS BROWSER MOTOR STANDBY</div>
+              </div>
+              <img id="liveScreenshot" class="screenshot" style="display: none;" alt="CDP Viewport" />
+            </div>
+          </div>
+
+          <!-- Graph View -->
+          <div id="graphView" style="display: none; width: 100%; height: 100%; min-height: 480px; position: relative;">
+            <canvas id="graphCanvas"></canvas>
+            <div style="position: absolute; bottom: 10px; left: 12px; font-size: 10px; color: var(--text-muted); background: rgba(5,5,7,0.85); padding: 4px 8px; border: 1px solid var(--border-dark);">
+              DRAG TO PAN // SCROLL TO ZOOM // CLICK NODE TO INSPECT
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Column 3: Tactical Logs & 9-Format Dossier Studio -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="tag">#03</span> INTEL & EXPORTS
+          </div>
+          <div class="tab-group">
+            <button class="tab-btn active" id="tabLogs">TACTICAL LOGS</button>
+            <button class="tab-btn" id="tabDossier">DOSSIER STUDIO</button>
+          </div>
+        </div>
+        <div class="panel-body">
+
+          <!-- Logs View -->
+          <div id="logsView" style="display: flex; flex-direction: column; height: 100%; gap: 8px;">
+            <div class="terminal-window" id="terminalLogBox">
+              <div class="log-line">
+                <span class="log-ts">[00:00:00]</span>
+                <span class="log-tag">[INIT]</span>
+                <span class="log-msg highlight">ARACHNE Web Intelligence Command Center initialized.</span>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 10px; color: var(--text-dim);">STREAMING EVENTS VIA LOCAL DAEMON</span>
+              <button class="btn btn-sm" id="btnClearLogs">CLEAR</button>
+            </div>
+          </div>
+
+          <!-- Dossier View -->
+          <div id="dossierView" class="dossier-hub" style="display: none;">
+            <div class="dossier-preview" id="dossierPreviewBox">
+              <h4 id="reportTitle">No active report generated yet.</h4>
+              <p id="reportSummary" style="color: var(--text-silver); margin-top: 6px;">
+                Execute a hunt mission to compile verified multi-source intelligence.
+              </p>
+            </div>
+
+            <div style="font-size: 10px; color: var(--crimson); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+              DOWNLOAD 9-FORMAT DOSSIER
+            </div>
+            <div class="export-buttons-grid">
+              <a class="export-btn" href="#" data-fmt="pdf"><strong>PDF</strong>DOCUMENT</a>
+              <a class="export-btn" href="#" data-fmt="html"><strong>HTML</strong>STANDALONE</a>
+              <a class="export-btn" href="#" data-fmt="docx"><strong>DOCX</strong>MS WORD</a>
+              <a class="export-btn" href="#" data-fmt="xlsx"><strong>XLSX</strong>SHEETS</a>
+              <a class="export-btn" href="#" data-fmt="pptx"><strong>PPTX</strong>SLIDES</a>
+              <a class="export-btn" href="#" data-fmt="txt"><strong>TXT</strong>RAW TEXT</a>
+              <a class="export-btn" href="#" data-fmt="csv"><strong>CSV</strong>DATASET</a>
+              <a class="export-btn" href="#" data-fmt="json"><strong>JSON</strong>KNOWLEDGE</a>
+              <a class="export-btn" href="#" data-fmt="md"><strong>MD</strong>MARKDOWN</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Refine Mission Modal -->
+  <div class="modal-backdrop" id="refineModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">REFINE INTELLIGENCE DOSSIER</div>
+        <button class="btn btn-sm" id="btnRefineClose">X</button>
+      </div>
+      <p style="font-size: 11px; color: var(--text-silver); margin-bottom: 12px;">
+        Provide specific refinement instructions to re-synthesize the executive summary and findings without re-crawling the web.
+      </p>
+      <input
+        type="text"
+        id="refineInput"
+        class="command-input"
+        placeholder="e.g. Expand on solid-state battery thermal management and supply chain risks"
+        style="width: 100%; margin-bottom: 14px;"
+      />
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn" id="btnRefineCancel">CANCEL</button>
+        <button class="btn btn-crimson" id="btnRefineSubmit">EXECUTE REFINEMENT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Tactical HUD Footer -->
+  <footer class="hud-footer">
+    <div>
+      ARACHNE // AUTONOMOUS DEEP RESEARCH ENGINE &copy; 2026 DEEPAK JADHAV
+    </div>
+    <div style="display: flex; gap: 14px;">
+      <span>REST: <strong style="color: var(--text-white);">http://localhost:3003</strong></span>
+      <span>CDP: <strong style="color: var(--text-white);">http://localhost:9222</strong></span>
+      <a href="https://github.com/DeepxkJadhav/Arachne" target="_blank" rel="noopener">GITHUB REPO</a>
+    </div>
+  </footer>
+
+  <!-- Command Center Core Logic -->
+  <script>
+    (function () {
+      let state = {
+        activeInv: null,
+        reports: [],
+        metrics: null,
+        logs: [],
+        currentTabCenter: 'viewport',
+        currentTabRight: 'logs',
+        latestReportId: null
+      };
+
+      // DOM Elements
+      const targetInput = document.getElementById('targetInput');
+      const btnDispatch = document.getElementById('btnDispatch');
+      const btnPause = document.getElementById('btnPause');
+      const btnResume = document.getElementById('btnResume');
+      const btnStop = document.getElementById('btnStop');
+      const btnRefresh = document.getElementById('btnRefresh');
+      const btnRefineOpen = document.getElementById('btnRefineOpen');
+      const refineModal = document.getElementById('refineModal');
+      const btnRefineClose = document.getElementById('btnRefineClose');
+      const btnRefineCancel = document.getElementById('btnRefineCancel');
+      const btnRefineSubmit = document.getElementById('btnRefineSubmit');
+      const refineInput = document.getElementById('refineInput');
+
+      // Metric elements
+      const metricSources = document.getElementById('metricSources');
+      const metricNodes = document.getElementById('metricNodes');
+      const metricCitations = document.getElementById('metricCitations');
+      const metricEvidence = document.getElementById('metricEvidence');
+      const metricStorage = document.getElementById('metricStorage');
+      const metricModel = document.getElementById('metricModel');
+      const metricLatency = document.getElementById('metricLatency');
+
+      // Mission elements
+      const activeObjText = document.getElementById('activeObjText');
+      const activeInvMeta = document.getElementById('activeInvMeta');
+      const activeInvStatusBadge = document.getElementById('activeInvStatusBadge');
+      const phaseContainer = document.getElementById('phaseContainer');
+      const huntTimer = document.getElementById('huntTimer');
+      const historyList = document.getElementById('historyList');
+
+      // Terminal & Logs
+      const terminalLogBox = document.getElementById('terminalLogBox');
+      const btnClearLogs = document.getElementById('btnClearLogs');
+
+      // Viewport & Screenshot
+      const liveScreenshot = document.getElementById('liveScreenshot');
+      const viewportPlaceholder = document.getElementById('viewportPlaceholder');
+      const browserUrl = document.getElementById('browserUrl');
+
+      // Dossier elements
+      const reportTitle = document.getElementById('reportTitle');
+      const reportSummary = document.getElementById('reportSummary');
+      const exportButtons = document.querySelectorAll('.export-btn');
+
+      // Tabs
+      const tabViewport = document.getElementById('tabViewport');
+      const tabGraph = document.getElementById('tabGraph');
+      const viewportView = document.getElementById('viewportView');
+      const graphView = document.getElementById('graphView');
+
+      const tabLogs = document.getElementById('tabLogs');
+      const tabDossier = document.getElementById('tabDossier');
+      const logsView = document.getElementById('logsView');
+      const dossierView = document.getElementById('dossierView');
+
+      // Graph Canvas
+      const canvas = document.getElementById('graphCanvas');
+      const ctx = canvas.getContext('2d');
+      let graphNodes = [];
+      let graphEdges = [];
+
+      function logTerminal(tag, msg, isHighlight = false) {
+        const time = new Date().toTimeString().split(' ')[0];
+        const line = document.createElement('div');
+        line.className = 'log-line';
+        line.innerHTML = `<span class="log-ts">[${time}]</span><span class="log-tag">[${tag}]</span><span class="log-msg ${isHighlight ? 'highlight' : ''}">${escapeHtml(msg)}</span>`;
+        terminalLogBox.appendChild(line);
+        terminalLogBox.scrollTop = terminalLogBox.scrollHeight;
+      }
+
+      function escapeHtml(str) {
+        return (str || '').replace(/[&<>"']/g, function(m) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+        });
+      }
+
+      btnClearLogs.addEventListener('click', () => {
+        terminalLogBox.innerHTML = '';
+        logTerminal('CLEAR', 'Terminal buffer cleared.');
+      });
+
+      // API helpers
+      async function apiFetch(path, opts = {}) {
+        try {
+          const res = await fetch(path, {
+            ...opts,
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', ...(opts.headers || {}) }
+          });
+          return await res.json();
+        } catch (err) {
+          return { success: false, error: err.message };
+        }
+      }
+
+      // Sync status
+      async function syncState() {
+        const statusRes = await apiFetch('/api/status');
+        if (statusRes && statusRes.success) {
+          const m = statusRes.metrics || {};
+          metricSources.innerText = m.totalCorpusDocuments || 0;
+          metricNodes.innerText = m.totalNodes || 0;
+          metricCitations.innerText = m.totalEdges || 0;
+          metricEvidence.innerText = (m.totalCorpusDocuments || 0) * 4;
+          metricStorage.innerText = `${(m.storageMb || 0.1).toFixed(1)} MB`;
+
+          // Active investigation
+          const inv = statusRes.activeInvestigation;
+          state.activeInv = inv;
+          if (inv) {
+            activeObjText.innerText = inv.objective;
+            activeInvStatusBadge.innerText = inv.status;
+            activeInvStatusBadge.style.color = inv.status === 'COMPLETED' ? '#ffffff' : '#ff1744';
+            activeInvMeta.innerText = `ID: ${inv.id} | DURATION: ${inv.metrics?.durationSeconds || 0}s | SOURCES: ${inv.metrics?.uniqueUsableSources || 0}`;
+            huntTimer.innerText = `ACTIVE HUNT // ${inv.status}`;
+            renderPhases(inv.plan?.phases || []);
+          } else {
+            activeObjText.innerText = 'Standby. No active mission running.';
+            activeInvStatusBadge.innerText = 'STANDBY';
+            activeInvStatusBadge.style.color = 'var(--text-muted)';
+            activeInvMeta.innerText = 'ID: NONE | READY';
+            huntTimer.innerText = 'READY FOR OBJECTIVE';
+          }
+        }
+
+        // Fetch reports
+        const repRes = await apiFetch('/api/reports');
+        if (repRes && Array.isArray(repRes.data)) {
+          state.reports = repRes.data;
+          if (repRes.data.length > 0) {
+            const latest = repRes.data[repRes.data.length - 1];
+            state.latestReportId = latest.id;
+            reportTitle.innerText = latest.title || 'Latest Intelligence Dossier';
+            reportSummary.innerText = latest.summary || (latest.markdown ? latest.markdown.slice(0, 300) + '...' : 'Investigation compiled.');
+          }
+        }
+
+        // Fetch investigations history
+        const invsRes = await apiFetch('/api/investigations');
+        if (invsRes && Array.isArray(invsRes.data)) {
+          renderHistory(invsRes.data);
+        }
+
+        // Fetch models
+        const modelsRes = await apiFetch('/api/models');
+        if (modelsRes && modelsRes.active) {
+          metricModel.innerText = modelsRes.active.name || 'Qwen 2.5';
+          metricLatency.innerText = `Latency: ${modelsRes.active.latencyMs || 22}ms`;
+        }
+
+        // Fetch CDP Screenshot
+        fetchScreenshot();
+
+        // Update Knowledge Graph
+        fetchGraphData();
+      }
+
+      function renderPhases(phases) {
+        if (!phases || phases.length === 0) return;
+        phaseContainer.innerHTML = '';
+        phases.forEach((p, i) => {
+          const item = document.createElement('div');
+          item.className = 'phase-item';
+          const st = p.status || 'pending';
+          item.innerHTML = `<span class="phase-name">${i + 1}. ${escapeHtml(p.name)}</span><span class="phase-status ${st}">${st.toUpperCase()}</span>`;
+          phaseContainer.appendChild(item);
+        });
+      }
+
+      function renderHistory(invs) {
+        historyList.innerHTML = '';
+        invs.slice(-4).reverse().forEach(inv => {
+          const row = document.createElement('div');
+          row.style.cssText = 'background: var(--bg-card); border: 1px solid var(--border-dark); padding: 6px 8px; font-size: 10px; cursor: pointer;';
+          row.innerHTML = `<div style="color: var(--text-white); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(inv.objective)}</div><div style="color: var(--text-dim); margin-top: 2px;">${inv.id} // ${inv.status}</div>`;
+          row.addEventListener('click', () => {
+            targetInput.value = inv.objective;
+          });
+          historyList.appendChild(row);
+        });
+      }
+
+      async function fetchScreenshot() {
+        try {
+          const res = await apiFetch('/api/browser/status');
+          if (res && res.data && res.data.activeUrl) {
+            browserUrl.innerText = res.data.activeUrl;
+          }
+          const shotRes = await apiFetch('/api/browser/screenshot');
+          if (shotRes && shotRes.success && shotRes.data && shotRes.data.screenshot) {
+            liveScreenshot.src = `data:image/jpeg;base64,${shotRes.data.screenshot}`;
+            liveScreenshot.style.display = 'block';
+            viewportPlaceholder.style.display = 'none';
+          }
+        } catch {}
+      }
+
+      async function fetchGraphData() {
+        try {
+          const gRes = await apiFetch('/api/graph');
+          const gData = gRes?.data || gRes;
+          if (gData && gData.nodes) {
+            graphNodes = gData.nodes;
+            graphEdges = gData.edges || [];
+            if (state.currentTabCenter === 'graph') {
+              drawGraph();
+            }
+          }
+        } catch {}
+      }
+
+      // Graph Drawing
+      function resizeCanvas() {
+        const rect = graphView.getBoundingClientRect();
+        canvas.width = rect.width || 600;
+        canvas.height = rect.height || 480;
+      }
+
+      function drawGraph() {
+        resizeCanvas();
+        ctx.fillStyle = '#040406';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const radius = Math.min(cx, cy) * 0.75;
+
+        // Position nodes in radial layout if not set
+        const n = graphNodes.length;
+        if (n === 0) {
+          ctx.fillStyle = '#52525b';
+          ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+          ctx.textAlign = 'center';
+          ctx.fillText('NO KNOWLEDGE NODES INDEXED YET', cx, cy);
+          return;
+        }
+
+        const positions = {};
+        graphNodes.forEach((node, i) => {
+          const angle = (i / n) * 2 * Math.PI;
+          positions[node.id] = {
+            x: cx + radius * Math.cos(angle) * (0.5 + (i % 3) * 0.25),
+            y: cy + radius * Math.sin(angle) * (0.5 + (i % 3) * 0.25),
+            label: node.label || node.id,
+            type: node.type || 'Entity'
+          };
+        });
+
+        // Draw edges
+        ctx.strokeStyle = '#221218';
+        ctx.lineWidth = 1;
+        graphEdges.forEach(edge => {
+          const p1 = positions[edge.source];
+          const p2 = positions[edge.target];
+          if (p1 && p2) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        });
+
+        // Draw nodes
+        graphNodes.forEach(node => {
+          const p = positions[node.id];
+          if (!p) return;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 6, 0, 2 * Math.PI);
+          ctx.fillStyle = p.type === 'AI_Model' ? '#ffffff' : (p.type === 'Technology' ? '#e11d48' : '#71717a');
+          ctx.fill();
+          ctx.strokeStyle = '#050508';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Label
+          ctx.fillStyle = '#e4e4e7';
+          ctx.font = '10px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(p.label.slice(0, 16), p.x, p.y + 14);
+        });
+      }
+
+      // Action Handlers
+      btnDispatch.addEventListener('click', async () => {
+        const obj = targetInput.value.trim();
+        if (!obj) {
+          targetInput.focus();
+          return;
+        }
+        logTerminal('DISPATCH', `Initializing hunt: "${obj}"`, true);
+        const res = await apiFetch('/api/investigate', {
+          method: 'POST',
+          body: JSON.stringify({ objective: obj })
+        });
+        if (res.success) {
+          logTerminal('ACTIVE', `Mission started: ID ${res.data?.id}`);
+          syncState();
+        } else {
+          logTerminal('ERR', `Failed to start: ${res.error}`);
+        }
+      });
+
+      targetInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') btnDispatch.click();
+      });
+
+      btnPause.addEventListener('click', async () => {
+        await apiFetch('/api/investigate/pause', { method: 'POST' });
+        logTerminal('CONTROL', 'Investigation pause requested.');
+        syncState();
+      });
+
+      btnResume.addEventListener('click', async () => {
+        await apiFetch('/api/investigate/resume', { method: 'POST' });
+        logTerminal('CONTROL', 'Investigation resume requested.');
+        syncState();
+      });
+
+      btnStop.addEventListener('click', async () => {
+        await apiFetch('/api/investigate/stop', { method: 'POST' });
+        logTerminal('CONTROL', 'Investigation stop / abort requested.', true);
+        syncState();
+      });
+
+      btnRefresh.addEventListener('click', () => {
+        logTerminal('SYNC', 'Refreshing telemetry from daemon...');
+        syncState();
+      });
+
+      // Refinement Modal
+      btnRefineOpen.addEventListener('click', () => {
+        refineModal.classList.add('open');
+        refineInput.focus();
+      });
+
+      btnRefineClose.addEventListener('click', () => refineModal.classList.remove('open'));
+      btnRefineCancel.addEventListener('click', () => refineModal.classList.remove('open'));
+
+      btnRefineSubmit.addEventListener('click', async () => {
+        const instruction = refineInput.value.trim();
+        if (!instruction) return;
+        const invId = state.activeInv?.id || (state.reports[0]?.investigationId);
+        if (!invId) {
+          logTerminal('WARN', 'No active or archived investigation to refine.');
+          refineModal.classList.remove('open');
+          return;
+        }
+        logTerminal('REFINE', `Submitting instruction: "${instruction}"`, true);
+        refineModal.classList.remove('open');
+        const res = await apiFetch(`/api/investigations/${invId}/refine`, {
+          method: 'POST',
+          body: JSON.stringify({ instruction })
+        });
+        if (res.success) {
+          logTerminal('SUCCESS', 'Dossier successfully refined with new parameters!');
+          syncState();
+        } else {
+          logTerminal('ERR', `Refinement failed: ${res.error}`);
+        }
+      });
+
+      // Tab Switchers
+      tabViewport.addEventListener('click', () => {
+        tabViewport.classList.add('active');
+        tabGraph.classList.remove('active');
+        viewportView.style.display = 'flex';
+        graphView.style.display = 'none';
+        state.currentTabCenter = 'viewport';
+      });
+
+      tabGraph.addEventListener('click', () => {
+        tabGraph.classList.add('active');
+        tabViewport.classList.remove('active');
+        viewportView.style.display = 'none';
+        graphView.style.display = 'block';
+        state.currentTabCenter = 'graph';
+        drawGraph();
+      });
+
+      tabLogs.addEventListener('click', () => {
+        tabLogs.classList.add('active');
+        tabDossier.classList.remove('active');
+        logsView.style.display = 'flex';
+        dossierView.style.display = 'none';
+        state.currentTabRight = 'logs';
+      });
+
+      tabDossier.addEventListener('click', () => {
+        tabDossier.classList.add('active');
+        tabLogs.classList.remove('active');
+        logsView.style.display = 'none';
+        dossierView.style.display = 'flex';
+        state.currentTabRight = 'dossier';
+      });
+
+      // 9-Format Downloads
+      exportButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const fmt = btn.getAttribute('data-fmt');
+          const reportId = state.latestReportId || (state.reports[0]?.id) || 'rep-baseline';
+          logTerminal('EXPORT', `Triggering download: arachne-${reportId}.${fmt}`);
+          window.location.href = `/api/reports/${reportId}/download?format=${fmt}`;
+        });
+      });
+
+      // Initial Sync and Polling Loop (Every 2s)
+      syncState();
+      setInterval(syncState, 2000);
+
+      window.addEventListener('resize', () => {
+        if (state.currentTabCenter === 'graph') drawGraph();
+      });
+    })();
+  </script>
+</body>
+</html>

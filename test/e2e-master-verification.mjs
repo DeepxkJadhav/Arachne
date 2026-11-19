@@ -324,6 +324,7 @@ async function runMasterSuite() {
   if (failed > 0) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runMasterSuite().catch(err => {

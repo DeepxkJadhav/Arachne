@@ -268,28 +268,157 @@ export class ReportEngine {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${data.title} - ARACHNE Intelligence</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${data.title} - ARACHNE Intelligence Dossier</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0a0812; color: #e2e8f0; line-height: 1.6; max-width: 960px; margin: 0 auto; padding: 40px 24px; }
-    h1, h2, h3 { color: #f8fafc; border-bottom: 1px solid #2d1a4e; padding-bottom: 8px; }
-    h1 { color: #c084fc; font-size: 2.2rem; }
-    blockquote { border-left: 4px solid #a855f7; margin: 0 0 20px 0; padding: 12px 20px; background: #160e29; color: #d8b4fe; border-radius: 4px; }
-    table { width: 100%; border-collapse: collapse; margin: 24px 0; background: #110d24; border-radius: 8px; overflow: hidden; border: 1px solid #2d1b54; }
-    th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #1f163d; font-size: 0.88rem; }
-    th { background: #1f1338; color: #e2e8f0; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; }
-    a { color: #38bdf8; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code { background: #1f163d; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: #f43f5e; font-size: 0.85em; }
-    hr { border: none; border-top: 1px solid #2d1b54; margin: 30px 0; }
+    :root {
+      --bg-deep: #050507;
+      --bg-surface: #0c0c10;
+      --bg-card: #121217;
+      --crimson: #e11d48;
+      --crimson-border: #4c0519;
+      --crimson-glow: rgba(225, 29, 72, 0.25);
+      --text-white: #ffffff;
+      --text-silver: #e4e4e7;
+      --text-muted: #8b8b99;
+      --border-dark: #202028;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace, -apple-system, sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-silver);
+      line-height: 1.65;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+    .hud-header {
+      border: 1px solid var(--border-dark);
+      border-left: 4px solid var(--crimson);
+      background: var(--bg-surface);
+      padding: 24px;
+      margin-bottom: 32px;
+      position: relative;
+    }
+    .hud-brand {
+      color: var(--crimson);
+      font-size: 0.82rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    h1, h2, h3, h4 { color: var(--text-white); font-weight: 700; letter-spacing: -0.01em; }
+    h1 {
+      font-size: 2rem;
+      border-bottom: 1px solid var(--border-dark);
+      padding-bottom: 14px;
+      margin-top: 0;
+    }
+    h2 {
+      font-size: 1.35rem;
+      border-bottom: 1px solid var(--crimson-border);
+      padding-bottom: 8px;
+      margin-top: 36px;
+      color: var(--text-white);
+    }
+    h3 { font-size: 1.1rem; color: var(--text-silver); margin-top: 24px; }
+    blockquote {
+      border-left: 3px solid var(--crimson);
+      margin: 20px 0;
+      padding: 14px 20px;
+      background: var(--bg-surface);
+      color: var(--text-silver);
+      border-radius: 2px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-dark);
+    }
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-dark);
+      font-size: 0.85rem;
+    }
+    th {
+      background: var(--bg-card);
+      color: var(--text-white);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.76rem;
+      letter-spacing: 1px;
+      border-bottom: 2px solid var(--crimson);
+    }
+    a { color: var(--crimson); text-decoration: none; border-bottom: 1px dashed var(--crimson); }
+    a:hover { color: #ff3355; text-decoration: none; border-bottom: 1px solid #ff3355; }
+    code {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dark);
+      padding: 2px 7px;
+      border-radius: 3px;
+      color: #ff3355;
+      font-size: 0.88em;
+    }
+    pre {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-dark);
+      border-left: 3px solid var(--crimson);
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 0.86rem;
+    }
+    hr { border: none; border-top: 1px solid var(--border-dark); margin: 36px 0; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba(225, 29, 72, 0.12);
+      border: 1px solid var(--crimson);
+      color: var(--crimson);
+      margin-right: 8px;
+    }
+    .meta-box {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .meta-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dark);
+      padding: 10px 14px;
+    }
+    .meta-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .meta-value { font-size: 0.9rem; color: var(--text-white); font-weight: 600; margin-top: 4px; }
   </style>
 </head>
 <body>
+  <div class="hud-header">
+    <div class="hud-brand">ARACHNE // AUTONOMOUS INTEL DOSSIER</div>
+    <div style="font-size: 1.4rem; font-weight: 700; color: #fff;">${data.title}</div>
+    <div class="meta-box">
+      <div class="meta-item"><div class="meta-label">INVESTIGATION ID</div><div class="meta-value">${data.investigation.id}</div></div>
+      <div class="meta-item"><div class="meta-label">TIMESTAMP</div><div class="meta-value">${data.dateFormatted}</div></div>
+      <div class="meta-item"><div class="meta-label">EVIDENCE SOURCES</div><div class="meta-value">${data.corpus.length} Verified Sources</div></div>
+      <div class="meta-item"><div class="meta-label">ENTITIES INDEXED</div><div class="meta-value">${data.keyEntities.length} Discovered</div></div>
+    </div>
+  </div>
   ${markdown
     .replace(/\n\n/g, '<p></p>')
     .replace(/# (.*)/g, '<h1>$1</h1>')
     .replace(/## (.*)/g, '<h2>$1</h2>')
     .replace(/### (.*)/g, '<h3>$1</h3>')
   }
+  <hr>
+  <div style="text-align: center; color: var(--text-muted); font-size: 0.78rem; letter-spacing: 1px;">
+    ARACHNE AUTONOMOUS WEB INTELLIGENCE // FAIL-CLOSED PERSISTENT CORE // CONFIDENTIAL
+  </div>
 </body>
 </html>`;
   }

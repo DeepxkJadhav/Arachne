@@ -14,6 +14,19 @@ import { ContentExtractor } from './crawler/extractor.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const UI_DASHBOARD_PATH = path.join(__dirname, 'ui', 'dashboard.html');
+let cachedDashboardHtml = null;
+function getDashboardHtml() {
+  if (!cachedDashboardHtml || process.env.NODE_ENV !== 'production') {
+    try {
+      cachedDashboardHtml = fs.readFileSync(UI_DASHBOARD_PATH, 'utf8');
+    } catch (e) {
+      cachedDashboardHtml = `<!DOCTYPE html><html><body><h1>ARACHNE UI</h1><p>${e.message}</p></body></html>`;
+    }
+  }
+  return cachedDashboardHtml;
+}
+
 // Load root .env environment variables if present
 try {
   const envPath = path.resolve(process.cwd(), '.env');
@@ -125,23 +138,34 @@ export function createArachneServer(port = 3003) {
     try {
       // --- REST API ENDPOINTS ---
 
+      // Web UI Command Center Dashboard (Served to Browsers)
+      if (
+        (pathname === '/ui' || pathname === '/dashboard' || (pathname === '/' && (req.headers.accept || '').toLowerCase().includes('text/html'))) &&
+        req.method === 'GET'
+      ) {
+        const html = getDashboardHtml();
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Length': Buffer.byteLength(html)
+        });
+        res.end(html);
+        return;
+      }
+
       // Root API status endpoint for CLI & SDK compatibility
       if (pathname === '/' && req.method === 'GET') {
-        const accept = (req.headers.accept || '').toLowerCase();
-        if (accept.includes('application/json') || !accept.includes('text/html')) {
-          const inv = researchAgent.activeInvestigation;
-          return sendJson({
-            name: 'ARACHNE Web Intelligence Core',
-            message: 'Arachne API',
-            version: '2.1.0',
-            repository: 'https://github.com/DeepxkJadhav/Arachne',
-            documentation_url: 'https://github.com/DeepxkJadhav/Arachne#readme',
-            status: 'online',
-            mode: 'standalone-intelligence-core',
-            ui_url: `http://localhost:${port}/`,
-            activeInvestigation: inv ? { id: inv.id, objective: inv.objective, status: inv.status } : null
-          });
-        }
+        const inv = researchAgent.activeInvestigation;
+        return sendJson({
+          name: 'ARACHNE Web Intelligence Core',
+          message: 'Arachne API',
+          version: '2.1.0',
+          repository: 'https://github.com/DeepxkJadhav/Arachne',
+          documentation_url: 'https://github.com/DeepxkJadhav/Arachne#readme',
+          status: 'online',
+          mode: 'standalone-intelligence-core',
+          ui_url: `http://localhost:${port}/`,
+          activeInvestigation: inv ? { id: inv.id, objective: inv.objective, status: inv.status } : null
+        });
       }
 
       // System Status

@@ -149,12 +149,13 @@ async function ensureServerOnline(quiet = false) {
   if (startScript) {
     try {
       const serverProc = spawn(process.execPath, [startScript, '--server-only'], {
+        cwd: path.resolve(__dirname, '..'),
         detached: true,
         stdio: 'ignore'
       });
       serverProc.unref();
 
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 30; i++) {
         await new Promise(r => setTimeout(r, 250));
         const recheck = await api('/api/status');
         if (recheck.ok) {
@@ -1345,12 +1346,30 @@ async function cmdNotifications(options = {}) {
   console.log();
 }
 
+// 20.5 Web UI Command Center
+async function cmdUi() {
+  const uiUrl = `${BASE_URL}/ui`;
+  console.log(`\n${C.crimson}🕷️  ARACHNE WEB INTELLIGENCE COMMAND CENTER${C.reset}`);
+  console.log(`${C.gray}================================================================${C.reset}`);
+  console.log(`  ${C.gray}Interface URL:${C.reset}    ${C.bold}${C.white}${uiUrl}${C.reset}`);
+  console.log(`  ${C.gray}Aesthetic:${C.reset}        ${C.crimson}Black, White & Crimson Tactical Hacker HUD${C.reset}`);
+  console.log(`  ${C.gray}Telemetry:${C.reset}        ${C.white}Live CDP Viewport, Graph Matrix & 9-Format Studio${C.reset}`);
+  console.log(`${C.gray}================================================================${C.reset}`);
+  console.log(`  ${C.gray}Launching Command Center in browser...${C.reset}\n`);
+
+  try {
+    const startCmd = process.platform === 'win32' ? 'start' : (process.platform === 'darwin' ? 'open' : 'xdg-open');
+    spawn(startCmd, [uiUrl], { shell: true, stdio: 'ignore' });
+  } catch {}
+}
+
 // 21. Help Command
 function cmdHelp() {
   console.log(`
 ${C.bold}${C.white}INTERACTIVE COMMANDS:${C.reset}
   ${C.crimson}new hunt${C.reset}                      Prompt for research objective and start hunt
   ${C.crimson}/hunt <objective>${C.reset}             Launch autonomous research mission immediately
+  ${C.crimson}/ui | /dashboard${C.reset}              Launch professional hacker Command Center in browser
   ${C.crimson}/report last${C.reset}                  Retrieve and display the latest completed research report
   ${C.crimson}/reports${C.reset}                      List historical research reports in vault
   ${C.crimson}/status${C.reset}                       Audit subsystem health, database size, and counts
@@ -1580,6 +1599,12 @@ async function startRepl() {
         await cmdApprovals();
         break;
 
+      case 'ui':
+      case 'dashboard':
+      case 'web':
+        await cmdUi();
+        break;
+
       case 'telegram':
         await cmdTelegram(args[0], ...args.slice(1));
         break;
@@ -1750,6 +1775,12 @@ async function main() {
 
     case 'notifications':
       await cmdNotifications({ json: isJson });
+      break;
+
+    case 'ui':
+    case 'dashboard':
+    case 'web':
+      await cmdUi();
       break;
 
     case 'pdf':
