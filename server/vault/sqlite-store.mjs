@@ -69,7 +69,8 @@ export class SqliteStore {
         word_count INTEGER DEFAULT 0,
         language TEXT DEFAULT 'en',
         crawl_timestamp TEXT,
-        metadata_json TEXT
+        metadata_json TEXT,
+        investigation_id TEXT
       );
 
       CREATE TABLE IF NOT EXISTS evidence_records (
@@ -447,6 +448,7 @@ export class SqliteStore {
     if (!doc || !doc.url) return null;
     const id = doc.id || `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
+    const invId = doc.investigationId || doc.investigation_id || null;
 
     // Store large content in filesystem addressed by SHA-256
     let contentHash = doc.contentHash;
@@ -457,10 +459,15 @@ export class SqliteStore {
       contentPath = stored.path;
     }
 
+    // Ensure column exists in legacy schemas
+    try {
+      this.db.exec('ALTER TABLE corpus_documents ADD COLUMN investigation_id TEXT;');
+    } catch {}
+
     const stmt = this.db.prepare(`
       INSERT INTO corpus_documents (
-        id, url, title, content_hash, content_path, word_count, language, crawl_timestamp, metadata_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, url, title, content_hash, content_path, word_count, language, crawl_timestamp, metadata_json, investigation_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(url) DO UPDATE SET
         title = excluded.title,
         content_hash = excluded.content_hash,
@@ -468,7 +475,8 @@ export class SqliteStore {
         word_count = excluded.word_count,
         language = excluded.language,
         crawl_timestamp = excluded.crawl_timestamp,
-        metadata_json = excluded.metadata_json
+        metadata_json = excluded.metadata_json,
+        investigation_id = COALESCE(excluded.investigation_id, corpus_documents.investigation_id)
     `);
 
     stmt.run(
@@ -480,19 +488,36 @@ export class SqliteStore {
       doc.wordCount || 0,
       doc.language || 'en',
       doc.crawlTimestamp || doc.timestamp || now,
-      JSON.stringify(doc.metadata || {})
+      JSON.stringify(doc.metadata || {}),
+      invId
     );
 
     return id;
   }
 
-  getCorpus() {
-    const stmt = this.db.prepare('SELECT * FROM corpus_documents ORDER BY crawl_timestamp DESC');
-    const rows = stmt.all();
+  getCorpus(investigationId = null) {
+    let rows;
+    if (investigationId) {
+      try {
+        const stmt = this.db.prepare('SELECT * FROM corpus_documents WHERE investigation_id = ? ORDER BY crawl_timestamp DESC');
+        rows = stmt.all(investigationId);
+      } catch {
+        rows = [];
+      }
+      if (!rows || rows.length === 0) {
+        const allStmt = this.db.prepare('SELECT * FROM corpus_documents ORDER BY crawl_timestamp DESC');
+        rows = allStmt.all();
+      }
+    } else {
+      const stmt = this.db.prepare('SELECT * FROM corpus_documents ORDER BY crawl_timestamp DESC');
+      rows = stmt.all();
+    }
+
     return rows.map(r => ({
       id: r.id,
       url: r.url,
       title: r.title,
+      investigationId: r.investigation_id,
       contentHash: r.content_hash,
       contentPath: r.content_path,
       wordCount: r.word_count,
@@ -618,7 +643,7 @@ export class SqliteStore {
 
   // --- Reports ---
   saveReport(report) {
-    if (!report || !report.id) return;
+    if (!report || !report.id) return null;
     const now = new Date().toISOString();
     const stmt = this.db.prepare(`
       INSERT INTO reports (id, investigation_id, title, format, file_path, summary, size_bytes, created_at)
@@ -640,6 +665,7 @@ export class SqliteStore {
       report.sizeBytes || 0,
       report.createdAt || now
     );
+    return report;
   }
 
   getReports() {
@@ -666,6 +692,25 @@ export class SqliteStore {
       sizeBytes: r.size_bytes || r.sizeBytes,
       createdAt: r.created_at || r.createdAt
     };
+  }
+
+  deleteReport(id) {
+    if (!id) return false;
+    const cleanId = path.basename(id);
+    try {
+      const stmt = this.db.prepare('DELETE FROM reports WHERE id = ?');
+      stmt.run(cleanId);
+    } catch {}
+
+    const reportsDir = path.join(this.vaultDir, 'reports');
+    const extensions = ['md', 'txt', 'html', 'pdf', 'docx', 'xlsx', 'pptx', 'csv', 'json'];
+    for (const ext of extensions) {
+      const p = path.join(reportsDir, `${cleanId}.${ext}`);
+      try {
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      } catch {}
+    }
+    return true;
   }
 
   // --- Collections ---

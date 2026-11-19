@@ -351,6 +351,20 @@ export class VaultStore {
     return fullReport;
   }
 
+  getReport(id) {
+    if (!id) return null;
+    return this.sqlite.getReport(id) || (this.state.reports || []).find(r => r.id === id) || null;
+  }
+
+  deleteReport(id) {
+    if (!id) return false;
+    if (this.state.reports) {
+      this.state.reports = this.state.reports.filter(r => r.id !== id);
+      this.saveState();
+    }
+    return this.sqlite.deleteReport(id);
+  }
+
   // --- Bookmarks & Collections ---
   toggleBookmark(item) {
     if (!this.state.bookmarks) this.state.bookmarks = [];

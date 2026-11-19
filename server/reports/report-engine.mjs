@@ -2,10 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import zlib from 'node:zlib';
+import { ReportValidator } from './report-validator.mjs';
 
 export class ReportEngine {
   constructor(vaultStore) {
     this.vaultStore = vaultStore;
+  }
+
+  validateReportRealism(report, objective = '') {
+    return ReportValidator.validate(report, objective || report.title);
   }
 
   // --- Automatic Format Selection ---
@@ -41,12 +46,14 @@ export class ReportEngine {
     const title = investigation.title || investigation.objective || 'ARACHNE Research Dossier';
     const timestamp = new Date().toISOString();
     const dateFormatted = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const synthesis = options.synthesis || null;
 
-    const keyEntities = graph.nodes
-      .filter(n => ['AI_Model', 'Repository', 'Technology', 'Dataset', 'Organization'].includes(n.type))
-      .slice(0, 20);
+    // Filter relevant key entities: prioritize Domain-specific Organizations, Standards, Metrics, Technologies, Patents
+    const keyEntities = (graph.nodes || [])
+      .filter(n => ['Organization', 'Standard', 'Metric', 'Technology', 'Patent', 'AI_Model', 'Repository', 'Dataset'].includes(n.type))
+      .slice(0, 25);
 
-    const citations = graph.nodes
+    const citations = (graph.nodes || [])
       .filter(n => ['Document', 'Citation'].includes(n.type))
       .slice(0, 15);
 
@@ -59,6 +66,7 @@ export class ReportEngine {
       title,
       timestamp,
       dateFormatted,
+      synthesis,
       additionalSectionTitle: options.additionalSectionTitle || null,
       additionalSectionContent: options.additionalSectionContent || null
     };
@@ -83,10 +91,11 @@ export class ReportEngine {
         title,
         objective: investigation.objective,
         generatedAt: timestamp,
-        generator: 'ARACHNE Web Intelligence Core v2.0'
+        generator: 'ARACHNE Web Intelligence Core v2.1'
       },
       metrics: investigation.metrics || {},
       phases: investigation.plan?.phases || [],
+      synthesis,
       entities: keyEntities,
       citations,
       corpusSources: data.corpus
@@ -142,8 +151,9 @@ export class ReportEngine {
       id: reportId,
       investigationId: investigation.id,
       title,
-      summary: `Comprehensive research dossier on "${investigation.objective}" with ${data.corpus.length} analyzed sources and ${graph.nodes.length} graph entities.`,
+      summary: synthesis?.executiveSummary?.slice(0, 320) || `Comprehensive research dossier on "${investigation.objective}" with ${data.corpus.length} analyzed sources and ${graph.nodes?.length || 0} graph entities.`,
       recommendedFormats: this.recommendFormats(investigation.objective),
+      synthesis,
       markdown,
       txt,
       html,
@@ -154,7 +164,8 @@ export class ReportEngine {
       formatsAvailable: verifiedFormats
     };
 
-    return this.vaultStore.saveReport(reportObj);
+    const saved = this.vaultStore.saveReport(reportObj);
+    return saved || reportObj;
   }
 
   // --- Exporters ---
@@ -167,10 +178,14 @@ export class ReportEngine {
     md += `---\n\n`;
 
     md += `## 1. Executive Summary\n\n`;
-    md += `This dossier compiles verified web intelligence regarding **${data.investigation.objective}**. `;
-    md += `During the investigation, ARACHNE executed ${data.investigation.plan?.phases?.length || 5} research phases, `;
-    md += `discovered ${data.investigation.metrics?.urlsDiscovered || data.corpus.length} URLs, extracted ${data.graph.nodes.length} topological nodes, `;
-    md += `and cross-examined evidence across open-source code repositories, technical documentation, and academic publications.\n\n`;
+    if (data.synthesis && data.synthesis.executiveSummary) {
+      md += `${data.synthesis.executiveSummary}\n\n`;
+    } else {
+      md += `This dossier compiles verified web intelligence regarding **${data.investigation.objective}**. `;
+      md += `During the investigation, ARACHNE executed ${data.investigation.plan?.phases?.length || 5} research phases, `;
+      md += `discovered ${data.investigation.metrics?.urlsDiscovered || data.corpus.length} URLs, extracted ${data.graph?.nodes?.length || 0} topological nodes, `;
+      md += `and cross-examined evidence across open-source code repositories, technical documentation, and academic publications.\n\n`;
+    }
 
     md += `## 2. Research Plan & Investigation Methodology\n\n`;
     if (data.investigation.plan && data.investigation.plan.phases) {
@@ -212,11 +227,31 @@ export class ReportEngine {
       md += `\n`;
     }
 
-    md += `## 6. Synthesis & Strategic Conclusions\n\n`;
-    md += `1. **Architecture Maturity:** The collected evidence demonstrates strong convergence around modular, tool-use-first autonomous agent frameworks.\n`;
-    md += `2. **State & Memory:** Systems emphasizing persistent externalized state and graph topologies significantly outperform ephemeral conversational wrappers.\n`;
+    if (data.synthesis && data.synthesis.technicalLandscape) {
+      md += `## 6. Technical Analysis & Architecture Findings\n\n`;
+      md += `${data.synthesis.technicalLandscape}\n\n`;
+    }
+
+    if (data.synthesis && data.synthesis.contradictionsAndDebate) {
+      md += `## 7. Cross-Source Contradictions & Technical Debate\n\n`;
+      md += `${data.synthesis.contradictionsAndDebate}\n\n`;
+    }
+
+    if (data.synthesis && data.synthesis.commercialRoadmap) {
+      md += `## 8. Strategic Roadmap & Deployment Horizon\n\n`;
+      md += `${data.synthesis.commercialRoadmap}\n\n`;
+    }
+
+    md += `## 9. Synthesis & Strategic Conclusions\n\n`;
+    if (data.synthesis && data.synthesis.strategicConclusions) {
+      md += `${data.synthesis.strategicConclusions}\n\n`;
+    } else {
+      md += `1. **Technical Trajectory:** Empirical data reflects active translation from laboratory prototypes toward standard compliance.\n`;
+      md += `2. **Gating Constraints:** Safety certification, environmental verification, and capital intensity govern operational timelines.\n\n`;
+    }
+
     if (data.additionalSectionContent) {
-      md += `## 7. ${data.additionalSectionTitle || 'Refined Technical Analysis'}\n\n`;
+      md += `## 10. ${data.additionalSectionTitle || 'Refined Technical Analysis'}\n\n`;
       md += `${data.additionalSectionContent}\n\n`;
     }
 
@@ -234,8 +269,12 @@ export class ReportEngine {
 
     txt += `1. EXECUTIVE SUMMARY\n`;
     txt += `--------------------\n`;
-    txt += `Objective: ${data.investigation.objective}\n`;
-    txt += `Corpus Documents: ${data.corpus.length} | Graph Entities: ${data.keyEntities.length}\n\n`;
+    if (data.synthesis && data.synthesis.executiveSummary) {
+      txt += `${data.synthesis.executiveSummary}\n\n`;
+    } else {
+      txt += `Objective: ${data.investigation.objective}\n`;
+      txt += `Corpus Documents: ${data.corpus.length} | Graph Entities: ${data.keyEntities.length}\n\n`;
+    }
 
     txt += `2. DISCOVERED ENTITIES\n`;
     txt += `----------------------\n`;
@@ -252,8 +291,26 @@ export class ReportEngine {
       txt += `    Snippet: ${doc.snippet}\n\n`;
     });
 
+    if (data.synthesis && data.synthesis.technicalLandscape) {
+      txt += `4. TECHNICAL ANALYSIS\n`;
+      txt += `--------------------\n`;
+      txt += `${data.synthesis.technicalLandscape}\n\n`;
+    }
+
+    if (data.synthesis && data.synthesis.commercialRoadmap) {
+      txt += `5. STRATEGIC ROADMAP\n`;
+      txt += `--------------------\n`;
+      txt += `${data.synthesis.commercialRoadmap}\n\n`;
+    }
+
+    if (data.synthesis && data.synthesis.strategicConclusions) {
+      txt += `6. STRATEGIC CONCLUSIONS\n`;
+      txt += `--------------------\n`;
+      txt += `${data.synthesis.strategicConclusions}\n\n`;
+    }
+
     if (data.additionalSectionContent) {
-      txt += `4. ${(data.additionalSectionTitle || 'REFINED TECHNICAL ANALYSIS').toUpperCase()}\n`;
+      txt += `7. ${(data.additionalSectionTitle || 'REFINED TECHNICAL ANALYSIS').toUpperCase()}\n`;
       txt += `--------------------\n`;
       txt += `${data.additionalSectionContent}\n\n`;
     }

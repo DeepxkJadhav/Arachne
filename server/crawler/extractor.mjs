@@ -174,18 +174,47 @@ export class ContentExtractor {
     }
 
     // 5. Global Organizations, Labs, Companies & Universities
-    const orgPatterns = /\b(Anthropic|OpenAI|Google|Google DeepMind|Meta|Meta AI|Microsoft|Microsoft Research|Stanford University|MIT|Harvard University|Berkeley|Tsinghua University|Hugging Face|Alibaba|Baidu|Tencent|Amazon|AWS|Apple|NVIDIA|SpaceX|CERN|World Bank|WHO|NASA)\b/gi;
+    const orgPatterns = /\b(Anthropic|OpenAI|Google|Google DeepMind|Meta|Meta AI|Microsoft|Microsoft Research|Stanford University|MIT|Harvard University|Berkeley|Tsinghua University|Hugging Face|Alibaba|Baidu|Tencent|Amazon|AWS|Apple|NVIDIA|SpaceX|CERN|World Bank|WHO|NASA|QuantumScape|Solid Power|CATL|Amprius|Factorial Energy|Sila Nanotechnologies|StoreDot|ProLogium|Airbus|Boeing|Joby Aviation|Archer Aviation|Beta Technologies|Lilium|Eve Air Mobility|Honeywell|Rolls-Royce|General Electric|Siemens|Tesla|Panasonic|LG Energy Solution|Samsung SDI|SK On|BYD|Toyota|BMW|Volkswagen|TSMC|ASML|Intel|AMD|Lockheed Martin|Northrop Grumman|Pfizer|Moderna)\b/gi;
     let orgM;
     while ((orgM = orgPatterns.exec(text)) !== null) {
       addEntity(orgM[1], 'Organization', 0.88);
     }
 
-    // 6. Quantitative Claims, Benchmarks & Metrics (e.g. 98.4%, $45B, 1.2M parameters)
+    // 6. Generic Organization, Enterprise, Agency & Lab Detection
+    const orgSuffixRegex = /\b([A-Z][a-zA-Z0-9&.-]+(?:\s+[A-Z][a-zA-Z0-9&.-]+){0,3}\s+(?:Corp|Corporation|Inc|LLC|Ltd|GmbH|Technologies|Aerospace|Energy|Power|Dynamics|Systems|Materials|Aviation|Airlines|Laboratories|Lab|Institute|University|Agency|Administration|Commission|Department|Foundation|Alliance|Consortium))\b/g;
+    let orgSuffixM;
+    while ((orgSuffixM = orgSuffixRegex.exec(text)) !== null) {
+      addEntity(orgSuffixM[1].trim(), 'Organization', 0.89);
+    }
+
+    // 7. Regulatory Standards, Airworthiness & Governance Bodies
+    const stdPatterns = /\b(FAA|EASA|ICAO|NTSB|SEC|FDA|EPA|DARPA|NIST|ISO\s*[0-9]+(?:-[0-9]+)?|SAE\s*[A-Z0-9-]+|DO-[0-9]+[A-Z]?|FAR\s*Part\s*[0-9]+|ASTM\s*[A-Z0-9-]+|IEEE\s*[0-9]+(?:\.[0-9]+)?)\b/g;
+    let stdM;
+    while ((stdM = stdPatterns.exec(text)) !== null) {
+      addEntity(stdM[1].trim(), 'Standard', 0.91);
+    }
+
+    // 8. Scientific, Engineering & Physical Metrics
+    const sciMetricMatches = text.match(/\b(?:\$|€|£)?\d+(?:\.\d+)?\s*(?:Wh\/kg|Wh\/L|mAh\/g|C-rate|cycles|°C|kW|MW|GW|kWh|MWh|kV|V|A|mAh|Ah|bar|psi|kPa|MPa|kg|lbs|nm|μm|mm|GHz|MHz|Gbps|Mbps|ms|μs|ns)\b/gi);
+    if (sciMetricMatches) {
+      for (const sm of sciMetricMatches.slice(0, 15)) {
+        addEntity(sm.trim(), 'Metric', 0.88);
+      }
+    }
+
+    // 9. Quantitative Financial & Volume Claims
     const metricMatches = text.match(/\b(?:\$|€|£)?\d+(?:\.\d+)?(?:\s*(?:%|billion|million|trillion|B|M|GB|TB|ms|tokens\/s|parameters|params|QPS))\b/gi);
     if (metricMatches) {
       for (const met of metricMatches.slice(0, 10)) {
         addEntity(met.trim(), 'Metric', 0.82);
       }
+    }
+
+    // 10. Patents & Intellectual Property
+    const patentRegex = /\b(US\d{7,10}[A-Z]\d?|EP\d{6,8}[A-Z]\d?|WO\d{4}\/\d{5,6})\b/g;
+    let patM;
+    while ((patM = patentRegex.exec(text)) !== null) {
+      addEntity(patM[1].trim(), 'Patent', 0.93);
     }
 
     return entities;
@@ -195,6 +224,54 @@ export class ContentExtractor {
     if (!text) return [];
     const citations = [];
     const seen = new Set();
+
+    // PubMed / PMC citations
+    const pmcRegex = /(?:ncbi\.nlm\.nih\.gov\/pmc\/articles\/PMC|PMC)([0-9]{6,8})/gi;
+    let pmcM;
+    while ((pmcM = pmcRegex.exec(text)) !== null) {
+      const pmcId = pmcM[1];
+      if (!seen.has(`pmc:${pmcId}`)) {
+        seen.add(`pmc:${pmcId}`);
+        citations.push({
+          type: 'PubMed Central Paper',
+          identifier: `PMC${pmcId}`,
+          url: `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${pmcId}/`,
+          title: `PMC${pmcId}`
+        });
+      }
+    }
+
+    // SEC EDGAR Filings
+    const secRegex = /(?:sec\.gov\/Archives\/edgar\/data\/[0-9]+\/|accession-number=)([0-9]{10}-[0-9]{2}-[0-9]{6})/gi;
+    let secM;
+    while ((secM = secRegex.exec(text)) !== null) {
+      const accNum = secM[1];
+      if (!seen.has(`sec:${accNum}`)) {
+        seen.add(`sec:${accNum}`);
+        citations.push({
+          type: 'SEC EDGAR Filing',
+          identifier: accNum,
+          url: `https://www.sec.gov/edgar/searchedgar/companysearch`,
+          title: `SEC Filing ${accNum}`
+        });
+      }
+    }
+
+    // Federal Register Documents
+    const fedRegex = /(?:federalregister\.gov\/documents\/[0-9]{4}\/[0-9]{2}\/[0-9]{2}\/)([0-9]{4}-[0-9]{5})/gi;
+    let fedM;
+    while ((fedM = fedRegex.exec(text)) !== null) {
+      const docNum = fedM[1];
+      if (!seen.has(`fed:${docNum}`)) {
+        seen.add(`fed:${docNum}`);
+        citations.push({
+          type: 'Federal Register Document',
+          identifier: `FR-${docNum}`,
+          url: `https://www.federalregister.gov/d/${docNum}`,
+          title: `Federal Register ${docNum}`
+        });
+      }
+    }
 
     // arXiv papers
     const arxivRegex = /(?:arxiv\.org\/(?:abs|pdf)\/|arXiv:)([0-9]{4}\.[0-9]{4,5})/gi;

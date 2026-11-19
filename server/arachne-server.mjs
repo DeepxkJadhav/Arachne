@@ -898,12 +898,14 @@ function seedInitialDemoData(vaultStore, graphEngine, researchAgent, reportEngin
   ];
 
   for (const doc of initialDocs) {
+    doc.investigationId = 'inv-baseline-initial';
     vaultStore.addCorpusDocument(doc);
     graphEngine.ingestDocument({
       url: doc.url,
       title: doc.title,
       domain: doc.domain,
       text: doc.content,
+      investigationId: 'inv-baseline-initial',
       entities: doc.entities.map(e => ({ name: e, type: e.includes('Claude') || e.includes('AutoGPT') ? 'AI_Model' : 'Technology', confidence: 0.95 })),
       citations: doc.citations.map(c => ({ identifier: c, title: c, url: `https://doi.org/${c}`, type: 'Document' }))
     });

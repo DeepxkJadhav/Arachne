@@ -267,6 +267,7 @@ export class ResearchAgent {
       },
       recentFindings: [],
       logs: [],
+      crawledUrls: new Set(),
       createdAt: new Date().toISOString()
     };
 
@@ -636,12 +637,16 @@ export class ResearchAgent {
           });
 
           // Ingest into Knowledge Vault Corpus (SQLite)
+          if (!inv.crawledUrls) inv.crawledUrls = new Set();
+          inv.crawledUrls.add(target.url);
+
           const doc = {
             url: target.url,
             title: metadata.title || target.url,
             domain: metadata.domain,
             snippet,
             content: markdown,
+            investigationId: inv.id,
             status: 'processed',
             type: metadata.contentType || 'Web Page',
             relevanceScore: Math.max(0.65, 0.95 - (target.depth * 0.1)),
@@ -804,13 +809,88 @@ export class ResearchAgent {
         this.setLifecycleState('VERIFYING', 'Validating claims against source provenance');
         await new Promise(r => setTimeout(r, 400));
 
-        // 5. REPORTING & COMPLETED (Synthesizer Specialist)
+        // 5. REPORTING & COMPLETED (Synthesizer Specialist with Ralph Loop Realism Gate)
         this.setLifecycleState('REPORTING', 'Compiling multi-format research dossier');
-        const corpus = this.vaultStore.getCorpus();
-        const graph = this.vaultStore.getGraph();
 
-        await this.swarm.runSynthesizerTask(inv, corpus, graph);
-        const report = this.reportEngine.generateReport(inv, corpus, graph);
+        let report = null;
+        let realismVerdict = null;
+        const maxRealismRetries = 2;
+
+        for (let attempt = 0; attempt <= maxRealismRetries; attempt++) {
+          const invCorpus = this.vaultStore.getCorpus(inv.id);
+          const activeCorpus = (invCorpus && invCorpus.length > 0)
+            ? invCorpus
+            : this.vaultStore.getCorpus().filter(d => inv.crawledUrls && inv.crawledUrls.has(d.url));
+          const finalCorpus = (activeCorpus && activeCorpus.length > 0) ? activeCorpus : this.vaultStore.getCorpus().slice(0, 20);
+          const finalGraph = this.vaultStore.getGraph();
+
+          await this.swarm.runSynthesizerTask(inv, finalCorpus, finalGraph);
+
+          // Invoke Real LLM Synthesis Specialist
+          const synthesis = await this.modelRouter.synthesizeInvestigationDossier({
+            objective: inv.objective,
+            corpus: finalCorpus,
+            keyEntities: (finalGraph.nodes || []).slice(0, 25),
+            plan: inv.plan
+          });
+
+          // Compile report
+          report = this.reportEngine.generateReport(inv, finalCorpus, finalGraph, { synthesis });
+
+          // Audit report realism via Critic
+          realismVerdict = this.reportEngine.validateReportRealism(report, inv.objective);
+
+          if (realismVerdict.isReal) {
+            this.log(`[REALISM GATE] Report ${report.id} PASSED quality audit (Score: ${realismVerdict.score}%). Genuine intelligence confirmed.`, 'info');
+            break;
+          } else {
+            this.log(`[REALISM GATE] Report ${report.id} REJECTED (Score: ${realismVerdict.score}%): ${realismVerdict.issues.join('; ')}. Tossing into dustbin.`, 'warn');
+            // Toss defective report in dustbin
+            this.vaultStore.deleteReport?.(report.id);
+            report = null;
+
+            if (attempt < maxRealismRetries) {
+              this.log(`[RALPH LOOP] Iterating research: refining extraction & re-synthesizing for objective: "${inv.objective}" (Iteration ${attempt + 1}/${maxRealismRetries})`, 'info');
+              // Quick targeted discovery to inject deeper facts
+              const extraSeeds = await this.discoverSeedUrls([`${inv.objective} empirical analysis data`]);
+              for (const u of extraSeeds.slice(0, 4)) {
+                if (frontier.isUrlPermitted(u).permitted) {
+                  frontier.enqueue(u, 1, 9, 'realism-refinement');
+                }
+              }
+              const extraTarget = await frontier.dequeueNext();
+              if (extraTarget) {
+                const extraFetch = await this.fetcher.fetchUrl(extraTarget.url);
+                if (extraFetch.success && extraFetch.html) {
+                  const extraExt = this.extractor.extract(extraTarget.url, extraFetch.html, '');
+                  const extraDoc = {
+                    url: extraTarget.url,
+                    title: extraExt.title,
+                    snippet: extraExt.snippet,
+                    content: extraExt.snippet,
+                    investigationId: inv.id,
+                    status: 'processed',
+                    crawledAt: new Date().toISOString()
+                  };
+                  this.vaultStore.addCorpusDocument(extraDoc);
+                  if (inv.crawledUrls) inv.crawledUrls.add(extraTarget.url);
+                }
+              }
+            }
+          }
+        }
+
+        if (!report) {
+          // Fallback if retries exhausted: Force extractive synthesis without stale boilerplate
+          const finalCorpus = this.vaultStore.getCorpus().slice(0, 15);
+          const fallbackSynth = await this.modelRouter.synthesizeInvestigationDossier({
+            objective: inv.objective,
+            corpus: finalCorpus,
+            keyEntities: (this.vaultStore.getGraph()?.nodes || []).slice(0, 20),
+            forceExtractive: true
+          });
+          report = this.reportEngine.generateReport(inv, finalCorpus, this.vaultStore.getGraph(), { synthesis: fallbackSynth });
+        }
 
         this.setLifecycleState('COMPLETED', `Investigation finalized. Report ${report.id} generated.`);
         this.log(`Research dossier generated successfully! Report ID: ${report.id}`, 'info');
@@ -947,10 +1027,15 @@ export class ResearchAgent {
       try {
         const newsRes = await this.fetcher.fetchUrl(`https://news.google.com/rss/search?q=${qEncoded}&hl=en-US&gl=US&ceid=US:en`);
         if (newsRes.success && newsRes.html) {
-          // Extract publisher source URLs
+          // Extract publisher source URLs (ignoring bare root domains)
           const sourceMatches = [...newsRes.html.matchAll(/<source[^>]*url="([^"]+)"/gi)];
           for (const s of sourceMatches) {
-            if (s[1] && s[1].startsWith('http')) urls.add(s[1]);
+            if (s[1] && s[1].startsWith('http')) {
+              try {
+                const pu = new URL(s[1]);
+                if (pu.pathname && pu.pathname !== '/') urls.add(s[1]);
+              } catch {}
+            }
           }
           // Also extract article redirect links for Chrome traversal
           const artMatches = [...newsRes.html.matchAll(/<link>(https:\/\/news\.google\.com\/rss\/articles\/[^<]+)<\/link>/gi)];
@@ -961,7 +1046,34 @@ export class ResearchAgent {
         }
       } catch {}
 
-      // C. CrossRef Global Academic & Industry Research Index (150M+ DOIs across all disciplines)
+      // C. Federal Register API (US Government Regulations, Standards & Directives)
+      try {
+        const fedRes = await this.fetcher.fetchUrl(`https://www.federalregister.gov/api/v1/documents.json?conditions[term]=${qEncoded}&per_page=3`);
+        if (fedRes.success && fedRes.html) {
+          try {
+            const fJson = JSON.parse(fedRes.html);
+            for (const doc of (fJson.results || [])) {
+              if (doc.html_url) urls.add(doc.html_url);
+            }
+          } catch {}
+        }
+      } catch {}
+
+      // D. PubMed Central / NCBI Peer-Reviewed Full-Texts (National Institutes of Health)
+      try {
+        const pmcRes = await this.fetcher.fetchUrl(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pmc&term=${qEncoded}&retmode=json&retmax=3`);
+        if (pmcRes.success && pmcRes.html) {
+          try {
+            const pmcJson = JSON.parse(pmcRes.html);
+            const ids = pmcJson.esearchresult?.idlist || [];
+            for (const pid of ids) {
+              urls.add(`https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${pid}/`);
+            }
+          } catch {}
+        }
+      } catch {}
+
+      // E. CrossRef Global Academic & Industry Research Index (150M+ DOIs across all disciplines)
       try {
         const crRes = await this.fetcher.fetchUrl(`https://api.crossref.org/works?query=${qEncoded}&rows=4`);
         if (crRes.success && crRes.html) {

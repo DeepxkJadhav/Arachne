@@ -14,7 +14,8 @@
     "server": "node server/start.mjs",
     "test": "node test/e2e-master-verification.mjs",
     "test:regression": "node test/regression-intent-reports-suite.mjs",
-    "test:all": "node test/e2e-master-verification.mjs && node test/regression-intent-reports-suite.mjs",
+    "test:realism": "node --test test/realism-report-quality-gate.test.mjs",
+    "test:all": "node test/e2e-master-verification.mjs && node test/regression-intent-reports-suite.mjs && node --test test/realism-report-quality-gate.test.mjs",
     "build:exe": "node scripts/build-exe.mjs"
   },
   "engines": {
