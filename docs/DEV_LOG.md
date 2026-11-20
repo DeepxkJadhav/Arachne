@@ -39,3 +39,4 @@ Automated and verified development entries.
 - `2026-11-14 14:49:00 +0530`: test(e2e): add regression assertions for nested flags
 - `2026-11-19 23:54:22 +0530`: feat(cli): enhance argument parser error recovery
 - `2026-11-20 00:14:22 +0530`: feat(output): format tabular reporting for terminal width
+- `2026-11-20 19:39:50`: fix(parser): handle trailing delimiters in input streams
