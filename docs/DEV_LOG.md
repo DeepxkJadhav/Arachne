@@ -41,3 +41,4 @@ Automated and verified development entries.
 - `2026-11-20 00:14:22 +0530`: feat(output): format tabular reporting for terminal width
 - `2026-11-20 19:39:50`: fix(parser): handle trailing delimiters in input streams
 - `2026-11-22 11:24:18 +0530`: feat(cli): enhance argument parser error recovery
+- `2026-11-22 13:45:52 +0530`: fix(scanner): correct edge-case handling in regex stream buffer
