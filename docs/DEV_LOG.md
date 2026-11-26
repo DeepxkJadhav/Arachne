@@ -48,3 +48,4 @@ Automated and verified development entries.
 - `2026-11-24 11:26:04 +0530`: refactor(core): decouple dispatcher from worker thread pool
 - `2026-11-25 09:30:18 +0530`: feat(output): format tabular reporting for terminal width
 - `2026-11-25 09:40:19 +0530`: perf(io): buffer asynchronous file descriptor reads
+- `2026-11-26 10:40:03 +0530`: test(e2e): add regression assertions for nested flags
