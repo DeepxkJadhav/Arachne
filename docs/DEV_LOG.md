@@ -50,3 +50,4 @@ Automated and verified development entries.
 - `2026-11-25 09:40:19 +0530`: perf(io): buffer asynchronous file descriptor reads
 - `2026-11-26 10:40:03 +0530`: test(e2e): add regression assertions for nested flags
 - `2026-11-26 11:41:03 +0530`: docs(api): document sub-command execution lifecycle
+- `2026-11-28 04:16:22 +0530`: refactor(core): decouple dispatcher from worker thread pool
