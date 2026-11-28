@@ -1,7 +1,8 @@
 <div align="center">
   <a name="readme-top"></a>
-  <h1>🕷️ ARACHNE</h1>
-  <p><b>Terminal-First Autonomous Web Intelligence & Deep Research CLI Engine</b></p>
+  <img src="assets/hero.svg" alt="ARACHNE Terminal-First Autonomous Web Intelligence CLI" width="100%" />
+
+  <br/><br/>
 
   <a href="https://github.com/DeepxkJadhav/Arachne/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/DeepxkJadhav/Arachne" alt="License">
